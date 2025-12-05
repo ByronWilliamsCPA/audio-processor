@@ -8,6 +8,10 @@ tags:
   - feedback
   - template
 ---
+<!--
+SPDX-FileCopyrightText: 2025 Byron Williams <byron@williamshome.family>
+SPDX-License-Identifier: CC-BY-4.0
+-->
 
 > **Purpose**: Document issues discovered in this project that should be addressed in the [cookiecutter-python-template](https://github.com/ByronWilliamsCPA/cookiecutter-python-template).
 >
