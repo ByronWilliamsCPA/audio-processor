@@ -42,7 +42,198 @@ When working on this project, if you discover any issue that originates from the
 
 <!-- Add your feedback below this line -->
 
-_No feedback items yet. Add issues as they are discovered._
+### Python Syntax Error in sentry.py
+
+- **Priority**: Critical
+- **Category**: Tooling
+- **Discovered**: 2025-12-04
+
+**Issue**: `src/{package_name}/core/sentry.py` has a Python syntax error at line 71 that prevents code from parsing. The `except ImportError:` statement has incorrect indentation, appearing outside the `try:` block.
+
+**Context**: Discovered during CI pipeline execution. Ruff formatter fails with "Expected a statement" error, and mkdocs build fails because griffe cannot parse the file for API documentation generation.
+
+**Current Code** (lines 68-75):
+```python
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.logging import LoggingIntegration
+        except ImportError:  # ❌ Wrong indentation - outside try block
+        logger.warning(
+            "Sentry SDK not installed. Install with: uv add sentry-sdk[fastapi]"
+        )
+        return
+```
+
+**Suggested Fix**: Correct the indentation of `except` to align with `try:`:
+```python
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.logging import LoggingIntegration
+    except ImportError:  # ✅ Correct indentation
+        logger.warning(
+            "Sentry SDK not installed. Install with: uv add sentry-sdk[fastapi]"
+        )
+        return
+```
+
+**Affected Files**:
+- `{{cookiecutter.project_slug}}/src/{{cookiecutter.package_name}}/core/sentry.py` (line 71)
+
+**Impact**: Blocks CI pipeline, prevents documentation builds, fails Ruff formatting. This is a critical blocker for any project generated from the template.
+
+---
+
+### Dependency Review Workflow Configuration Error
+
+- **Priority**: High
+- **Category**: CI/CD
+- **Discovered**: 2025-12-04
+
+**Issue**: `.github/workflows/dependency-review.yml` contains conflicting configuration parameters that cause the GitHub Actions dependency review check to fail.
+
+**Context**: Discovered during PR CI checks. The workflow fails with error: "You cannot specify both allow-licenses and deny-licenses"
+
+**Current Configuration**:
+```yaml
+# The workflow appears to have both:
+allow-licenses: [...]
+deny-licenses: [...]
+```
+
+**Suggested Fix**: Choose one approach (either allow-list OR deny-list, not both):
+
+**Option A - Allow-list approach (recommended for permissive projects)**:
+```yaml
+with:
+  allow-licenses: MIT, Apache-2.0, BSD-3-Clause, BSD-2-Clause, ISC, GPL-3.0-or-later
+  # Remove deny-licenses parameter
+```
+
+**Option B - Deny-list approach (recommended for restrictive policies)**:
+```yaml
+with:
+  deny-licenses: AGPL-3.0, GPL-2.0-only, LGPL-3.0
+  # Remove allow-licenses parameter
+```
+
+**Affected Files**:
+- `{{cookiecutter.project_slug}}/.github/workflows/dependency-review.yml`
+
+**Impact**: Prevents dependency security reviews from running, which is a critical security check for detecting vulnerable dependencies in PRs.
+
+---
+
+### REUSE Compliance: GPL-3.0 Deprecated License Warning
+
+- **Priority**: Medium
+- **Category**: Configuration
+- **Discovered**: 2025-12-04
+
+**Issue**: REUSE compliance check reports "Deprecated licenses: GPL-3.0" because the license identifier format has changed in SPDX 3.x specification.
+
+**Context**: The REUSE 3.2 specification uses `GPL-3.0-or-later` or `GPL-3.0-only` instead of the deprecated `GPL-3.0` identifier.
+
+**Current**: Template likely uses `GPL-3.0` in LICENSES/ directory or REUSE.toml
+
+**Suggested Fix**: Update license identifier format:
+```toml
+# REUSE.toml (if GPL-3.0 is used)
+[[annotations]]
+path = "**"
+SPDX-FileCopyrightText = "..."
+SPDX-License-Identifier = "GPL-3.0-or-later"  # ✅ Not GPL-3.0
+```
+
+Or if using LICENSES/ directory:
+- Rename `LICENSES/GPL-3.0.txt` → `LICENSES/GPL-3.0-or-later.txt`
+- Update all file headers from `GPL-3.0` → `GPL-3.0-or-later`
+
+**Affected Files**:
+- `{{cookiecutter.project_slug}}/LICENSES/` (license files)
+- `{{cookiecutter.project_slug}}/REUSE.toml` (if using bulk annotations)
+- Any files with inline `SPDX-License-Identifier: GPL-3.0` headers
+
+**Impact**: REUSE compliance check fails, preventing PR merges if this check is required. This affects legal compliance and open-source licensing clarity.
+
+---
+
+### ClusterFuzzLite Action Not Found
+
+- **Priority**: Medium
+- **Category**: CI/CD
+- **Discovered**: 2025-12-04
+
+**Issue**: The ClusterFuzzLite continuous fuzzing workflow fails with "An action could not be found at the URI" error, suggesting the action SHA reference is invalid or the repository is inaccessible.
+
+**Context**: GitHub Actions cannot download the ClusterFuzzLite action from `google/clusterfuzzlite@f090cc7d581f82fb0e0b04f0c9e56ff7f4a24e76`
+
+**Error**:
+```
+An action could not be found at the URI 'https://api.github.com/repos/google/clusterfuzzlite/tarball/f090cc7d581f82fb0e0b04f0c9e56ff7f4a24e76'
+```
+
+**Suggested Fix**:
+
+**Option A - Update to latest stable version**:
+```yaml
+# Use latest stable tag instead of specific SHA
+- uses: google/clusterfuzzlite@v1
+```
+
+**Option B - Verify SHA is valid**:
+- Check if the SHA `f090cc7d581f82fb0e0b04f0c9e56ff7f4a24e76` exists in google/clusterfuzzlite
+- If not, update to a valid commit SHA from the main branch
+
+**Option C - Make fuzzing optional**:
+```yaml
+# Add continue-on-error for non-critical fuzzing
+- uses: google/clusterfuzzlite@v1
+  continue-on-error: true  # Don't block PR on fuzzing failures
+```
+
+**Affected Files**:
+- `{{cookiecutter.project_slug}}/.github/workflows/fuzzing.yml` (or similar)
+
+**Impact**: Prevents continuous fuzzing from running. While fuzzing is valuable for security, this shouldn't block documentation-only PRs. Consider making fuzzing non-blocking or conditional on code changes.
+
+---
+
+### Missing REUSE Copyright Headers in Generated Planning Documents
+
+- **Priority**: Low
+- **Category**: Documentation
+- **Discovered**: 2025-12-04
+
+**Issue**: Planning document placeholders in `docs/planning/` don't include REUSE-compliant copyright headers, causing REUSE compliance failures when files are first generated.
+
+**Context**: Template includes placeholder files like `docs/planning/project-vision.md`, `docs/planning/tech-spec.md`, etc. with YAML front matter but no REUSE headers. When these are generated, they fail REUSE compliance checks showing "14 files missing copyright/licensing information."
+
+**Current**: Placeholder files have only YAML front matter, no REUSE headers
+
+**Suggested Fix**: Add REUSE headers to all planning document templates:
+
+```markdown
+---
+title: "Audio Processor - Project Vision & Scope"
+schema_type: planning
+status: draft
+# SPDX-FileCopyrightText: {{cookiecutter.author_name}} <{{cookiecutter.author_email}}>
+# SPDX-License-Identifier: {{cookiecutter.license}}
+---
+```
+
+Or use bulk annotations in `.reuse/dep5`:
+```
+Files: docs/planning/*.md docs/planning/adr/*.md
+Copyright: {{cookiecutter.author_name}} <{{cookiecutter.author_email}}>
+License: {{cookiecutter.license}}
+```
+
+**Affected Files**:
+- All files in `{{cookiecutter.project_slug}}/docs/planning/`
+- `{{cookiecutter.project_slug}}/.reuse/dep5` (bulk annotation alternative)
+
+**Impact**: Low severity (doesn't block development), but causes REUSE compliance failures on first PR. Adding headers or dep5 annotations would make initial project setup cleaner.
 
 ---
 

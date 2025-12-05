@@ -68,7 +68,7 @@ def init_sentry(
     try:
         import sentry_sdk
         from sentry_sdk.integrations.logging import LoggingIntegration
-        except ImportError:
+    except ImportError:
         logger.warning(
             "Sentry SDK not installed. Install with: uv add sentry-sdk[fastapi]"
         )
