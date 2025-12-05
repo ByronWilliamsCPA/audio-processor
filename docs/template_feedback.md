@@ -309,6 +309,58 @@ outputs:
 
 ---
 
+### Pre-existing Ruff Linting Errors in Template Files
+
+- **Priority**: High
+- **Category**: Code Quality
+- **Discovered**: 2025-12-04
+
+**Issue**: Multiple template-generated Python files contain Ruff linting violations that block CI, including unused imports, commented code, timezone issues, and PyStrict rule violations.
+
+**Context**: Discovered during CI pipeline execution. Ruff check fails with 38+ linting errors across cache.py, sentry.py, and worker.py files that are generated from the template.
+
+**Errors in Template Files:**
+
+**src/{package_name}/core/sentry.py** (13 errors):
+- `F401`: Unused import `collections.abc.Callable`
+- `PLC0415` (multiple): Import statements inside functions (6 occurrences)
+- `S607`: Partial executable path in subprocess
+- `TRY300` (2x): Statements should be in else blocks
+- `S110`: try-except-pass without logging
+- `BLE001`: Blind except catching `Exception`
+- `RUF059`: Unpacked variable never used
+- `ARG001`: Unused function argument
+- `SIM102`: Nested if statements should be combined
+
+**src/{package_name}/core/cache.py** (1 error):
+- `TRY400`: Should use `logging.exception` instead of `logging.error`
+
+**src/{package_name}/jobs/worker.py** (24 errors):
+- `ARG001` (8x): Unused function arguments (ctx, body, data)
+- `DTZ003` (3x): `datetime.datetime.utcnow()` without timezone
+- `ERA001` (7x): Commented-out code
+- `TRY400`: Should use `logging.exception`
+- `RUF012` (2x): Mutable class attributes need `ClassVar` annotation
+
+**Suggested Fix**: Clean up all template files to pass Ruff checks with PyStrict-aligned rules:
+
+1. Remove unused imports
+2. Move imports to module top-level (or suppress PLC0415 for optional dependencies)
+3. Replace `datetime.utcnow()` with `datetime.now(timezone.utc)`
+4. Remove commented-out code or use proper # noqa comments
+5. Add `ClassVar` annotations to mutable class attributes
+6. Use `logging.exception()` for logging in except blocks
+7. Prefix unused args with underscore: `_ctx`, `_body`, `_data`
+
+**Affected Files**:
+- `{{cookiecutter.project_slug}}/src/{{cookiecutter.package_name}}/core/sentry.py`
+- `{{cookiecutter.project_slug}}/src/{{cookiecutter.package_name}}/core/cache.py`
+- `{{cookiecutter.project_slug}}/src/{{cookiecutter.package_name}}/jobs/worker.py`
+
+**Impact**: Blocks CI pipeline on ALL projects generated from template. Code Quality Checks fail immediately, preventing merges and blocking development workflow. This is a critical blocker affecting template usability.
+
+---
+
 ## Submitting Feedback
 
 Once you've collected feedback, you can:
