@@ -214,6 +214,31 @@ Implement core audio processing pipeline with Deepgram transcription, speaker di
 | Store status updates in Redis | 2 | ⏸️ |
 | Write tests for status tracking | 2 | ⏸️ |
 
+#### US-009: Audio Signal Conditioning Pipeline
+
+**As a** processing pipeline
+**I want** to standardize all audio to optimal ASR parameters
+**So that** transcription accuracy is maximized and API costs are minimized
+
+**Acceptance Criteria**:
+
+- [ ] Resample all audio to 16kHz using polyphase filters
+- [ ] Convert stereo to mono with energy-based channel selection
+- [ ] Apply RMS normalization to -20dBFS target
+- [ ] Implement Silero VAD to remove silence segments
+- [ ] Processing completes in < 10% of audio duration
+
+**Tasks**:
+
+| Task | Est. Hours | Status |
+|------|------------|--------|
+| Create AudioConditioner service (resampling, mono mix, RMS) | 6 | ⏸️ |
+| Integrate Silero VAD model for silence removal | 4 | ⏸️ |
+| Implement VAD timeline reconstruction | 3 | ⏸️ |
+| Add preprocessing metrics (VAD removed %, processing time) | 2 | ⏸️ |
+| Write unit tests for signal processing | 4 | ⏸️ |
+| Validate WER improvement with preprocessed audio | 3 | ⏸️ |
+
 ### Dependencies
 
 - Requires: Phase 0 complete

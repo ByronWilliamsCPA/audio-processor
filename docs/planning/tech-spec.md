@@ -37,8 +37,23 @@ FastAPI-based async audio processing service using Deepgram Nova-2 API, Redis Qu
 
 - **ASR Engine**: Deepgram SDK 3.x (Nova-2 model) - See [ADR-001](./adr/adr-001-initial-architecture.md)
 - **Queue**: Redis 7.x + RQ 1.x (job management)
-- **Media Processing**: FFmpeg 6.x (audio extraction, conversion)
-- **Audio Analysis**: librosa 0.10+ (quality assessment)
+
+### Audio Processing Stack
+
+- **Signal Processing**:
+  - **librosa 0.10+**: Polyphase resampling, SNR calculation, spectral analysis
+  - **pydub 0.25+**: High-level audio manipulation, RMS normalization, format conversion
+  - **ffmpeg-python 0.2+**: Robust codec conversion and audio extraction
+  - **soundfile 0.12+**: Audio file I/O and validation
+- **Voice Activity Detection**:
+  - **silero-vad 4.0+**: Pre-trained VAD model (CPU-efficient, no GPU required)
+- **Quality Assessment**:
+  - SNR (Signal-to-Noise Ratio) calculation
+  - Silence ratio detection
+  - Clipping detection
+  - Composite quality scoring
+
+See [ADR-002](./adr/adr-002-audio-preprocessing-pipeline.md) for audio preprocessing architecture.
 
 ### Infrastructure
 
@@ -93,9 +108,11 @@ FastAPI-based async audio processing service using Deepgram Nova-2 API, Redis Qu
 |-----------|---------|---------------|
 | **FastAPI App** | HTTP API server | Request validation, job submission, status queries |
 | **AudioProcessor** | Processing orchestrator | Pipeline coordination, progress tracking, error handling |
+| **AudioConditioner** | Signal preprocessing | Resampling (16kHz), channel mixing (mono), RMS normalization (-20dBFS) |
+| **VADProcessor** | Silence removal | Silero VAD integration, speech segment detection, timeline reconstruction |
+| **QualityAssessor** | Audio analysis | SNR calculation, silence/clipping detection, quality scoring, warning generation |
 | **DeepgramClient** | ASR API integration | Transcription, diarization, summarization via API |
-| **AudioConverter** | Media manipulation | FFmpeg wrapper for extraction, conversion, splitting |
-| **QualityAssessor** | Audio analysis | SNR calculation, silence detection, quality scoring |
+| **AudioConverter** | Media manipulation | FFmpeg wrapper for extraction, conversion, long file splitting |
 | **DOMBuilder** | Output formatting | Map speakers/utterances to Docling SectionItems/TextItems |
 | **RQ Worker** | Background processing | Async job execution, retry logic, status updates |
 
