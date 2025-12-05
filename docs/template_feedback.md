@@ -241,6 +241,74 @@ License: {{cookiecutter.license}}
 
 ---
 
+### Invalid setup-uv Action SHA in FIPS Workflow
+
+- **Priority**: High
+- **Category**: CI/CD
+- **Discovered**: 2025-12-04
+
+**Issue**: FIPS compliance workflow fails because the `astral-sh/setup-uv` action SHA reference is invalid or outdated.
+
+**Context**: GitHub Actions cannot download the setup-uv action from the specified SHA `582b2d78a0f5913301dcc87c4e93301fdd2b6711`
+
+**Error**:
+```
+An action could not be found at the URI 'https://api.github.com/repos/astral-sh/setup-uv/tarball/582b2d78a0f5913301dcc87c4e93301fdd2b6711'
+```
+
+**Suggested Fix**:
+```yaml
+# Use latest stable version tag instead of SHA
+- uses: astral-sh/setup-uv@v5  # or current latest version
+```
+
+**Affected Files**:
+- `{{cookiecutter.project_slug}}/.github/workflows/fips-compliance.yml`
+
+**Impact**: Blocks FIPS compliance checks which are important for government/healthcare deployments. This affects projects that need to validate FIPS 140-2/140-3 compatibility.
+
+---
+
+### Python Compatibility Matrix Output Format Error
+
+- **Priority**: Medium
+- **Category**: CI/CD
+- **Discovered**: 2025-12-04
+
+**Issue**: Python compatibility matrix workflow has malformed JSON output causing the build test matrix step to fail.
+
+**Context**: The "Build Test Matrix" job produces invalid JSON output that cannot be parsed by subsequent steps.
+
+**Error**:
+```
+##[error]Invalid format '  "python": ['
+jq: parse error: Unfinished JSON term at EOF at line 2, column 0
+```
+
+**Suggested Fix**: Review the matrix generation script to ensure it produces valid JSON:
+
+```yaml
+# Ensure proper JSON array formatting
+outputs:
+  matrix: ${{ steps.set-matrix.outputs.matrix }}
+
+# In the step that sets matrix:
+- id: set-matrix
+  run: |
+    MATRIX=$(jq -n '{
+      "python": ["3.11", "3.12", "3.13"],
+      "os": ["ubuntu-latest", "windows-latest", "macos-latest"]
+    }')
+    echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+```
+
+**Affected Files**:
+- `{{cookiecutter.project_slug}}/.github/workflows/python-compatibility.yml` (or similar)
+
+**Impact**: Prevents multi-Python version testing which is valuable for validating broad compatibility. Not critical for single-version projects but important for libraries.
+
+---
+
 ## Submitting Feedback
 
 Once you've collected feedback, you can:
