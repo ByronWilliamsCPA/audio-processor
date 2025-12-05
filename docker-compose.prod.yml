@@ -1,0 +1,55 @@
+# Production overrides for docker-compose.yml
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+version: '3.9'
+
+services:
+  app:
+    # Production image (pre-built)
+    # image: ghcr.io/ByronWilliamsCPA/audio_processor:${VERSION:-latest}
+
+    # Don't mount source code in production
+    volumes: []
+
+    environment:
+      ENVIRONMENT: production
+      JSON_LOGS: "true"
+      LOG_LEVEL: ${LOG_LEVEL:-WARNING}
+
+    # Production replicas (for load balancing)
+    deploy:
+      replicas: ${REPLICAS:-2}
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        order: start-first
+
+# =============================================================================
+# Production Usage
+# =============================================================================
+# 1. Set environment variables in .env file or export them:
+#    export DB_PASSWORD=secure-production-password
+#    export SENTRY_DSN=your-sentry-dsn
+#    export VERSION=v1.0.0
+#
+# 2. Start services:
+#    docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# 3. Scale application:
+#    docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --scale app=3
+#
+# 4. Monitor:
+#    docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs -f

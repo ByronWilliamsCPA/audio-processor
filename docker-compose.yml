@@ -1,0 +1,113 @@
+# Docker Compose configuration for Audio Processor
+# Development and production-ready setup with common services
+
+version: '3.9'
+
+services:
+  # =============================================================================
+  # Application Service
+  # =============================================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILD_ENV: ${ENVIRONMENT:-development}
+    image: audio_processor:${VERSION:-latest}
+    container_name: audio_processor-app
+    environment:
+      # Core settings
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      JSON_LOGS: ${JSON_LOGS:-false}
+
+      # Redis cache (if applicable)
+      # REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+
+      # Sentry (error tracking)
+      # SENTRY_DSN: ${SENTRY_DSN:-}
+      # SENTRY_ENVIRONMENT: ${ENVIRONMENT:-development}
+
+      # Google Cloud credentials (if using Assured OSS)
+      # GOOGLE_APPLICATION_CREDENTIALS_B64: ${GOOGLE_APPLICATION_CREDENTIALS_B64:-}
+      # GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+
+    volumes:
+      # Development: Mount source code for hot reload
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      # Logs (optional)
+      # - ./logs:/app/logs
+
+    restart: unless-stopped
+
+    # Security: Run as non-root user
+    user: "1000:1000"
+
+    networks:
+      - audio_processor-network
+
+# =============================================================================
+  # Redis Service (Caching/Sessions)
+  # =============================================================================
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: audio_processor-redis
+  #   command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redispassword}
+  #
+  #   volumes:
+  #     - redis-data:/data
+  #
+  #   ports:
+  #     - "${REDIS_PORT:-6379}:6379"
+  #
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 5
+  #
+  #   restart: unless-stopped
+  #
+  #   networks:
+  #     - audio_processor-network
+
+# =============================================================================
+# Volumes (Persistent Storage)
+# =============================================================================
+volumes:
+# redis-data:
+  #   driver: local
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  audio_processor-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+
+# =============================================================================
+# Usage Instructions
+# =============================================================================
+# Development:
+#   docker-compose up -d
+#   docker-compose logs -f app
+#   docker-compose exec app bash
+#
+# Production:
+#   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Rebuild after dependency changes:
+#   docker-compose up -d --build
+#
+# View logs:
+#   docker-compose logs -f
+#
+# Stop services:
+#   docker-compose down
+#
+# Clean up (including volumes):
+#   docker-compose down -v
