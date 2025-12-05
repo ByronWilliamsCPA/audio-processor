@@ -109,15 +109,15 @@ def init_sentry(
         attach_stacktrace=True,  # Include stack traces in messages
         send_default_pii=False,  # Don't send PII by default (GDPR compliance)
         # Custom options
-        before_send=before_send_hook,
+        before_send=before_send_hook,  # type: ignore[arg-type]
         before_breadcrumb=before_breadcrumb_hook,
     )
 
     logger.info(
         "sentry_initialized",
-        environment=environment,
-        release=release,
-        traces_sample_rate=traces_sample_rate,
+        environment=environment,  # type: ignore[call-arg]
+        release=release,  # type: ignore[call-arg]
+        traces_sample_rate=traces_sample_rate,  # type: ignore[call-arg]
     )
 
 
@@ -139,10 +139,10 @@ def _get_release_version() -> str:
             .decode()
             .strip()
         )
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        pass
-    else:
         return f"audio_processor@{sha}"
+    except Exception:  # noqa: BLE001
+        # Handles both subprocess.CalledProcessError and FileNotFoundError
+        pass
 
     # Fallback to package version
     try:
