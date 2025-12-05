@@ -19,12 +19,10 @@ Reference:
 
 from __future__ import annotations
 
+import contextlib
 import sys
 
 import atheris
-
-# Import the module functions you want to fuzz
-# from audio_processor.validation import validate_input
 
 
 def test_one_input(data: bytes) -> None:
@@ -41,17 +39,9 @@ def test_one_input(data: bytes) -> None:
     fdp = atheris.FuzzedDataProvider(data)
 
     # Example: Fuzz string input validation
-    try:
-        test_string = fdp.ConsumeUnicodeNoSurrogates(1024)
-        # Call your validation function here
-        # result = validate_input(test_string)
-
-        # Example assertions (uncomment when you have real validation)
-        # assert result is not None
-
-    except (ValueError, TypeError):
-        # Expected exceptions for invalid input
-        pass
+    with contextlib.suppress(ValueError, TypeError):
+        _ = fdp.ConsumeUnicodeNoSurrogates(1024)
+        # Call your validation function here when implemented
 
 
 def main() -> None:

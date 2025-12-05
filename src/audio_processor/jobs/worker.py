@@ -31,8 +31,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from arq import cron
 from arq.connections import RedisSettings
@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 
 async def example_background_task(
-    ctx: dict[str, Any], user_id: str, data: dict
+    ctx: dict[str, Any], user_id: str, _data: dict
 ) -> dict:
     """Example background task.
 
@@ -75,15 +75,15 @@ async def example_background_task(
     return {
         "status": "success",
         "user_id": user_id,
-        "processed_at": datetime.utcnow().isoformat(),
+        "processed_at": datetime.now(UTC).isoformat(),
     }
 
 
 async def send_email_task(
-    ctx: dict[str, Any],
+    _ctx: dict[str, Any],
     recipient: str,
     subject: str,
-    body: str,
+    _body: str,
 ) -> dict:
     """Send email asynchronously.
 
@@ -100,19 +100,18 @@ async def send_email_task(
 
     # TODO: Integrate with your email provider
     # Example with SendGrid, AWS SES, etc.
-    # await send_email_via_provider(recipient, subject, body)
 
     await asyncio.sleep(1)  # Simulate email sending
 
     return {
         "status": "sent",
         "recipient": recipient,
-        "sent_at": datetime.utcnow().isoformat(),
+        "sent_at": datetime.now(UTC).isoformat(),
     }
 
 
 async def process_file_upload(
-    ctx: dict[str, Any],
+    _ctx: dict[str, Any],
     file_id: str,
     file_path: str,
 ) -> dict:
@@ -130,25 +129,22 @@ async def process_file_upload(
 
     try:
         # Example: Read and process file
-        # with open(file_path, 'rb') as f:
-        #     data = f.read()
-        #     # Process data...
 
         await asyncio.sleep(3)  # Simulate processing
 
         return {
             "status": "completed",
             "file_id": file_id,
-            "processed_at": datetime.utcnow().isoformat(),
+            "processed_at": datetime.now(UTC).isoformat(),
             "records_processed": 1000,
         }
 
-    except Exception as e:
-        logger.error("file_processing_failed", file_id=file_id, error=str(e))
+    except Exception:
+        logger.exception("file_processing_failed", file_id=file_id)
         raise
 
 
-async def cleanup_old_data(ctx: dict[str, Any]) -> int:
+async def cleanup_old_data(_ctx: dict[str, Any]) -> int:
     """Scheduled task to clean up old data.
 
     This runs daily via cron schedule defined in WorkerSettings.
@@ -162,9 +158,6 @@ async def cleanup_old_data(ctx: dict[str, Any]) -> int:
     logger.info("cleanup_task_started")
 
     # Example: Delete old records
-    # deleted = await db.execute(
-    #     delete(Table).where(Table.created_at < datetime.utcnow() - timedelta(days=90))
-    # )
 
     deleted_count = 0  # Placeholder
     logger.info("cleanup_task_completed", deleted=deleted_count)
@@ -177,7 +170,7 @@ async def cleanup_old_data(ctx: dict[str, Any]) -> int:
 # =============================================================================
 
 
-async def startup(ctx: dict[str, Any]) -> None:
+async def startup(_ctx: dict[str, Any]) -> None:
     """Worker startup hook.
 
     Runs once when the worker starts.
@@ -188,14 +181,10 @@ async def startup(ctx: dict[str, Any]) -> None:
     """
     logger.info("arq_worker_starting")
 
-    # Example: Initialize database connection
-    # ctx['db'] = await create_db_connection()
-
-    # Example: Load configuration
-    # ctx['config'] = load_config()
+    # Example: Initialize database connection or load configuration
 
 
-async def shutdown(ctx: dict[str, Any]) -> None:
+async def shutdown(_ctx: dict[str, Any]) -> None:
     """Worker shutdown hook.
 
     Runs once when the worker shuts down gracefully.
@@ -206,9 +195,7 @@ async def shutdown(ctx: dict[str, Any]) -> None:
     """
     logger.info("arq_worker_shutting_down")
 
-    # Example: Close database connection
-    # if 'db' in ctx:
-    #     await ctx['db'].close()
+    # Example: Close database connection if needed
 
 
 # =============================================================================
@@ -223,14 +210,14 @@ class WorkerSettings:
     """
 
     # Task functions to register
-    functions = [
+    functions: ClassVar = [
         example_background_task,
         send_email_task,
         process_file_upload,
     ]
 
     # Scheduled tasks (cron)
-    cron_jobs = [
+    cron_jobs: ClassVar = [
         cron(cleanup_old_data, hour=2, minute=0),  # Run daily at 2 AM
     ]
 

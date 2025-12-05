@@ -30,14 +30,14 @@ import functools
 import hashlib
 import json
 import logging
-from collections.abc import Callable
+import os
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from redis.asyncio import Redis, from_url
 from redis.exceptions import RedisError
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable
+    from collections.abc import Awaitable, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -63,12 +63,10 @@ async def get_redis() -> Redis:
         >>> await redis.set("key", "value", ex=60)
         >>> value = await redis.get("key")
     """
-    global _redis_pool
+    global _redis_pool  # noqa: PLW0603
 
     if _redis_pool is None:
         # Get Redis URL from environment
-        import os
-
         redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
         _redis_pool = from_url(
@@ -92,7 +90,7 @@ async def close_redis() -> None:
 
     Call this on application shutdown.
     """
-    global _redis_pool
+    global _redis_pool  # noqa: PLW0603
 
     if _redis_pool is not None:
         await _redis_pool.close()
@@ -168,8 +166,7 @@ def cached(
                     json.dumps(result, default=str),
                 )
 
-                return result
-
+                return result  # noqa: TRY300
             except RedisError as e:
                 # If Redis is unavailable, gracefully degrade (call function directly)
                 logger.warning("cache_error", error=str(e), key=cache_key)
@@ -260,8 +257,7 @@ async def set_cached(key: str, value: Any, ttl: int = 3600) -> bool:
     try:
         redis = await get_redis()
         await redis.setex(key, ttl, json.dumps(value, default=str))
-        return True
-
+        return True  # noqa: TRY300
     except RedisError as e:
         logger.warning("cache_set_failed", key=key, error=str(e))
         return False
@@ -279,8 +275,7 @@ async def delete_cached(key: str) -> bool:
     try:
         redis = await get_redis()
         deleted = await redis.delete(key)
-        return deleted > 0
-
+        return deleted > 0  # noqa: TRY300
     except RedisError as e:
         logger.warning("cache_delete_failed", key=key, error=str(e))
         return False
@@ -306,9 +301,7 @@ async def invalidate_pattern(pattern: str) -> int:
         redis = await get_redis()
 
         # Find all matching keys
-        keys = []
-        async for key in redis.scan_iter(match=pattern, count=100):
-            keys.append(key)
+        keys = [key async for key in redis.scan_iter(match=pattern, count=100)]
 
         # Delete in batches
         if keys:
@@ -316,10 +309,9 @@ async def invalidate_pattern(pattern: str) -> int:
             logger.info("cache_invalidated", pattern=pattern, count=deleted)
             return deleted
 
-        return 0
-
+        return 0  # noqa: TRY300
     except RedisError as e:
-        logger.error("cache_invalidation_failed", pattern=pattern, error=str(e))
+        logger.exception("cache_invalidation_failed", pattern=pattern, error=str(e))
         return 0
 
 
@@ -367,10 +359,9 @@ async def warm_cache(
         await redis.setex(key, ttl, json.dumps(value, default=str))
 
         logger.info("cache_warmed", key=key, ttl=ttl)
-        return True
-
+        return True  # noqa: TRY300
     except RedisError as e:
-        logger.error("cache_warming_failed", key=key, error=str(e))
+        logger.exception("cache_warming_failed", key=key, error=str(e))
         return False
 
 
@@ -450,5 +441,5 @@ async def get_cache_stats() -> dict[str, Any]:
         }
 
     except RedisError as e:
-        logger.error("cache_stats_failed", error=str(e))
+        logger.exception("cache_stats_failed", error=str(e))
         return {"error": str(e)}

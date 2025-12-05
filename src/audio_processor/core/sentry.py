@@ -25,10 +25,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -66,8 +63,8 @@ def init_sentry(
         ... )
     """
     try:
-        import sentry_sdk
-        from sentry_sdk.integrations.logging import LoggingIntegration
+        import sentry_sdk  # noqa: PLC0415
+        from sentry_sdk.integrations.logging import LoggingIntegration  # noqa: PLC0415
     except ImportError:
         logger.warning(
             "Sentry SDK not installed. Install with: uv add sentry-sdk[fastapi]"
@@ -132,28 +129,30 @@ def _get_release_version() -> str:
     """
     # Try to get git SHA
     try:
-        import subprocess
+        import subprocess  # noqa: PLC0415
 
         sha = (
             subprocess.check_output(
-                ["git", "rev-parse", "--short", "HEAD"],
+                ["git", "rev-parse", "--short", "HEAD"],  # noqa: S607
                 stderr=subprocess.DEVNULL,
             )
             .decode()
             .strip()
         )
-        return f"audio_processor@{sha}"
     except (subprocess.CalledProcessError, FileNotFoundError):
         pass
+    else:
+        return f"audio_processor@{sha}"
 
     # Fallback to package version
     try:
-        from importlib.metadata import version
+        from importlib.metadata import version  # noqa: PLC0415
 
         pkg_version = version("audio-processor")
-        return f"audio_processor@{pkg_version}"
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
+    else:
+        return f"audio_processor@{pkg_version}"
 
     # Ultimate fallback
     return "audio_processor@0.1.0"
@@ -179,7 +178,7 @@ def before_send_hook(
     """
     # Example: Filter out specific exceptions
     if "exc_info" in hint:
-        exc_type, exc_value, _tb = hint["exc_info"]
+        exc_type, _exc_value, _tb = hint["exc_info"]
 
         # Don't send certain exception types
         if exc_type.__name__ in ("KeyboardInterrupt", "SystemExit"):
@@ -200,7 +199,8 @@ def before_send_hook(
 
 
 def before_breadcrumb_hook(
-    crumb: dict[str, Any], hint: dict[str, Any]
+    crumb: dict[str, Any],
+    hint: dict[str, Any],  # noqa: ARG001
 ) -> dict[str, Any] | None:
     """Filter and modify breadcrumbs before adding to events.
 
@@ -214,9 +214,12 @@ def before_breadcrumb_hook(
         Modified breadcrumb dictionary, or None to drop the breadcrumb
     """
     # Example: Don't include query parameters in HTTP breadcrumbs
-    if crumb.get("category") == "httplib":
-        if "data" in crumb and "query" in crumb["data"]:
-            crumb["data"]["query"] = "[FILTERED]"
+    if (
+        crumb.get("category") == "httplib"
+        and "data" in crumb
+        and "query" in crumb["data"]
+    ):
+        crumb["data"]["query"] = "[FILTERED]"
 
     return crumb
 
@@ -247,7 +250,7 @@ def capture_exception(
         ...     )
     """
     try:
-        import sentry_sdk
+        import sentry_sdk  # noqa: PLC0415
     except ImportError:
         logger.warning("Sentry SDK not installed")
         return
@@ -292,7 +295,7 @@ def capture_message(
         ... )
     """
     try:
-        import sentry_sdk
+        import sentry_sdk  # noqa: PLC0415
     except ImportError:
         logger.warning("Sentry SDK not installed")
         return
@@ -335,7 +338,7 @@ def set_user_context(
         ... )
     """
     try:
-        import sentry_sdk
+        import sentry_sdk  # noqa: PLC0415
     except ImportError:
         return
 
@@ -375,7 +378,7 @@ def add_breadcrumb(
         ... )
     """
     try:
-        import sentry_sdk
+        import sentry_sdk  # noqa: PLC0415
     except ImportError:
         return
 
