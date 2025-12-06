@@ -155,7 +155,8 @@ secrets*.json
 # Project-Specific
 # =============================================================================
 # Add project-specific files to ignore
-README.md
+# NOTE: README.md is required by pyproject.toml for package metadata
+# README.md  # REMOVED - needed for build
 LICENSE
 CHANGELOG.md
 CONTRIBUTING.md
