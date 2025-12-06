@@ -270,41 +270,48 @@ An action could not be found at the URI 'https://api.github.com/repos/astral-sh/
 
 ### Python Compatibility Matrix Output Format Error
 
-- **Priority**: Medium
-- **Category**: CI/CD
+- **Priority**: High
+- **Category**: CI/CD (Reusable Workflow)
 - **Discovered**: 2025-12-04
+- **Updated**: 2025-12-06
 
-**Issue**: Python compatibility matrix workflow has malformed JSON output causing the build test matrix step to fail.
+**Issue**: Python compatibility matrix workflow fails in the "Build Test Matrix" step with malformed JSON output from the reusable workflow.
 
-**Context**: The "Build Test Matrix" job produces invalid JSON output that cannot be parsed by subsequent steps.
+**Context**: The local workflow calls `ByronWilliamsCPA/.github/.github/workflows/python-compatibility.yml@main` which produces invalid JSON in the matrix output step.
 
 **Error**:
 ```
+##[error]Unable to process file command 'output' successfully.
 ##[error]Invalid format '  "python": ['
 jq: parse error: Unfinished JSON term at EOF at line 2, column 0
 ```
 
-**Suggested Fix**: Review the matrix generation script to ensure it produces valid JSON:
+**Root Cause**: Issue is in the **org-level reusable workflow** (`ByronWilliamsCPA/.github`), not the project-level template. The matrix generation logic in the reusable workflow has malformed JSON output.
+
+**Suggested Fix**: Fix the reusable workflow at `ByronWilliamsCPA/.github/.github/workflows/python-compatibility.yml`:
 
 ```yaml
-# Ensure proper JSON array formatting
-outputs:
-  matrix: ${{ steps.set-matrix.outputs.matrix }}
-
-# In the step that sets matrix:
+# Ensure proper JSON array formatting in GITHUB_OUTPUT
 - id: set-matrix
   run: |
-    MATRIX=$(jq -n '{
-      "python": ["3.11", "3.12", "3.13"],
-      "os": ["ubuntu-latest", "windows-latest", "macos-latest"]
-    }')
+    # Generate valid JSON without line breaks or invalid formatting
+    MATRIX=$(jq -nc --arg pythons "${{ inputs.python-versions }}" \
+                     --arg oses "${{ inputs.operating-systems }}" \
+      '{
+        python: ($pythons | fromjson),
+        os: ($oses | fromjson)
+      }')
     echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
 ```
 
 **Affected Files**:
-- `{{cookiecutter.project_slug}}/.github/workflows/python-compatibility.yml` (or similar)
 
-**Impact**: Prevents multi-Python version testing which is valuable for validating broad compatibility. Not critical for single-version projects but important for libraries.
+- `ByronWilliamsCPA/.github/.github/workflows/python-compatibility.yml` (org-level reusable workflow)
+- Projects calling this workflow will fail until fixed upstream
+
+**Impact**: Prevents multi-Python version testing for ALL projects using the org-level reusable workflow. This is a critical blocker affecting the entire organization's CI infrastructure, not just template-generated projects.
+
+**Workaround**: Until fixed, disable or skip python-compatibility workflow in project CI.
 
 ---
 
