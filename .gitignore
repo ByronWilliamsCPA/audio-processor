@@ -291,3 +291,6 @@ tmp_cleanup/.tmp-*
 .qlty/out/
 .qlty/plugin_cachedir/
 .qlty/results/
+
+
+docs/template_feedback.md

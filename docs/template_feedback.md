@@ -368,6 +368,71 @@ jq: parse error: Unfinished JSON term at EOF at line 2, column 0
 
 ---
 
+### Organization Reusable Workflows Experiencing startup_failure
+
+- **Priority**: Critical
+- **Category**: CI/CD (Organization Workflows)
+- **Discovered**: 2025-12-06
+
+**Issue**: Multiple organization-level reusable workflows are experiencing `startup_failure` errors, preventing CI checks from running on ALL projects that use them.
+
+**Context**: During PR CI pipeline execution, three critical org-level workflows fail with `startup_failure` status before any jobs can start:
+
+1. **Security Analysis** (`python-security-analysis.yml@main`) - ID: 19984575923
+2. **SBOM & Security Scan** (`python-sbom.yml@main`) - ID: 19984575931
+3. **PR Validation** (`python-pr-validation.yml@main`) - ID: 19984575936
+
+**Error Symptoms**:
+
+- Workflow status: `startup_failure`
+- No logs available (`gh run view <id> --log` returns "log not found")
+- Workflows fail before any jobs execute
+- All recent runs show same failure pattern
+
+**Affected Workflows in ByronWilliamsCPA/.github**:
+- `.github/workflows/python-security-analysis.yml`
+- `.github/workflows/python-sbom.yml`
+- `.github/workflows/python-pr-validation.yml`
+
+**Calling Pattern** (from project workflows):
+
+```yaml
+jobs:
+  security:
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-security-analysis.yml@main
+    with:
+      source-directory: 'src'
+      python-version: '3.12'
+      # ... other inputs
+```
+
+**Possible Causes**:
+
+1. **Syntax error** in the reusable workflow YAML
+2. **Invalid action reference** within the workflow
+3. **Missing required secrets/inputs** not properly defined
+4. **Recent breaking change** to workflow syntax or GitHub Actions runtime
+
+**Suggested Investigation Steps**:
+
+1. Validate YAML syntax in all three org workflows
+2. Check for invalid action references (wrong SHAs, deprecated actions)
+3. Verify `workflow_call` input definitions match what callers provide
+4. Check GitHub Actions status page for platform issues
+5. Review recent commits to org workflows for breaking changes
+
+**Impact**: CRITICAL - Blocks all security scanning, SBOM generation, and PR validation for ALL projects in the organization. This affects:
+
+- Security vulnerability detection
+- Dependency scanning
+- License compliance
+- PR quality checks
+- Conventional commit enforcement
+
+**Workaround**: Projects cannot fix this locally as the issue is in org-level reusable workflows. Must be fixed in `ByronWilliamsCPA/.github` repository.
+
+---
+
 ## Submitting Feedback
 
 Once you've collected feedback, you can:

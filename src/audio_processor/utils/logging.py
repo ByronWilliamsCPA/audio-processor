@@ -16,7 +16,7 @@ configuration.
 
 import logging
 import sys
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import structlog
 from rich.console import Console
@@ -158,7 +158,7 @@ def get_logger(name: str) -> BoundLogger:
     """
     # Cast to BoundLogger for type checking - structlog.get_logger returns
     # a BoundLogger when configured with stdlib LoggerFactory
-    return structlog.get_logger(name)  # type: ignore[return-value]  # pyright: ignore[reportAny,reportReturnType]
+    return cast(BoundLogger, structlog.get_logger(name))
 
 
 def log_performance(
@@ -232,5 +232,5 @@ if __name__ == "__main__":
 
     try:
         _raise_example_error()
-    except Exception:
+    except ValueError:  # Narrow exception to expected type
         logger.exception("Unexpected error during processing")
