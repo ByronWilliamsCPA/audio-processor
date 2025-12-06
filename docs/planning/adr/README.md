@@ -4,6 +4,8 @@ schema_type: planning
 status: published
 owner: core-maintainer
 purpose: "Index and documentation for Architecture Decision Records."
+component: Context
+source: "Generated from project planning workflow"
 tags:
   - planning
   - architecture
@@ -83,5 +85,4 @@ See `.claude/skills/project-planning/templates/adr-template.md` for the full tem
 
 ## More Information
 
-- [Document Guide](../.claude/skills/project-planning/reference/document-guide.md)
-- [Prompting Patterns](../.claude/skills/project-planning/reference/prompting-patterns.md)
+See the project planning skill documentation in `.claude/skills/project-planning/reference/` for detailed guidance on creating and maintaining ADRs.

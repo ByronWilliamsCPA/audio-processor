@@ -25,7 +25,19 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Any
+
+    # Sentry types - opaque dicts from Sentry SDK, we manipulate them
+    # Using Any is appropriate since these are external SDK types
+    SentryEvent = dict[str, Any]  # pyright: ignore[reportExplicitAny]
+    SentryHint = dict[str, Any]  # pyright: ignore[reportExplicitAny]
+    SentryBreadcrumb = dict[str, Any]  # pyright: ignore[reportExplicitAny]
+    SentryIntegration = object
+    # Type for extra context data passed to Sentry
+    SentryExtra = dict[str, str | int | float | bool | None]
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +97,7 @@ def init_sentry(
     release = release or os.getenv("SENTRY_RELEASE") or _get_release_version()
 
     # Configure integrations
-    integrations: list[Any] = [
+    integrations: list[SentryIntegration] = [
         # Logging integration - capture log messages as breadcrumbs
         LoggingIntegration(
             level=logging.INFO,  # Capture INFO and above
@@ -158,9 +170,7 @@ def _get_release_version() -> str:
     return "audio_processor@0.1.0"
 
 
-def before_send_hook(
-    event: dict[str, Any], hint: dict[str, Any]
-) -> dict[str, Any] | None:
+def before_send_hook(event: SentryEvent, hint: SentryHint) -> SentryEvent | None:
     """Filter and modify events before sending to Sentry.
 
     This hook allows you to:
@@ -177,31 +187,33 @@ def before_send_hook(
         Modified event dictionary, or None to drop the event
     """
     # Example: Filter out specific exceptions
-    if "exc_info" in hint:
-        exc_type, _exc_value, _tb = hint["exc_info"]
+    # Sentry SDK provides exc_info - using Any types is appropriate here
+    if "exc_info" in hint:  # pyright: ignore[reportAny]
+        exc_type, _exc_value, _tb = hint["exc_info"]  # pyright: ignore[reportAny, reportUnknownVariableType]
 
         # Don't send certain exception types
-        if exc_type.__name__ in ("KeyboardInterrupt", "SystemExit"):
+        if exc_type.__name__ in ("KeyboardInterrupt", "SystemExit"):  # pyright: ignore[reportAny, reportUnknownMemberType]
             return None
 
     # Example: Scrub sensitive data from request bodies
-    if "request" in event:
-        request = event["request"]
-        if "data" in request:
+    # Sentry event structure uses Any - this is expected
+    if "request" in event:  # pyright: ignore[reportAny]
+        request = event["request"]  # pyright: ignore[reportAny]
+        if "data" in request:  # pyright: ignore[reportAny]
             # Remove sensitive fields
             sensitive_fields = {"password", "token", "api_key", "secret"}
-            if isinstance(request["data"], dict):
+            if isinstance(request["data"], dict):  # pyright: ignore[reportAny]
                 for field in sensitive_fields:
-                    if field in request["data"]:
-                        request["data"][field] = "[REDACTED]"
+                    if field in request["data"]:  # pyright: ignore[reportAny]
+                        request["data"][field] = "[REDACTED]"  # pyright: ignore[reportAny]
 
     return event
 
 
 def before_breadcrumb_hook(
-    crumb: dict[str, Any],
-    hint: dict[str, Any],  # noqa: ARG001
-) -> dict[str, Any] | None:
+    crumb: SentryBreadcrumb,
+    hint: SentryHint,  # noqa: ARG001
+) -> SentryBreadcrumb | None:
     """Filter and modify breadcrumbs before adding to events.
 
     Breadcrumbs are actions/events leading up to an error.
@@ -214,12 +226,13 @@ def before_breadcrumb_hook(
         Modified breadcrumb dictionary, or None to drop the breadcrumb
     """
     # Example: Don't include query parameters in HTTP breadcrumbs
+    # Sentry breadcrumb structure uses Any - this is expected
     if (
-        crumb.get("category") == "httplib"
-        and "data" in crumb
-        and "query" in crumb["data"]
+        crumb.get("category") == "httplib"  # pyright: ignore[reportAny]
+        and "data" in crumb  # pyright: ignore[reportAny]
+        and "query" in crumb["data"]  # pyright: ignore[reportAny]
     ):
-        crumb["data"]["query"] = "[FILTERED]"
+        crumb["data"]["query"] = "[FILTERED]"  # pyright: ignore[reportAny]
 
     return crumb
 
@@ -229,7 +242,7 @@ def capture_exception(
     *,
     level: str = "error",
     tags: dict[str, str] | None = None,
-    extra: dict[str, Any] | None = None,
+    extra: SentryExtra | None = None,
 ) -> None:
     """Manually capture an exception to Sentry with additional context.
 
@@ -264,7 +277,7 @@ def capture_exception(
 
         if extra:
             for key, value in extra.items():
-                scope.set_extra(key, value)
+                scope.set_extra(key, value)  # pyright: ignore[reportAny]
 
         sentry_sdk.capture_exception(exception)
 
@@ -274,7 +287,7 @@ def capture_message(
     *,
     level: str = "info",
     tags: dict[str, str] | None = None,
-    extra: dict[str, Any] | None = None,
+    extra: SentryExtra | None = None,
 ) -> None:
     """Capture a message (not an exception) to Sentry.
 
@@ -309,7 +322,7 @@ def capture_message(
 
         if extra:
             for key, value in extra.items():
-                scope.set_extra(key, value)
+                scope.set_extra(key, value)  # pyright: ignore[reportAny]
 
         sentry_sdk.capture_message(message)
 
@@ -318,7 +331,7 @@ def set_user_context(
     user_id: str | None = None,
     email: str | None = None,
     username: str | None = None,
-    **kwargs: Any,
+    **kwargs: str | int | float | bool | None,
 ) -> None:
     """Set user context for error tracking.
 
@@ -342,23 +355,23 @@ def set_user_context(
     except ImportError:
         return
 
-    user_data = {}
+    user_data: dict[str, str | int | float | bool | None] = {}
     if user_id:
         user_data["id"] = user_id
     if email:
         user_data["email"] = email
     if username:
         user_data["username"] = username
-    user_data.update(kwargs)
+    user_data.update(kwargs)  # pyright: ignore[reportUnknownMemberType]
 
-    sentry_sdk.set_user(user_data)
+    sentry_sdk.set_user(user_data)  # pyright: ignore[reportUnknownArgumentType]
 
 
 def add_breadcrumb(
     message: str,
     category: str = "custom",
     level: str = "info",
-    data: dict[str, Any] | None = None,
+    data: SentryExtra | None = None,
 ) -> None:
     """Add a breadcrumb (event leading up to an error).
 

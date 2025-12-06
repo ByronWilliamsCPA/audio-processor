@@ -6,7 +6,6 @@ owner: core-maintainer
 purpose: "Detailed sprint breakdown for Phase 2 Integration with 3-4 hour increments."
 tags:
   - planning
-  - phase_plan
 component: Development-Tools
 source: "Derived from roadmap.md Phase 2"
 ---
@@ -15,7 +14,6 @@ SPDX-FileCopyrightText: 2025 Byron Williams <byron@williamshome.family>
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# Phase 2: Integration - Detailed Plan
 
 > **Branch**: `feat/phase-2-integration`
 > **Duration**: Weeks 3-4 (~37 hours across 10 sprints)

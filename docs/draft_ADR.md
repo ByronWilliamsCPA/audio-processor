@@ -1,4 +1,13 @@
-# Project E
+---
+title: "Project E - Audio Preprocessing Engine - Architecture Decision Records"
+schema_type: common
+status: draft
+owner: core-maintainer
+purpose: "Draft ADR document for Project E audio preprocessing engine."
+tags:
+  - research
+  - architecture
+---
 
 ## Audio Preprocessing Engine
 

@@ -5,7 +5,7 @@ status: published
 owner: core-maintainer
 purpose: "Development roadmap for Audio Processor."
 tags:
-  - project
+  - documentation
   - roadmap
 ---
 

@@ -1,4 +1,12 @@
-# **Architecting High-Fidelity Audio Ingestion Engines for RAG: A Docling-Centric Analysis**
+---
+title: "Architecting High-Fidelity Audio Ingestion Engines for RAG: A Docling-Centric Analysis"
+schema_type: common
+status: draft
+owner: core-maintainer
+purpose: "Technical analysis of audio preprocessing for RAG systems using Docling framework."
+tags:
+  - research
+---
 
 ## **1\. Introduction: The Imperative of Multimodal Retrieval-Augmented Generation**
 

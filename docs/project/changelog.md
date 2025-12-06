@@ -5,7 +5,7 @@ status: published
 owner: core-maintainer
 purpose: "Changelog for Audio Processor."
 tags:
-  - project
+  - documentation
   - changelog
 ---
 

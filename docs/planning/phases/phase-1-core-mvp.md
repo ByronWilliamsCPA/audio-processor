@@ -6,7 +6,6 @@ owner: core-maintainer
 purpose: "Detailed sprint breakdown for Phase 1 Core MVP with 3-4 hour increments."
 tags:
   - planning
-  - phase_plan
 component: Development-Tools
 source: "Derived from roadmap.md Phase 1"
 ---
@@ -15,7 +14,6 @@ SPDX-FileCopyrightText: 2025 Byron Williams <byron@williamshome.family>
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# Phase 1: Core MVP - Detailed Plan
 
 > **Branch**: `feat/phase-1-core-mvp`
 > **Duration**: Weeks 2-3 (~88 hours across 22 sprints)

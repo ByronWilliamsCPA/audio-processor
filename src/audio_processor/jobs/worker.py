@@ -40,6 +40,12 @@ from arq.connections import RedisSettings
 if TYPE_CHECKING:
     from arq.connections import ArqRedis
 
+    # Type aliases for ARQ job system
+    # ARQ context contains redis connection, job_id, etc.
+    JobContext = dict[str, object]
+    # Job result is a dict with task output
+    JobResult = dict[str, str | int | float | bool | None]
+
 logger = logging.getLogger(__name__)
 
 
@@ -49,17 +55,17 @@ logger = logging.getLogger(__name__)
 
 
 async def example_background_task(
-    ctx: dict[str, Any], user_id: str, _data: dict
-) -> dict:
+    ctx: JobContext, user_id: str, _data: dict[str, object]
+) -> JobResult:
     """Example background task.
 
     Args:
         ctx: ARQ context (contains redis connection, job_id, etc.)
         user_id: User identifier
-        data: Task data
+        _data: Task data (unused in this example).
 
     Returns:
-        Result dictionary
+        Result dictionary with task status and user_id.
     """
     logger.info("background_task_started", user_id=user_id, job_id=ctx.get("job_id"))  # type: ignore[call-arg]
 
@@ -67,7 +73,7 @@ async def example_background_task(
     await asyncio.sleep(2)
 
     # Access Redis for storing results
-    redis: ArqRedis = ctx["redis"]
+    redis: ArqRedis = ctx["redis"]  # pyright: ignore[reportAssignmentType]
     await redis.set(f"task_result:{user_id}", "completed", expire=3600)  # type: ignore[call-arg]
 
     logger.info("background_task_completed", user_id=user_id)  # type: ignore[call-arg]
@@ -80,11 +86,11 @@ async def example_background_task(
 
 
 async def send_email_task(
-    ctx: dict[str, Any],  # noqa: ARG001
+    ctx: JobContext,  # noqa: ARG001
     recipient: str,
     subject: str,
     body: str,  # noqa: ARG001
-) -> dict:
+) -> JobResult:
     """Send email asynchronously.
 
     Args:
@@ -98,8 +104,13 @@ async def send_email_task(
     """
     logger.info("sending_email", recipient=recipient, subject=subject)  # type: ignore[call-arg]
 
-    # TODO: Integrate with your email provider
-    # Example with SendGrid, AWS SES, etc.
+    # NOTE: Email integration required - configure provider in production
+    # Supported options: SendGrid, AWS SES, Mailgun, Postmark
+    # Example with SendGrid:
+    #   from sendgrid import SendGridAPIClient  # noqa: ERA001
+    #   from sendgrid.helpers.mail import Mail  # noqa: ERA001
+    #   sg = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))  # noqa: ERA001
+    #   sg.send(Mail(from_email=..., to_emails=..., subject=..., html_content=...))  # noqa: ERA001
 
     await asyncio.sleep(1)  # Simulate email sending
 
@@ -111,10 +122,10 @@ async def send_email_task(
 
 
 async def process_file_upload(
-    ctx: dict[str, Any],  # noqa: ARG001
+    ctx: JobContext,  # noqa: ARG001
     file_id: str,
     file_path: str,
-) -> dict:
+) -> JobResult:
     """Process uploaded file in background.
 
     Args:
@@ -123,7 +134,10 @@ async def process_file_upload(
         file_path: Path to uploaded file
 
     Returns:
-        Processing result
+        Processing result with file_id and status.
+
+    Raises:
+        Exception: If file processing fails.
     """
     logger.info("processing_file", file_id=file_id, path=file_path)  # type: ignore[call-arg]
 
@@ -144,7 +158,7 @@ async def process_file_upload(
         raise
 
 
-async def cleanup_old_data(ctx: dict[str, Any]) -> int:  # noqa: ARG001
+async def cleanup_old_data(ctx: JobContext) -> int:  # noqa: ARG001
     """Scheduled task to clean up old data.
 
     This runs daily via cron schedule defined in WorkerSettings.
@@ -170,7 +184,7 @@ async def cleanup_old_data(ctx: dict[str, Any]) -> int:  # noqa: ARG001
 # =============================================================================
 
 
-async def startup(ctx: dict[str, Any]) -> None:  # noqa: ARG001
+async def startup(ctx: JobContext) -> None:  # noqa: ARG001
     """Worker startup hook.
 
     Runs once when the worker starts.
@@ -184,7 +198,7 @@ async def startup(ctx: dict[str, Any]) -> None:  # noqa: ARG001
     # Example: Initialize database connection or load configuration
 
 
-async def shutdown(ctx: dict[str, Any]) -> None:  # noqa: ARG001
+async def shutdown(ctx: JobContext) -> None:  # noqa: ARG001
     """Worker shutdown hook.
 
     Runs once when the worker shuts down gracefully.
@@ -210,7 +224,8 @@ class WorkerSettings:
     """
 
     # Task functions to register
-    functions: ClassVar = [
+    # ARQ worker expects a list of callable functions - type varies
+    functions: ClassVar[list[object]] = [  # pyright: ignore[reportUnknownVariableType]
         example_background_task,
         send_email_task,
         process_file_upload,
@@ -251,8 +266,8 @@ class WorkerSettings:
 async def enqueue_task(
     redis: ArqRedis,
     task_name: str,
-    *args: Any,
-    **kwargs: Any,
+    *args: Any,  # ARQ's enqueue_job has complex signature - Any needed for **kwargs spread  # pyright: ignore[reportExplicitAny, reportAny]
+    **kwargs: Any,  # pyright: ignore[reportExplicitAny, reportAny]
 ) -> str:
     """Enqueue a background task.
 
@@ -263,7 +278,10 @@ async def enqueue_task(
         **kwargs: Task keyword arguments
 
     Returns:
-        Job ID
+        Job ID string.
+
+    Raises:
+        RuntimeError: If task enqueueing fails.
 
     Example:
         >>> from arq import create_pool
@@ -272,7 +290,8 @@ async def enqueue_task(
         ...     redis, "example_background_task", "user_123", {"action": "export"}
         ... )
     """
-    job = await redis.enqueue_job(task_name, *args, **kwargs)
+    # ARQ's enqueue_job accepts variadic args - type checking limitation
+    job = await redis.enqueue_job(task_name, *args, **kwargs)  # pyright: ignore[reportAny]
     if job is None:
         msg = f"Failed to enqueue task: {task_name}"
         raise RuntimeError(msg)

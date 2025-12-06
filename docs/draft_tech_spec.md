@@ -1,4 +1,12 @@
-# Project E
+---
+title: "Project E - Audio Preprocessing Engine - Technical Implementation Specification"
+schema_type: common
+status: draft
+owner: core-maintainer
+purpose: "Draft technical specification for Project E audio preprocessing engine."
+tags:
+  - research
+---
 
 ## Audio Preprocessing Engine
 
