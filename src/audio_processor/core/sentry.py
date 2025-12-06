@@ -139,8 +139,8 @@ def _get_release_version() -> str:
             .decode()
             .strip()
         )
-        return f"audio_processor@{sha}"
-    except Exception:  # noqa: BLE001
+        return f"audio_processor@{sha}"  # noqa: TRY300
+    except Exception:  # noqa: BLE001, S110
         # Handles both subprocess.CalledProcessError and FileNotFoundError
         pass
 
