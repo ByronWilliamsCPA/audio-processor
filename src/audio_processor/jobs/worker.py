@@ -36,10 +36,10 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, ClassVar
 
 # Python 3.10 compatibility: UTC was added in 3.11
-if sys.version_info >= (3, 11):
+if sys.version_info >= (3, 11):  # noqa: UP036
     from datetime import UTC
 else:
-    UTC = timezone.utc
+    UTC = timezone.utc  # noqa: UP017
 
 from arq import cron
 from arq.connections import RedisSettings
