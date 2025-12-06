@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
-from audio_processor.core.config import settings
 from audio_processor.utils.logging import get_logger
 
 if TYPE_CHECKING:
