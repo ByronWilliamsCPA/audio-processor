@@ -33,7 +33,7 @@ This directory contains the essential planning documents for Audio Processor.
 ## Documents
 
 | Document | Purpose | Status |
-|----------|---------|--------|
+| ---------- | --------- | -------- |
 | [project-vision.md](./project-vision.md) | What & Why | Awaiting Generation |
 | [tech-spec.md](./tech-spec.md) | How to build | Awaiting Generation |
 | [roadmap.md](./roadmap.md) | Implementation plan | Awaiting Generation |
@@ -43,7 +43,7 @@ This directory contains the essential planning documents for Audio Processor.
 
 ### Starting a Session
 
-```
+```text
 Load context from:
 - project-vision.md sections 2-3
 - adr/adr-001-*.md
@@ -54,7 +54,7 @@ Then implement [feature].
 
 ### Validating Code
 
-```
+```text
 Review this code against:
 - tech-spec.md section 6 (security)
 - adr/adr-002-*.md (relevant decision)
@@ -65,6 +65,7 @@ Flag any violations.
 ### Updating Documents
 
 Update documents when:
+
 - **Roadmap**: After completing tasks
 - **ADR**: When making architectural decisions
 - **Tech Spec**: When architecture changes
@@ -72,7 +73,7 @@ Update documents when:
 
 ## Document Relationships
 
-```
+```text
 ┌─────────────────────────────┐
 │   Project Vision & Scope    │  ← WHAT & WHY
 └──────────────┬──────────────┘

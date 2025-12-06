@@ -91,8 +91,10 @@ SPDX-FileCopyrightText = "2025 Byron Williams"
 [[annotations]]
 path = [
     ".claude/settings.local.json",
+    ".claude/settings.local.json.example",  # Example configuration
     ".claude/**/*.json",  # Claude configuration files
     ".claude/**/*.md",  # Claude documentation files
+    ".claude/**/*.py",  # Claude skill scripts
     ".standards/**",  # Baseline standards (auto-updated by cruft)
     ".clusterfuzzlite/**",
     ".sonarlint/**",  # SonarLint IDE configuration
@@ -100,12 +102,24 @@ path = [
     ".coderabbit.yaml",  # CodeRabbit AI review configuration
     ".vscode/**",  # VS Code settings
     ".idea/**",  # IntelliJ/PyCharm settings
+    ".cruft.json",  # Cruft template tracking
+    ".dockerignore",  # Docker ignore patterns
+    ".env.example",  # Environment variable template
+    ".infisical.json",  # Infisical secrets configuration
+    ".markdownlint.json",  # Markdown linting rules
+    ".mutmut_config",  # Mutation testing configuration
+    ".prettierrc",  # Prettier formatting rules
+    ".shellcheckrc",  # Shell script linting
+    ".yamllint",  # YAML linting configuration
+    "Dockerfile",  # Container definition
+    "uv.lock",  # UV lockfile
     "concept.txt",
     "image_reference_sets.txt",
     "overrides/**",
     "renovate.json",
     "validate_workflows.sh",
     "scripts/**/*.sh",  # Shell scripts for automation
+    "scripts/**/*.md",  # Script documentation
     "tmp_cleanup/**/*.txt",  # Temporary text files
     "tmp_cleanup/.gitkeep",  # Directory placeholder
     "sonar-project.properties",  # SonarCloud/SonarQube configuration

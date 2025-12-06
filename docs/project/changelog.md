@@ -9,6 +9,8 @@ tags:
   - changelog
 ---
 
+<!-- markdownlint-disable MD024 - Duplicate headings are standard in Keep a Changelog format -->
+
 All notable changes to Audio Processor will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),

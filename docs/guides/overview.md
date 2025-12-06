@@ -33,6 +33,7 @@ Built with Click for a robust CLI experience:
 ```bash
 audio_processor --help
 ```
+
 ## Getting Started
 
 1. **Installation**: See the [Configuration Guide](configuration.md)

@@ -31,8 +31,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from arq import cron
 from arq.connections import RedisSettings
@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 
 async def example_background_task(
-    ctx: dict[str, Any], user_id: str, data: dict
+    ctx: dict[str, Any], user_id: str, _data: dict
 ) -> dict:
     """Example background task.
 
@@ -61,29 +61,29 @@ async def example_background_task(
     Returns:
         Result dictionary
     """
-    logger.info("background_task_started", user_id=user_id, job_id=ctx.get("job_id"))
+    logger.info("background_task_started", user_id=user_id, job_id=ctx.get("job_id"))  # type: ignore[call-arg]
 
     # Simulate some work
     await asyncio.sleep(2)
 
     # Access Redis for storing results
     redis: ArqRedis = ctx["redis"]
-    await redis.set(f"task_result:{user_id}", "completed", expire=3600)
+    await redis.set(f"task_result:{user_id}", "completed", expire=3600)  # type: ignore[call-arg]
 
-    logger.info("background_task_completed", user_id=user_id)
+    logger.info("background_task_completed", user_id=user_id)  # type: ignore[call-arg]
 
     return {
         "status": "success",
         "user_id": user_id,
-        "processed_at": datetime.utcnow().isoformat(),
+        "processed_at": datetime.now(UTC).isoformat(),
     }
 
 
 async def send_email_task(
-    ctx: dict[str, Any],
+    ctx: dict[str, Any],  # noqa: ARG001
     recipient: str,
     subject: str,
-    body: str,
+    body: str,  # noqa: ARG001
 ) -> dict:
     """Send email asynchronously.
 
@@ -96,23 +96,22 @@ async def send_email_task(
     Returns:
         Send status
     """
-    logger.info("sending_email", recipient=recipient, subject=subject)
+    logger.info("sending_email", recipient=recipient, subject=subject)  # type: ignore[call-arg]
 
     # TODO: Integrate with your email provider
     # Example with SendGrid, AWS SES, etc.
-    # await send_email_via_provider(recipient, subject, body)
 
     await asyncio.sleep(1)  # Simulate email sending
 
     return {
         "status": "sent",
         "recipient": recipient,
-        "sent_at": datetime.utcnow().isoformat(),
+        "sent_at": datetime.now(UTC).isoformat(),
     }
 
 
 async def process_file_upload(
-    ctx: dict[str, Any],
+    ctx: dict[str, Any],  # noqa: ARG001
     file_id: str,
     file_path: str,
 ) -> dict:
@@ -126,35 +125,32 @@ async def process_file_upload(
     Returns:
         Processing result
     """
-    logger.info("processing_file", file_id=file_id, path=file_path)
+    logger.info("processing_file", file_id=file_id, path=file_path)  # type: ignore[call-arg]
 
     try:
         # Example: Read and process file
-        # with open(file_path, 'rb') as f:
-        #     data = f.read()
-        #     # Process data...
 
         await asyncio.sleep(3)  # Simulate processing
 
         return {
             "status": "completed",
             "file_id": file_id,
-            "processed_at": datetime.utcnow().isoformat(),
+            "processed_at": datetime.now(UTC).isoformat(),
             "records_processed": 1000,
         }
 
-    except Exception as e:
-        logger.error("file_processing_failed", file_id=file_id, error=str(e))
+    except Exception:
+        logger.exception("file_processing_failed", file_id=file_id)  # type: ignore[call-arg]
         raise
 
 
-async def cleanup_old_data(ctx: dict[str, Any]) -> int:
+async def cleanup_old_data(ctx: dict[str, Any]) -> int:  # noqa: ARG001
     """Scheduled task to clean up old data.
 
     This runs daily via cron schedule defined in WorkerSettings.
 
     Args:
-        ctx: ARQ context
+        ctx: ARQ context (required by ARQ but unused in this function)
 
     Returns:
         Number of records cleaned
@@ -162,12 +158,9 @@ async def cleanup_old_data(ctx: dict[str, Any]) -> int:
     logger.info("cleanup_task_started")
 
     # Example: Delete old records
-    # deleted = await db.execute(
-    #     delete(Table).where(Table.created_at < datetime.utcnow() - timedelta(days=90))
-    # )
 
     deleted_count = 0  # Placeholder
-    logger.info("cleanup_task_completed", deleted=deleted_count)
+    logger.info("cleanup_task_completed", deleted=deleted_count)  # type: ignore[call-arg]
 
     return deleted_count
 
@@ -177,38 +170,32 @@ async def cleanup_old_data(ctx: dict[str, Any]) -> int:
 # =============================================================================
 
 
-async def startup(ctx: dict[str, Any]) -> None:
+async def startup(ctx: dict[str, Any]) -> None:  # noqa: ARG001
     """Worker startup hook.
 
     Runs once when the worker starts.
     Use for initializing connections, caches, etc.
 
     Args:
-        ctx: ARQ context
+        ctx: ARQ context (required by ARQ but unused in this function)
     """
     logger.info("arq_worker_starting")
 
-    # Example: Initialize database connection
-    # ctx['db'] = await create_db_connection()
-
-    # Example: Load configuration
-    # ctx['config'] = load_config()
+    # Example: Initialize database connection or load configuration
 
 
-async def shutdown(ctx: dict[str, Any]) -> None:
+async def shutdown(ctx: dict[str, Any]) -> None:  # noqa: ARG001
     """Worker shutdown hook.
 
     Runs once when the worker shuts down gracefully.
     Use for closing connections, cleaning up resources.
 
     Args:
-        ctx: ARQ context
+        ctx: ARQ context (required by ARQ but unused in this function)
     """
     logger.info("arq_worker_shutting_down")
 
-    # Example: Close database connection
-    # if 'db' in ctx:
-    #     await ctx['db'].close()
+    # Example: Close database connection if needed
 
 
 # =============================================================================
@@ -223,14 +210,14 @@ class WorkerSettings:
     """
 
     # Task functions to register
-    functions = [
+    functions: ClassVar = [
         example_background_task,
         send_email_task,
         process_file_upload,
     ]
 
     # Scheduled tasks (cron)
-    cron_jobs = [
+    cron_jobs: ClassVar = [
         cron(cleanup_old_data, hour=2, minute=0),  # Run daily at 2 AM
     ]
 
@@ -286,7 +273,10 @@ async def enqueue_task(
         ... )
     """
     job = await redis.enqueue_job(task_name, *args, **kwargs)
-    logger.info("task_enqueued", task=task_name, job_id=job.job_id)
+    if job is None:
+        msg = f"Failed to enqueue task: {task_name}"
+        raise RuntimeError(msg)
+    logger.info("task_enqueued", task=task_name, job_id=job.job_id)  # type: ignore[call-arg]
     return job.job_id
 
 
