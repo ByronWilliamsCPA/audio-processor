@@ -4,6 +4,8 @@ schema_type: planning
 status: published
 owner: core-maintainer
 purpose: "Index and documentation for Architecture Decision Records."
+component: Context
+source: "Generated from project planning workflow"
 tags:
   - planning
   - architecture

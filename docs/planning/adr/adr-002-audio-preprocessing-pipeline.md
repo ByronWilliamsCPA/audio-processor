@@ -6,8 +6,6 @@ owner: core-maintainer
 purpose: "Document the audio signal conditioning pipeline required before ASR transcription."
 tags:
   - adr
-  - audio-processing
-  - signal-processing
 component: Development-Tools
 source: "Audio preprocessing research paper analysis"
 ---

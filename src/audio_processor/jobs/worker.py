@@ -62,10 +62,10 @@ async def example_background_task(
     Args:
         ctx: ARQ context (contains redis connection, job_id, etc.)
         user_id: User identifier
-        data: Task data
+        _data: Task data (unused in this example).
 
     Returns:
-        Result dictionary
+        Result dictionary with task status and user_id.
     """
     logger.info("background_task_started", user_id=user_id, job_id=ctx.get("job_id"))  # type: ignore[call-arg]
 
@@ -129,7 +129,10 @@ async def process_file_upload(
         file_path: Path to uploaded file
 
     Returns:
-        Processing result
+        Processing result with file_id and status.
+
+    Raises:
+        Exception: If file processing fails.
     """
     logger.info("processing_file", file_id=file_id, path=file_path)  # type: ignore[call-arg]
 
@@ -270,7 +273,10 @@ async def enqueue_task(
         **kwargs: Task keyword arguments
 
     Returns:
-        Job ID
+        Job ID string.
+
+    Raises:
+        RuntimeError: If task enqueueing fails.
 
     Example:
         >>> from arq import create_pool

@@ -6,7 +6,7 @@ owner: core-maintainer
 purpose: "Complete development environment setup guide for Audio Processor."
 tags:
   - development
-  - setup
+  - guide
 ---
 
 This guide walks you through setting up a complete development environment for Audio Processor.

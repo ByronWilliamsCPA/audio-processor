@@ -5,14 +5,13 @@ description: "Comprehensive project plan for Audio Processor with detailed imple
 tags:
   - planning
   - roadmap
-  - project
-  - strategy
 status: published
 owner: "core-maintainer"
 authors:
   - name: "Byron Williams"
-purpose: "Document the complete implementation roadmap for Audio Processor with detailed phases, milestones, and technical strategy"
+purpose: "Document the complete implementation roadmap for Audio Processor with detailed phases, milestones, and technical strategy."
 component: "Strategy"
+source: "Generated from project planning workflow"
 ---
 
 **Project**: Audio Processor

@@ -5,8 +5,7 @@ status: published
 owner: core-maintainer
 purpose: "Document template issues for upstream fixes."
 tags:
-  - feedback
-  - template
+  - documentation
 ---
 <!--
 SPDX-FileCopyrightText: 2025 Byron Williams <byron@williamshome.family>

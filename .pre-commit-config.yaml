@@ -108,11 +108,13 @@ repos:
   # ============================================================================
   # pyproject.toml Validation
   # ============================================================================
-  - repo: https://github.com/abravalheri/validate-pyproject
-    rev: v0.20.2
-    hooks:
-      - id: validate-pyproject
-        stages: [pre-commit]
+  # NOTE: Disabled due to PEP 735 (dependency-groups) not yet supported by validate-pyproject
+  # Re-enable when https://github.com/abravalheri/validate-pyproject/issues/XXX is resolved
+  # - repo: https://github.com/abravalheri/validate-pyproject
+  #   rev: v0.23
+  #   hooks:
+  #     - id: validate-pyproject
+  #       stages: [pre-commit]
 
   # ============================================================================
   # GitHub Workflow Validation
