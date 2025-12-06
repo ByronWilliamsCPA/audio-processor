@@ -15,7 +15,7 @@ source: "/plan command generation"
 
 ## TL;DR
 
-FastAPI-based async audio processing service using Deepgram Nova-2 API, Redis Queue for job management, FFmpeg for media handling, and Docling DOM for pipeline-compatible output. Python 3.12 with UV, Ruff, BasedPyright, and pytest.
+FastAPI-based async audio processing service using Deepgram Nova-2 API with comprehensive audio preprocessing pipeline (librosa, pydub, Silero VAD), Redis Queue for job management, FFmpeg for media handling, and Docling DOM for pipeline-compatible output. Python 3.12 with UV, Ruff, BasedPyright, and pytest.
 
 ## 1. Technology Stack
 
@@ -107,7 +107,7 @@ See [ADR-002](./adr/adr-002-audio-preprocessing-pipeline.md) for audio preproces
 | Component | Purpose | Key Functions |
 | ----------- | --------- | --------------- |
 | **FastAPI App** | HTTP API server | Request validation, job submission, status queries |
-| **AudioProcessor** | Processing orchestrator | Pipeline coordination, progress tracking, error handling |
+| **AudioProcessor** | Processing orchestrator | Coordinates ADR-002 preprocessing pipeline, progress tracking, error handling |
 | **AudioConditioner** | Signal preprocessing | Resampling (16kHz), channel mixing (mono), RMS normalization (-20dBFS) |
 | **VADProcessor** | Silence removal | Silero VAD integration, speech segment detection, timeline reconstruction |
 | **QualityAssessor** | Audio analysis | SNR calculation, silence/clipping detection, quality scoring, warning generation |

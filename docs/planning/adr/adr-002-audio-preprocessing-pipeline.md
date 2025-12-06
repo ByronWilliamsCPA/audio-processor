@@ -43,6 +43,7 @@ Raw audio files vary dramatically in technical parameters (sampling rate, bit de
 ### Significance
 
 Audio preprocessing quality directly determines:
+
 - **Word Error Rate (WER)**: Poor preprocessing can increase WER from 2.5% to 8%+
 - **API Costs**: Silence segments waste money on transcribing non-speech
 - **Hallucination Rate**: Improper signal conditioning triggers phantom transcription
@@ -65,6 +66,7 @@ Audio preprocessing quality directly determines:
 ### Option 1: Comprehensive Preprocessing Pipeline (librosa + pydub) ✓
 
 **Preprocessing Steps**:
+
 1. **Format Detection & Validation** (magic bytes, duration check)
 2. **Codec Conversion** (to WAV PCM for lossless manipulation)
 3. **Resampling** (polyphase filter to 16kHz)
@@ -74,6 +76,7 @@ Audio preprocessing quality directly determines:
 7. **Quality Assessment** (SNR, clipping ratio, silence ratio metrics)
 
 **Pros**:
+
 - ✅ Maximizes ASR accuracy through optimal signal conditioning
 - ✅ Reduces API costs by removing silence segments
 - ✅ Provides quality metrics for user feedback
@@ -81,6 +84,7 @@ Audio preprocessing quality directly determines:
 - ✅ Enables advanced channel separation strategies
 
 **Cons**:
+
 - ❌ Adds 5-10% processing time overhead
 - ❌ Increases implementation complexity
 - ❌ Requires additional Python dependencies (librosa, pydub, silero-vad)
@@ -89,14 +93,17 @@ Audio preprocessing quality directly determines:
 ### Option 2: Minimal FFmpeg-Only Conversion
 
 **Preprocessing Steps**:
+
 1. Convert to 16kHz mono MP3 via FFmpeg
 2. Send directly to Deepgram
 
 **Pros**:
+
 - ✅ Minimal implementation complexity
 - ✅ Fast processing (< 1% overhead)
 
 **Cons**:
+
 - ❌ No VAD = wasted API costs on silence
 - ❌ No quality assessment = no user warnings
 - ❌ No RMS normalization = variable confidence scores
@@ -107,10 +114,12 @@ Audio preprocessing quality directly determines:
 **Approach**: Rely entirely on Deepgram's internal preprocessing
 
 **Pros**:
+
 - ✅ Zero implementation effort
 - ✅ No processing time overhead
 
 **Cons**:
+
 - ❌ No control over preprocessing parameters
 - ❌ Cannot optimize for cost (silence removal)
 - ❌ No quality feedback to users
@@ -128,7 +137,7 @@ Audio preprocessing quality directly determines:
 
 ### Trade-offs
 
-- ⚠️ **Processing Overhead**: Adds 30-60 seconds preprocessing time per hour of audio
+- ⚠️ **Processing Overhead**: Adds 30-60 seconds preprocessing time per hour of audio (0.8-2% overhead)
 - ⚠️ **Storage Requirements**: Intermediate WAV files require 10MB/min (cleaned up after processing)
 - ⚠️ **Complexity**: Requires expertise in signal processing for maintenance
 
@@ -256,13 +265,13 @@ async def preprocess_audio(input_path: Path) -> PreprocessedAudio:
 
 ### Performance Targets
 
-| Metric | Target | Measurement Method |
-|--------|--------|-------------------|
-| Preprocessing Overhead | < 10% audio duration | Wall-clock timing |
-| VAD False Negative Rate | < 5% | Manual annotation comparison |
-| RMS Normalization Accuracy | ± 2dB | Peak analysis |
-| Resampling Quality | > 99% spectral fidelity | FFT comparison |
-| Cost Reduction | 10-30% | API billing comparison |
+| Metric                      | Target                  | Measurement Method           |
+|-----------------------------|-------------------------|------------------------------|
+| Preprocessing Overhead      | < 10% audio duration    | Wall-clock timing            |
+| VAD False Negative Rate     | < 5%                    | Manual annotation comparison |
+| RMS Normalization Accuracy  | ± 2dB                   | Peak analysis                |
+| Resampling Quality          | > 99% spectral fidelity | FFT comparison               |
+| Cost Reduction              | 10-30%                  | API billing comparison       |
 
 ### Review Schedule
 

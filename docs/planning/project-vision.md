@@ -30,8 +30,8 @@ The existing RAG pipeline (/home/byron/dev/image_detection/) handles text docume
 
 ### Success Metrics
 
-- **Transcription Accuracy**: Achieve < 3% WER on clear speech, < 8% on noisy audio (Deepgram Nova-2 benchmark)
-- **Processing Speed**: < 0.2x real-time (1 hour audio processes in < 12 minutes)
+- **Transcription Accuracy**: Achieve < 10% WER on clear speech (target 6-9% range per Deepgram Nova-2 benchmarks)
+- **Processing Speed**: < 0.02x real-time (1 hour audio processes in < 1 minute)
 - **Pipeline Integration**: 100% compatibility with downstream chunking and vector indexing (no special handling required)
 - **Cost Efficiency**: < $0.50 per hour of audio processed (including all features)
 - **Uptime**: > 99.5% excluding external API dependencies
@@ -45,7 +45,7 @@ Audio Processor transforms spoken content into searchable, attributable text chu
 ### Key Capabilities (MVP)
 
 1. **Universal Audio Ingestion**: Accept audio files (MP3, WAV, M4A, FLAC, OGG, AAC) and video files (MP4, MOV, AVI, MKV, WEBM) with automatic audio extraction from video
-2. **High-Accuracy Transcription**: Deepgram Nova-2 ASR with 2.5% WER, smart formatting, word-level timestamps, and confidence scores
+2. **High-Accuracy Transcription**: Deepgram Nova-2 ASR with 6-9% WER, native diarization, smart formatting, word-level timestamps, and confidence scores
 3. **Speaker Attribution**: Native Deepgram diarization providing word-level speaker identification without separate processing steps
 4. **Content Summarization**: Automatic summarization via Deepgram v2 for improved retrieval and user experience
 5. **RAG Integration**: Output Docling Document Object Model (DOM) format matching the image_detection pipeline for unified downstream processing

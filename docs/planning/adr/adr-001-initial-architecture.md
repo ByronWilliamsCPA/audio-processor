@@ -33,6 +33,7 @@ Audio Processor needs a high-accuracy, cost-effective transcription solution tha
 ### Significance
 
 The ASR engine choice determines accuracy, cost structure, infrastructure requirements, and integration complexity. Wrong choice could lead to:
+
 - Poor transcription quality affecting RAG retrieval
 - High GPU costs competing with other pipeline components
 - Complex integration requiring special handling for audio content
@@ -44,11 +45,11 @@ The ASR engine choice determines accuracy, cost structure, infrastructure requir
 
 ### Rationale
 
-1. **Best-in-class accuracy**: Nova-2 achieves 2.5% WER vs. Whisper's 4-5%
+1. **Competitive accuracy**: Nova-2 achieves 6-9% WER (industry benchmark ~8.4%) vs. Whisper's 4-5% (Whisper has better WER but lacks native diarization)
 2. **Zero GPU requirement**: API-based processing frees local GPU for other tasks
-3. **Native diarization**: Single API call handles transcription + speaker ID (no Pyannote needed)
+3. **Native diarization**: Single API call handles transcription + speaker ID (no Pyannote needed) - this integration benefit outweighs WER difference
 4. **Cost-effective**: $0.35/hour (including summarization) vs. GPU compute costs
-5. **Processing speed**: 0.1x real-time means 1 hour audio in ~6 minutes
+5. **Processing speed**: ~0.0083x real-time (~30 seconds per hour of audio)
 6. **Pipeline integration**: Docling DOM format enables unified downstream processing
 
 ## Options Considered
@@ -56,61 +57,87 @@ The ASR engine choice determines accuracy, cost structure, infrastructure requir
 ### Option 1: Deepgram Nova-2 (API) ✓
 
 **Pros**:
-- ✅ 2.5% WER (industry-leading accuracy)
-- ✅ Native diarization included at no extra cost
-- ✅ Fast processing (0.1x real-time)
+
+- ✅ Competitive accuracy (6-9% WER, industry benchmark ~8.4%)
+- ✅ Native diarization included at no extra cost (key differentiator vs. Whisper)
+- ✅ Very fast processing (~0.0083x real-time, ~30 seconds per hour of audio)
 - ✅ No GPU infrastructure needed
 - ✅ Built-in smart formatting and summarization
 - ✅ Predictable costs at $0.35/hour
 
 **Cons**:
+
 - ❌ External API dependency (requires internet)
-- ❌ Audio data leaves infrastructure
+- ❌ Audio data leaves infrastructure (see data privacy considerations below)
 - ❌ Vendor lock-in
 - ❌ No offline capability
 
 ### Option 2: Local Whisper Large (Modal GPU)
 
 **Pros**:
+
 - ✅ Open-source, self-hosted
 - ✅ No external API dependency
-- ✅ Data stays local
+- ✅ Data stays local (critical for sensitive content)
+- ✅ Better raw WER (4-5% vs. Deepgram's 6-9%)
 
 **Cons**:
-- ❌ 4-5% WER (lower accuracy)
+
 - ❌ Requires 10+ GB VRAM (A10G/A100)
 - ❌ Modal cold starts add 30-60s per job
 - ❌ GPU contention with IQA and embedding workloads
-- ❌ Requires separate Pyannote for diarization
-- ❌ Slower processing (0.3-1x real-time)
+- ❌ Requires separate Pyannote for diarization (two-step pipeline)
+- ❌ Slower overall processing (0.3-1x real-time including diarization)
 
 ### Option 3: Whisper API (OpenAI)
 
 **Pros**:
+
 - ✅ No local GPU needed
 - ✅ Fast processing
+- ✅ Better WER (4-5%)
 
 **Cons**:
-- ❌ 4-5% WER (same as local Whisper)
-- ❌ No native diarization
-- ❌ Higher cost ($0.36/hour transcription only)
+
+- ❌ No native diarization (requires separate Pyannote)
+- ❌ Higher cost ($0.36/hour transcription only, more with diarization)
 - ❌ Basic formatting vs. Deepgram's smart formatting
+- ❌ Audio data leaves infrastructure
 
 ## Consequences
 
 ### Positive
 
-- ✅ **Best Accuracy**: 2.5% WER significantly improves RAG retrieval quality
-- ✅ **Simplified Architecture**: No GPU management, no separate diarization pipeline
-- ✅ **Fast Processing**: 1 hour audio processes in ~6 minutes
+- ✅ **Integrated Diarization**: Native speaker ID in single API call (vs. two-step Whisper+Pyannote pipeline)
+- ✅ **Simplified Architecture**: No GPU management, no alignment algorithms
+- ✅ **Very Fast Processing**: 1 hour audio processes in ~30 seconds
 - ✅ **Cost Predictable**: $0.35/hour well under $0.50 target
 - ✅ **Pipeline Integration**: Docling DOM enables unified downstream processing
+- ✅ **Smart Formatting**: Automatic entity formatting (dates, numbers, currency)
 
 ### Trade-offs
 
+- ⚠️ **WER vs. Integration**: Accept 6-9% WER (vs. Whisper's 4-5%) for native diarization benefit
 - ⚠️ **Internet Dependency**: Mitigated by retry logic, queue persistence, and job recovery
 - ⚠️ **Vendor Lock-in**: Future ADR may add Whisper fallback for air-gapped deployments
-- ⚠️ **Data Privacy**: Audio sent to Deepgram (acceptable for non-sensitive use cases)
+- ⚠️ **Data Privacy**: Audio sent to Deepgram (see guidance below)
+
+### Data Privacy Considerations
+
+**When to use Deepgram** (API-based):
+
+- General business meetings, podcasts, public content
+- Internal non-sensitive communications
+- Content already shared externally
+
+**When to use Whisper fallback** (local processing - Phase 2):
+
+- **PII/PHI**: Audio containing personally identifiable information or protected health information
+- **Legal/Confidential**: Attorney-client privileged communications, NDAs, trade secrets
+- **Compliance Requirements**: HIPAA, GDPR Article 32, FedRAMP, or other data residency mandates
+- **Sensitive HR**: Performance reviews, disciplinary actions, salary discussions
+
+**Recommendation**: For sensitive content, defer to Phase 2 local Whisper implementation despite higher complexity.
 
 ### Technical Debt
 
@@ -137,9 +164,9 @@ The ASR engine choice determines accuracy, cost structure, infrastructure requir
 
 ### Success Criteria
 
-- [ ] Transcription achieves < 3% WER on clear speech test set
+- [ ] Transcription achieves < 10% WER on clear speech test set (target 6-9% range)
 - [ ] Diarization achieves < 10% error rate on multi-speaker audio
-- [ ] Processing completes in < 0.2x real-time for typical 1-hour files
+- [ ] Processing completes in < 0.02x real-time (< 1 minute per hour of audio)
 - [ ] Cost stays under $0.50/hour including all features
 - [ ] Docling DOM output processes successfully through existing pipeline
 

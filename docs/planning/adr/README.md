@@ -23,9 +23,9 @@ ADRs document significant architectural decisions along with their context and c
 
 ## ADR Index
 
-| ADR | Title | Status | Date |
-|-----|-------|--------|------|
-| *No ADRs yet* | Generate with `/plan` command | - | - |
+| ADR            | Title                             | Status | Date |
+|----------------|-----------------------------------|--------|------|
+| *No ADRs yet*  | Generate with `/plan` command     | -      | -    |
 
 ## Creating ADRs
 
