@@ -263,5 +263,5 @@ A deployment is production-ready when:
 - [Tech Spec - Testing Strategy](../tech-spec.md#9-testing-strategy)
 - [Tech Spec - Security](../tech-spec.md#6-security)
 - [Previous: Phase 2 Integration](./phase-2-integration.md)
-- [Contributing Guide](../../../CONTRIBUTING.md)
-- [Security Policy](../../../SECURITY.md)
+- Contributing Guide: `CONTRIBUTING.md` (see project root)
+- Security Policy: `SECURITY.md` (see project root)
