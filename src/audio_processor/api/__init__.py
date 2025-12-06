@@ -12,9 +12,12 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from audio_processor.core.config import settings
+from audio_processor.utils.logging import get_logger
 
 if TYPE_CHECKING:
     from fastapi import Request
+
+logger = get_logger(__name__)
 
 # Application metadata
 APP_TITLE = "Audio Processor API"
@@ -56,26 +59,34 @@ async def root() -> dict[str, str]:
 
 
 @app.exception_handler(Exception)
-async def global_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
+async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Global exception handler for unhandled errors.
 
-    In production, returns a generic error message to avoid exposing internal details.
-    In DEBUG mode, includes the exception details for troubleshooting.
+    Logs the exception with full context and returns a safe, generic error message
+    to avoid exposing internal details in production.
 
     Args:
-        _request: The incoming request (unused but required by FastAPI).
+        request: The incoming request.
         exc: The exception that was raised.
 
     Returns:
-        JSON response with error message (and details in DEBUG mode).
+        JSON response with generic error message.
     """
-    content: dict[str, str] = {"error": "Internal server error"}
+    # Log the exception with full context for debugging and monitoring
+    logger.exception(
+        "unhandled_exception",
+        exc_type=type(exc).__name__,
+        exc_message=str(exc),
+        path=str(request.url.path),
+        method=request.method,
+    )
 
-    # Only expose exception details in DEBUG mode
-    if settings.log_level == "DEBUG":
-        content["detail"] = str(exc)
-
+    # Never expose internal exception details in the response
+    # (even in DEBUG mode - use logs/Sentry for debugging)
     return JSONResponse(
         status_code=500,
-        content=content,
+        content={
+            "error": "Internal server error",
+            "detail": "An unexpected error occurred. Please contact support.",
+        },
     )
