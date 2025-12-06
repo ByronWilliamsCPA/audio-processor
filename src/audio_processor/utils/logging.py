@@ -26,7 +26,8 @@ from structlog.stdlib import BoundLogger
 if TYPE_CHECKING:
     from structlog.types import EventDict, Processor
 else:
-    # Runtime fallbacks - these are not used at runtime, just for imports
+    # Type aliases for runtime - only used during static type checking, not at runtime
+    # These provide fallback definitions when TYPE_CHECKING is False
     EventDict = dict
     Processor = object
 

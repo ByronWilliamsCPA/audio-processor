@@ -68,6 +68,7 @@ When working on this project, if you discover any issue that originates from the
 ```
 
 **Suggested Fix**: Correct the indentation of `except` to align with `try:`:
+
 ```python
     try:
         import sentry_sdk

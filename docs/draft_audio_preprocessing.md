@@ -202,7 +202,7 @@ VAD is the gatekeeper. Its role is to discard segments of silence or non-speech 
 
 ### **6.2. Source Separation and Denoising**
 
-For recordings with background noise (street ambience, HVAC hum), **spectral gating** or deep-learning based denoising (like Facebook's **Denoiser**) is required.
+For recordings with background noise (street ambience, HVAC hum), **spectral gating** or deep-learning-based denoising (like Facebook's **Denoiser**) is required.
 
 * **Caution:** Aggressive denoising can introduce "musical noise" artifacts—random spectral bursts that sound like digital chirping. These artifacts are highly detrimental to ASR models.
 * **Best Practice:** Use conservative settings (low reduction amounts) or fine-tune the ASR model on noisy data rather than aggressively preprocessing the signal.

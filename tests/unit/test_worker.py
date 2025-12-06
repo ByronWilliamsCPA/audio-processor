@@ -62,7 +62,7 @@ class TestBackgroundTasks:
         """Test process_file_upload completes successfully."""
         ctx = {}
         file_id = "file_789"
-        file_path = "/tmp/test.csv"
+        file_path = "/data/test.csv"
 
         with patch("audio_processor.jobs.worker.logger"):
             result = await process_file_upload(ctx, file_id, file_path)
@@ -77,7 +77,7 @@ class TestBackgroundTasks:
         """Test process_file_upload handles exceptions."""
         ctx = {}
         file_id = "file_789"
-        file_path = "/tmp/test.csv"
+        file_path = "/data/test.csv"
 
         with (
             patch(
