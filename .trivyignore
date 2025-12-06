@@ -19,3 +19,24 @@
 # Review Date: 2025-12-06
 # Next Review: When Debian releases patch (monitor bug #1121488)
 CVE-2025-13601
+
+# CVE-2025-64720, CVE-2025-65018, CVE-2025-66293 - libpng16-16t64 vulnerabilities
+# Status: No fix available in Debian 13.2 as of 2025-12-06
+# Severity: HIGH (all three)
+# Risk Assessment: LOW for this application
+# Justification:
+#   - CVE-2025-64720: Buffer overflow in png_image_read_composite
+#   - CVE-2025-65018: Heap buffer overflow in libpng
+#   - CVE-2025-66293: Out-of-bounds read in png_image_read_composite
+#   - Application uses libpng only through Python libraries (Pillow, matplotlib)
+#   - No direct manipulation of PNG internals or untrusted PNG files in processing pipeline
+#   - Debian security tracker shows "affected" status with no fix version yet
+# References:
+#   - https://security-tracker.debian.org/tracker/CVE-2025-64720
+#   - https://security-tracker.debian.org/tracker/CVE-2025-65018
+#   - https://security-tracker.debian.org/tracker/CVE-2025-66293
+# Review Date: 2025-12-06
+# Next Review: When Debian releases patched version
+CVE-2025-64720
+CVE-2025-65018
+CVE-2025-66293
