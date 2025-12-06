@@ -95,7 +95,7 @@ Audio Processor transforms spoken content into searchable, attributable text chu
 
 ## Integration Architecture
 
-```
+```text
 Web UI (Shared)
     │
     ├── Route: Documents/Images → image_detection/

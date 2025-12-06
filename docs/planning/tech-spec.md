@@ -69,7 +69,7 @@ See [ADR-002](./adr/adr-002-audio-preprocessing-pipeline.md) for audio preproces
 
 ### Component Diagram
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                      FASTAPI APPLICATION                    │
 ├────────────────┬────────────────┬──────────────────────────┤
@@ -105,7 +105,7 @@ See [ADR-002](./adr/adr-002-audio-preprocessing-pipeline.md) for audio preproces
 ### Component Responsibilities
 
 | Component | Purpose | Key Functions |
-|-----------|---------|---------------|
+| ----------- | --------- | --------------- |
 | **FastAPI App** | HTTP API server | Request validation, job submission, status queries |
 | **AudioProcessor** | Processing orchestrator | Pipeline coordination, progress tracking, error handling |
 | **AudioConditioner** | Signal preprocessing | Resampling (16kHz), channel mixing (mono), RMS normalization (-20dBFS) |
@@ -189,7 +189,7 @@ class Job:
 ### Endpoints
 
 | Method | Path | Purpose | Auth |
-|--------|------|---------|------|
+| -------- | ------ | --------- | ------ |
 | POST | /api/v1/process | Submit audio/video for processing | No |
 | GET | /api/v1/status/{job_id} | Get job status and progress | No |
 | GET | /api/v1/results/{job_id} | Get completed results | No |
@@ -253,7 +253,7 @@ class Job:
 ### Commands
 
 | Command | Purpose | Example |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | `audio-processor process` | Process audio file locally | `audio-processor process meeting.mp3` |
 | `audio-processor status` | Check job status | `audio-processor status audio_abc123` |
 | `audio-processor config` | Show/set configuration | `audio-processor config --show` |
@@ -297,7 +297,7 @@ class Job:
 ### Error Codes
 
 | Code | Meaning | User Action |
-|------|---------|-------------|
+| ------ | --------- | ------------- |
 | `INVALID_FILE_TYPE` | Unsupported format | Use MP3, WAV, M4A, FLAC, OGG, MP4, MOV |
 | `FILE_TOO_LARGE` | Exceeds 2GB limit | Split file or compress |
 | `FILE_TOO_SHORT` | < 1 second duration | Provide longer audio |
@@ -315,7 +315,7 @@ class Job:
 ## 8. Performance Requirements
 
 | Metric | Target | Measurement |
-|--------|--------|-------------|
+| -------- | -------- | ------------- |
 | **Processing Speed** | < 0.2x real-time | End-to-end timing for 1-hour test file |
 | **API Response Time** | < 200ms (submit), < 50ms (status) | 95th percentile |
 | **Throughput** | 10 concurrent jobs | Load testing with varied file sizes |

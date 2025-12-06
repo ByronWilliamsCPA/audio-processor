@@ -11,6 +11,8 @@ component: Strategy
 source: "/plan command generation"
 ---
 
+<!-- markdownlint-disable MD024 - Duplicate headings are intentional for phase structure -->
+
 > **Status**: Active | **Updated**: 2025-12-04
 
 ## TL;DR
@@ -19,7 +21,7 @@ Build Deepgram-powered audio transcription pipeline in 4 phases over 4 weeks: Ph
 
 ## Timeline Overview
 
-```
+```text
 Phase 0: Foundation    ████████░░░░░░░░░░░░░░ (Week 1)    - Dev environment, CI/CD
 Phase 1: Core MVP      ░░░░░░░░████████████░░░░ (Week 2-3) - Deepgram, processing
 Phase 2: Integration   ░░░░░░░░░░░░░░░░████████ (Week 3-4) - Docling DOM, pipeline
@@ -29,7 +31,7 @@ Phase 3: Polish        ░░░░░░░░░░░░░░░░░░░
 ## Milestones
 
 | Milestone | Target | Status | Dependencies |
-|-----------|--------|--------|--------------|
+| ----------- | -------- | -------- | -------------- |
 | M0: Dev Environment Ready | Week 1 End | ⏸️ Planned | None |
 | M1: Deepgram Integration Working | Week 2 Mid | ⏸️ Planned | M0 |
 | M2: Basic Processing Pipeline | Week 2 End | ⏸️ Planned | M1 |
@@ -64,7 +66,7 @@ Establish development environment, project structure, and CI/CD pipeline for eff
 ### Tasks
 
 | Task | Est. Hours | Status |
-|------|------------|--------|
+| ------ | ------------ | -------- |
 | Configure UV with pyproject.toml dependencies | 2 | ⏸️ |
 | Add Deepgram SDK, FastAPI, Redis, librosa, FFmpeg deps | 2 | ⏸️ |
 | Set up pre-commit hooks (Ruff, BasedPyright, Bandit) | 2 | ⏸️ |
@@ -116,7 +118,7 @@ Implement core audio processing pipeline with Deepgram transcription, speaker di
 **Tasks**:
 
 | Task | Est. Hours | Status |
-|------|------------|--------|
+| ------ | ------------ | -------- |
 | Create FastAPI app with /process endpoint | 4 | ⏸️ |
 | Implement file upload validation | 2 | ⏸️ |
 | Integrate Redis Queue job submission | 3 | ⏸️ |
@@ -138,7 +140,7 @@ Implement core audio processing pipeline with Deepgram transcription, speaker di
 **Tasks**:
 
 | Task | Est. Hours | Status |
-|------|------------|--------|
+| ------ | ------------ | -------- |
 | Create DeepgramClient service class | 4 | ⏸️ |
 | Implement API call with proper options | 3 | ⏸️ |
 | Parse Deepgram JSON response into models | 4 | ⏸️ |
@@ -161,7 +163,7 @@ Implement core audio processing pipeline with Deepgram transcription, speaker di
 **Tasks**:
 
 | Task | Est. Hours | Status |
-|------|------------|--------|
+| ------ | ------------ | -------- |
 | Create AudioConverter wrapper for FFmpeg | 4 | ⏸️ |
 | Implement audio extraction from video | 3 | ⏸️ |
 | Add format conversion (optimal for Deepgram) | 2 | ⏸️ |
@@ -185,7 +187,7 @@ Implement core audio processing pipeline with Deepgram transcription, speaker di
 **Tasks**:
 
 | Task | Est. Hours | Status |
-|------|------------|--------|
+| ------ | ------------ | -------- |
 | Create QualityAssessor service using librosa | 5 | ⏸️ |
 | Implement SNR calculation | 2 | ⏸️ |
 | Implement silence and clipping detection | 3 | ⏸️ |
@@ -208,7 +210,7 @@ Implement core audio processing pipeline with Deepgram transcription, speaker di
 **Tasks**:
 
 | Task | Est. Hours | Status |
-|------|------------|--------|
+| ------ | ------------ | -------- |
 | Implement /status endpoint | 3 | ⏸️ |
 | Add progress tracking in worker | 3 | ⏸️ |
 | Store status updates in Redis | 2 | ⏸️ |
@@ -231,7 +233,7 @@ Implement core audio processing pipeline with Deepgram transcription, speaker di
 **Tasks**:
 
 | Task | Est. Hours | Status |
-|------|------------|--------|
+| ------ | ------------ | -------- |
 | Create AudioConditioner service (resampling, mono mix, RMS) | 6 | ⏸️ |
 | Integrate Silero VAD model for silence removal | 4 | ⏸️ |
 | Implement VAD timeline reconstruction | 3 | ⏸️ |
@@ -286,7 +288,7 @@ Implement Docling DOM output format for pipeline integration and add result retr
 **Tasks**:
 
 | Task | Est. Hours | Status |
-|------|------------|--------|
+| ------ | ------------ | -------- |
 | Create DOMBuilder service class | 4 | ⏸️ |
 | Implement speaker → SectionItem mapping | 3 | ⏸️ |
 | Implement utterance → TextItem mapping | 3 | ⏸️ |
@@ -310,7 +312,7 @@ Implement Docling DOM output format for pipeline integration and add result retr
 **Tasks**:
 
 | Task | Est. Hours | Status |
-|------|------------|--------|
+| ------ | ------------ | -------- |
 | Implement /results endpoint | 3 | ⏸️ |
 | Build comprehensive result response model | 2 | ⏸️ |
 | Add result caching in Redis | 2 | ⏸️ |
@@ -332,7 +334,7 @@ Implement Docling DOM output format for pipeline integration and add result retr
 **Tasks**:
 
 | Task | Est. Hours | Status |
-|------|------------|--------|
+| ------ | ------------ | -------- |
 | Implement /artifacts endpoint | 3 | ⏸️ |
 | Generate plain text transcript | 2 | ⏸️ |
 | Generate SRT subtitle format | 3 | ⏸️ |
@@ -372,7 +374,7 @@ Achieve production readiness through testing, documentation, and deployment conf
 ### Tasks
 
 | Task | Est. Hours | Status |
-|------|------------|--------|
+| ------ | ------------ | -------- |
 | Increase test coverage to 80% | 6 | ⏸️ |
 | Write E2E tests for complete workflows | 4 | ⏸️ |
 | Write comprehensive README | 4 | ⏸️ |
@@ -390,7 +392,7 @@ Achieve production readiness through testing, documentation, and deployment conf
 ## Risk Register
 
 | Risk | Probability | Impact | Mitigation |
-|------|-------------|--------|------------|
+| ------ | ------------- | -------- | ------------ |
 | Deepgram API accuracy below 3% WER target | Low | High | Test with diverse audio samples early; add Whisper fallback if needed |
 | Deepgram costs exceed $0.50/hour | Low | Medium | Monitor billing closely; implement cost tracking and alerts |
 | FFmpeg extraction fails on some video formats | Medium | Medium | Test with common formats (MP4, MOV, AVI); document unsupported formats |

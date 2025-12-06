@@ -49,6 +49,7 @@ Enable debug logging:
 ```bash
 audio_processor --debug hello --name "Test"
 ```
+
 ## Library Usage
 
 ### Basic Import

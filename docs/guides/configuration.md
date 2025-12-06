@@ -16,7 +16,7 @@ This guide covers all configuration options for Audio Processor.
 Audio Processor uses environment variables for configuration:
 
 | Variable | Description | Default |
-|----------|-------------|---------|
+| ---------- | ------------- | --------- |
 | `LOG_LEVEL` | Logging level (DEBUG, INFO, WARNING, ERROR) | `INFO` |
 | `JSON_LOGS` | Enable JSON log format | `false` |
 

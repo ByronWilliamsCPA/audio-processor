@@ -13,7 +13,7 @@ This document describes the architecture and design decisions for Audio Processo
 
 ## Project Structure
 
-```
+```text
 audio_processor/
 ├── src/
 │   └── audio_processor/
@@ -47,6 +47,7 @@ Pydantic Settings for type-safe configuration from environment variables.
 ### 4. CLI Design
 
 Click framework for robust command-line interface with subcommands.
+
 ## Dependencies
 
 See `pyproject.toml` for the complete dependency list.
