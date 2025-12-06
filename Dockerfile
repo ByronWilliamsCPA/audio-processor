@@ -26,15 +26,15 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 # Copy dependency files
 COPY pyproject.toml uv.lock ./
 
-# Install dependencies to a virtual environment (including audio extras)
+# Install dependencies to a virtual environment
 # This creates .venv/ which we'll copy to the final stage
-RUN uv sync --frozen --no-dev --no-install-project --extra audio
+RUN uv sync --frozen --no-dev --no-install-project
 
 # Copy application code
 COPY . .
 
-# Install the project itself with audio extras
-RUN uv sync --frozen --no-dev --extra audio
+# Install the project itself
+RUN uv sync --frozen --no-dev
 
 # =============================================================================
 # Stage 2: Runtime - Production image with audio processing capabilities
