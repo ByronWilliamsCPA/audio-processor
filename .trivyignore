@@ -1,0 +1,21 @@
+# Trivy Ignore File for Audio Processor
+# This file documents vulnerabilities that are accepted risks or cannot be fixed yet.
+# Each entry should have a clear justification.
+
+# CVE-2025-13601 - libglib2.0-0t64 heap buffer overflow in g_escape_uri_string()
+# Status: No fix available in Debian as of 2025-12-06
+# Severity: HIGH
+# Risk Assessment: LOW for this application
+# Justification:
+#   - Vulnerability requires calling g_escape_uri_string() with a very large number
+#     of unacceptable characters that need escaping
+#   - This application does not use GLib URI escaping functionality
+#   - Upstream patches exist (glib 2.86.2) but not yet backported to Debian
+#   - Tracking: Debian bug #1121488
+# References:
+#   - https://security-tracker.debian.org/tracker/CVE-2025-13601
+#   - https://gitlab.gnome.org/GNOME/glib/-/issues/3827
+#   - https://gitlab.gnome.org/GNOME/glib/-/merge_requests/4914
+# Review Date: 2025-12-06
+# Next Review: When Debian releases patch (monitor bug #1121488)
+CVE-2025-13601

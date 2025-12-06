@@ -51,7 +51,10 @@ LABEL org.opencontainers.image.source="https://github.com/ByronWilliamsCPA/audio
 LABEL org.opencontainers.image.licenses="MIT"
 
 # Install runtime dependencies for audio processing
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# NOTE: Upgrade libpng16-16t64 to fix CVE-2025-64720, CVE-2025-65018, CVE-2025-66293
+# libglib2.0-0t64 CVE-2025-13601 remains unfixed in Debian (see .trivyignore)
+RUN apt-get update && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
     # FFmpeg for audio/video extraction and conversion
