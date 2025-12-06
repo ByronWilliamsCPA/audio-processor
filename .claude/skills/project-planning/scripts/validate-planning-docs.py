@@ -14,6 +14,10 @@ from __future__ import annotations
 import re
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def count_words(text: str) -> int:
@@ -261,13 +265,16 @@ def validate_adr(content: str, filepath: Path) -> list[str]:
 
 
 def validate_file(
-    filepath: Path, validator: object, docs_dir: Path, all_issues: list[str]
+    filepath: Path,
+    validator: Callable[[str, Path], list[str]],
+    docs_dir: Path,
+    all_issues: list[str],
 ) -> int:
     """Validate a single file.
 
     Args:
         filepath: Path to the file to validate.
-        validator: Validation function to use.
+        validator: Validation function that takes content and filepath, returns issues.
         docs_dir: Path to docs directory for cross-reference resolution.
         all_issues: List to append issues to.
 
@@ -278,7 +285,7 @@ def validate_file(
         all_issues.append(f"Missing required file: {filepath}")
         return 0
 
-    content = filepath.read_text()
+    content = filepath.read_text(encoding="utf-8")
 
     # Check if still placeholder
     if "Awaiting Generation" in content:
@@ -286,8 +293,7 @@ def validate_file(
         return 1
 
     # Run document-specific validation
-    # Type assertion safe: validators are checked at call site
-    all_issues.extend(validator(content, filepath))  # pyright: ignore[reportArgumentType]
+    all_issues.extend(validator(content, filepath))
 
     # Check cross-references
     all_issues.extend(check_cross_references(content, filepath, docs_dir))
@@ -317,7 +323,7 @@ def validate_adr_directory(adr_dir: Path, docs_dir: Path, all_issues: list[str])
 
     files_checked = 0
     for adr_file in adr_files:
-        content = adr_file.read_text()
+        content = adr_file.read_text(encoding="utf-8")
         files_checked += 1
 
         if "Awaiting Generation" in content:

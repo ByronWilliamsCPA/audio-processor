@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
+from audio_processor.core.config import settings
+
 if TYPE_CHECKING:
     from fastapi import Request
 
@@ -57,17 +59,23 @@ async def root() -> dict[str, str]:
 async def global_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
     """Global exception handler for unhandled errors.
 
+    In production, returns a generic error message to avoid exposing internal details.
+    In DEBUG mode, includes the exception details for troubleshooting.
+
     Args:
         _request: The incoming request (unused but required by FastAPI).
         exc: The exception that was raised.
 
     Returns:
-        JSON response with error details.
+        JSON response with error message (and details in DEBUG mode).
     """
+    content: dict[str, str] = {"error": "Internal server error"}
+
+    # Only expose exception details in DEBUG mode
+    if settings.log_level == "DEBUG":
+        content["detail"] = str(exc)
+
     return JSONResponse(
         status_code=500,
-        content={
-            "error": "Internal server error",
-            "detail": str(exc),
-        },
+        content=content,
     )

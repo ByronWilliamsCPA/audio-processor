@@ -1,5 +1,5 @@
 # Docker Compose configuration for Audio Processor
-# Development environment with FastAPI app, Redis queue, and RQ worker
+# Development environment with FastAPI app, Redis queue, and ARQ worker
 
 services:
   # =============================================================================
@@ -87,7 +87,7 @@ services:
       - audio_processor-network
 
   # =============================================================================
-  # RQ Worker Service (Background Job Processing)
+  # ARQ Worker Service (Background Job Processing)
   # =============================================================================
   worker:
     build:
@@ -98,7 +98,7 @@ services:
         BUILD_ENV: ${ENVIRONMENT:-development}
     image: audio_processor:${VERSION:-latest}
     container_name: audio_processor-worker
-    command: ["rq", "worker", "--url", "redis://redis:6379/0", "--with-scheduler"]
+    command: ["arq", "audio_processor.jobs.worker.WorkerSettings"]
     environment:
       # Core settings
       ENVIRONMENT: ${ENVIRONMENT:-development}

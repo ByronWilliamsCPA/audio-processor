@@ -108,8 +108,10 @@ repos:
   # ============================================================================
   # pyproject.toml Validation
   # ============================================================================
-  # NOTE: Disabled due to PEP 735 (dependency-groups) not yet supported by validate-pyproject
-  # Re-enable when https://github.com/abravalheri/validate-pyproject/issues/XXX is resolved
+  # NOTE: Disabled due to PEP 735 (dependency-groups) not yet fully supported
+  # validate-pyproject v0.23 has experimental PEP 735 support but may require
+  # additional configuration or still have compatibility issues with UV's implementation.
+  # Test by uncommenting and running: pre-commit run validate-pyproject --all-files
   # - repo: https://github.com/abravalheri/validate-pyproject
   #   rev: v0.23
   #   hooks:

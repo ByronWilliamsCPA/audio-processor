@@ -93,7 +93,7 @@ USER appuser
 
 # Default command - can be overridden in docker-compose
 # For API server: uvicorn audio_processor.api:app --host 0.0.0.0 --port 8000
-# For RQ worker: rq worker --url redis://redis:6379/0
+# For ARQ worker: arq audio_processor.jobs.worker.WorkerSettings
 CMD ["audio_processor", "--help"]
 
 # =============================================================================
