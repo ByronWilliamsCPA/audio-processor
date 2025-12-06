@@ -148,8 +148,7 @@ def get_logger(name: str) -> BoundLogger:
     """
     # Cast to BoundLogger for type checking - structlog.get_logger returns
     # a BoundLogger when configured with stdlib LoggerFactory
-    result = structlog.get_logger(name)  # pyright: ignore[reportAny]
-    return result  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
+    return structlog.get_logger(name)  # type: ignore[return-value]  # pyright: ignore[reportAny,reportReturnType]
 
 
 def log_performance(

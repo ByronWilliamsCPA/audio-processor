@@ -40,7 +40,8 @@ if TYPE_CHECKING:
     # Type for exception details - allows common JSON-serializable types
     # Allows nesting for complex error contexts
     ErrorDetails = dict[
-        str, str | int | float | bool | None | dict[str, str | int | float | bool | None]
+        str,
+        str | int | float | bool | None | dict[str, str | int | float | bool | None],
     ]
 else:
     ErrorDetails = dict

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -81,7 +80,10 @@ class TestBackgroundTasks:
         file_path = "/tmp/test.csv"
 
         with (
-            patch("audio_processor.jobs.worker.asyncio.sleep", side_effect=RuntimeError("Test error")),
+            patch(
+                "audio_processor.jobs.worker.asyncio.sleep",
+                side_effect=RuntimeError("Test error"),
+            ),
             patch("audio_processor.jobs.worker.logger"),
             pytest.raises(RuntimeError, match="Test error"),
         ):

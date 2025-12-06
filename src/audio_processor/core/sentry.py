@@ -29,6 +29,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from typing import Any
+
     # Sentry types - opaque dicts from Sentry SDK, we manipulate them
     # Using Any is appropriate since these are external SDK types
     SentryEvent = dict[str, Any]  # pyright: ignore[reportExplicitAny]
@@ -169,9 +170,7 @@ def _get_release_version() -> str:
     return "audio_processor@0.1.0"
 
 
-def before_send_hook(
-    event: SentryEvent, hint: SentryHint
-) -> SentryEvent | None:
+def before_send_hook(event: SentryEvent, hint: SentryHint) -> SentryEvent | None:
     """Filter and modify events before sending to Sentry.
 
     This hook allows you to:

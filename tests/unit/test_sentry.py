@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sys
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -125,7 +125,9 @@ class TestInitSentry:
         test_env = "production"
 
         with (
-            patch.dict("os.environ", {"SENTRY_DSN": test_dsn, "SENTRY_ENVIRONMENT": test_env}),
+            patch.dict(
+                "os.environ", {"SENTRY_DSN": test_dsn, "SENTRY_ENVIRONMENT": test_env}
+            ),
             patch("audio_processor.core.sentry.logger.info"),
         ):
             init_sentry()

@@ -40,7 +40,15 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
     # Type for cacheable JSON-serializable values
-    CacheValue = dict[str, str | int | float | bool | None] | list[str | int | float | bool | None] | str | int | float | bool | None
+    CacheValue = (
+        dict[str, str | int | float | bool | None]
+        | list[str | int | float | bool | None]
+        | str
+        | int
+        | float
+        | bool
+        | None
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -182,7 +190,9 @@ def cached(
     return decorator
 
 
-def cache_invalidate(key_pattern: str) -> Callable[[Callable[..., Awaitable[T]]], Callable[..., Awaitable[T]]]:
+def cache_invalidate(
+    key_pattern: str,
+) -> Callable[[Callable[..., Awaitable[T]]], Callable[..., Awaitable[T]]]:
     """Decorator to invalidate cache keys matching a pattern.
 
     Useful for cache invalidation on data updates.

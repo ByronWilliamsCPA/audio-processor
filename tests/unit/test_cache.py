@@ -13,8 +13,8 @@ from audio_processor.core.cache import (
     cached,
     close_redis,
     delete_cached,
-    get_cached,
     get_cache_stats,
+    get_cached,
     get_redis,
     invalidate_pattern,
     set_cached,
@@ -39,6 +39,7 @@ def mock_redis():
         async def async_gen():
             for item in items:
                 yield item
+
         return async_gen()
 
     redis_mock.scan_iter = MagicMock(side_effect=lambda **kwargs: scan_iter_factory([]))
@@ -80,7 +81,9 @@ class TestGetRedis:
         """Test that get_redis uses REDIS_URL from environment."""
         test_url = "redis://testhost:6380/1"
         with (
-            patch("audio_processor.core.cache.from_url", return_value=mock_redis) as mock_from_url,
+            patch(
+                "audio_processor.core.cache.from_url", return_value=mock_redis
+            ) as mock_from_url,
             patch.dict("os.environ", {"REDIS_URL": test_url}),
         ):
             await get_redis()
@@ -92,7 +95,9 @@ class TestGetRedis:
     async def test_get_redis_default_url(self, mock_redis: AsyncMock) -> None:
         """Test that get_redis uses default URL when env var not set."""
         with (
-            patch("audio_processor.core.cache.from_url", return_value=mock_redis) as mock_from_url,
+            patch(
+                "audio_processor.core.cache.from_url", return_value=mock_redis
+            ) as mock_from_url,
             patch.dict("os.environ", {}, clear=True),
         ):
             await get_redis()
@@ -128,6 +133,7 @@ class TestCachedDecorator:
         mock_redis.get.return_value = None
 
         with patch("audio_processor.core.cache.get_redis", return_value=mock_redis):
+
             @cached(ttl=300)
             async def test_func(value: int) -> dict:
                 return {"result": value * 2}
@@ -167,6 +173,7 @@ class TestCachedDecorator:
         mock_redis.get.return_value = None
 
         with patch("audio_processor.core.cache.get_redis", return_value=mock_redis):
+
             @cached(ttl=300, key_prefix="custom")
             async def test_func(value: int) -> dict:
                 return {"result": value}
@@ -186,6 +193,7 @@ class TestCachedDecorator:
             return f"mykey:{value}"
 
         with patch("audio_processor.core.cache.get_redis", return_value=mock_redis):
+
             @cached(ttl=300, key_builder=custom_builder)
             async def test_func(value: int) -> dict:
                 return {"result": value}
@@ -205,6 +213,7 @@ class TestCachedDecorator:
             patch("audio_processor.core.cache.get_redis", return_value=mock_redis),
             patch("audio_processor.core.cache.logger.warning"),
         ):
+
             @cached(ttl=300)
             async def test_func(value: int) -> dict:
                 return {"result": value * 2}
@@ -220,6 +229,7 @@ class TestCachedDecorator:
         custom_ttl = 7200
 
         with patch("audio_processor.core.cache.get_redis", return_value=mock_redis):
+
             @cached(ttl=custom_ttl)
             async def test_func(value: int) -> dict:
                 return {"result": value}
@@ -237,6 +247,7 @@ class TestCacheInvalidateDecorator:
     @pytest.mark.asyncio
     async def test_cache_invalidate_success(self, mock_redis: AsyncMock) -> None:
         """Test cache_invalidate decorator successfully invalidates cache."""
+
         async def scan_iter_mock(**kwargs):
             for key in ["key1", "key2"]:
                 yield key
@@ -245,6 +256,7 @@ class TestCacheInvalidateDecorator:
         mock_redis.delete.return_value = 2
 
         with patch("audio_processor.core.cache.get_redis", return_value=mock_redis):
+
             @cache_invalidate("user:*")
             async def update_user(user_id: str) -> dict:
                 return {"updated": user_id}
@@ -257,9 +269,10 @@ class TestCacheInvalidateDecorator:
     @pytest.mark.asyncio
     async def test_cache_invalidate_redis_error(self, mock_redis: AsyncMock) -> None:
         """Test cache_invalidate handles Redis errors gracefully."""
+
         async def scan_iter_error(**kwargs):
             raise RedisError("Connection failed")
-            yield  # noqa: RET503, ERA001
+            yield
 
         mock_redis.scan_iter = MagicMock(return_value=scan_iter_error())
 
@@ -268,6 +281,7 @@ class TestCacheInvalidateDecorator:
             patch("audio_processor.core.cache.logger.warning"),
             patch("audio_processor.core.cache.logger.exception"),
         ):
+
             @cache_invalidate("user:*")
             async def update_user(user_id: str) -> dict:
                 return {"updated": user_id}
@@ -391,6 +405,7 @@ class TestInvalidatePattern:
     @pytest.mark.asyncio
     async def test_invalidate_pattern_with_matches(self, mock_redis: AsyncMock) -> None:
         """Test invalidate_pattern deletes matching keys."""
+
         async def scan_iter_mock(**kwargs):
             for key in ["user:1", "user:2", "user:3"]:
                 yield key
@@ -407,9 +422,10 @@ class TestInvalidatePattern:
     @pytest.mark.asyncio
     async def test_invalidate_pattern_no_matches(self, mock_redis: AsyncMock) -> None:
         """Test invalidate_pattern when no keys match."""
+
         async def scan_iter_mock(**kwargs):
             return
-            yield  # noqa: RET503, ERA001
+            yield
 
         mock_redis.scan_iter = MagicMock(return_value=scan_iter_mock())
 
@@ -422,9 +438,10 @@ class TestInvalidatePattern:
     @pytest.mark.asyncio
     async def test_invalidate_pattern_redis_error(self, mock_redis: AsyncMock) -> None:
         """Test invalidate_pattern handles Redis errors."""
+
         async def scan_iter_error(**kwargs):
             raise RedisError("Connection failed")
-            yield  # noqa: RET503, ERA001
+            yield
 
         mock_redis.scan_iter = MagicMock(return_value=scan_iter_error())
 
@@ -454,7 +471,9 @@ class TestWarmCache:
             mock_redis.setex.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_warm_cache_existing_key_no_force(self, mock_redis: AsyncMock) -> None:
+    async def test_warm_cache_existing_key_no_force(
+        self, mock_redis: AsyncMock
+    ) -> None:
         """Test warm_cache with existing key and no force."""
         mock_redis.exists.return_value = 1
 
@@ -468,7 +487,9 @@ class TestWarmCache:
             mock_redis.setex.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_warm_cache_existing_key_with_force(self, mock_redis: AsyncMock) -> None:
+    async def test_warm_cache_existing_key_with_force(
+        self, mock_redis: AsyncMock
+    ) -> None:
         """Test warm_cache with existing key and force=True."""
         mock_redis.exists.return_value = 1
 
@@ -520,7 +541,9 @@ class TestGetCacheStats:
             assert stats["connected_clients"] == 5
 
     @pytest.mark.asyncio
-    async def test_get_cache_stats_zero_hits_misses(self, mock_redis: AsyncMock) -> None:
+    async def test_get_cache_stats_zero_hits_misses(
+        self, mock_redis: AsyncMock
+    ) -> None:
         """Test get_cache_stats with zero hits and misses."""
         mock_redis.info.return_value = {
             "keyspace_hits": 0,
