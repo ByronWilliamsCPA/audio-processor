@@ -35,6 +35,10 @@ permissions:
 jobs:
   compatibility:
     name: Python Compatibility Matrix
+    # Temporarily disabled: org-level reusable workflow has JSON format issue
+    # See docs/template_feedback.md for details
+    # Re-enable when ByronWilliamsCPA/.github workflow is fixed
+    if: false
     uses: ByronWilliamsCPA/.github/.github/workflows/python-compatibility.yml@main
     with:
       python-versions: '["3.10", "3.11", "3.12", "3.13"]'
