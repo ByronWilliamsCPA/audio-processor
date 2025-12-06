@@ -158,7 +158,7 @@ def get_logger(name: str) -> BoundLogger:
     """
     # Cast to BoundLogger for type checking - structlog.get_logger returns
     # a BoundLogger when configured with stdlib LoggerFactory
-    return cast(BoundLogger, structlog.get_logger(name))
+    return cast("BoundLogger", structlog.get_logger(name))
 
 
 def log_performance(
