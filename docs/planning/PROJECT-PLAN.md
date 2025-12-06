@@ -83,8 +83,10 @@ git checkout -b feat/phase-{N+1}-{name}
 ### Phase 0: Foundation (Week 1)
 
 **Branch**: `feat/phase-0-foundation`
-**Duration**: 1 week (~14 hours)
+**Duration**: 1 week (~14 hours across 4 sprints)
 **Dependencies**: None
+
+**📋 [Detailed Phase Plan](./phases/phase-0-foundation.md)** - Sprint-by-sprint breakdown
 
 **Objective**: Establish development environment, project structure, and CI/CD pipeline.
 
@@ -125,8 +127,10 @@ git checkout -b feat/phase-0-foundation
 ### Phase 1: Core MVP (Weeks 2-3)
 
 **Branch**: `feat/phase-1-core-mvp`
-**Duration**: 2 weeks
+**Duration**: 2 weeks (~88 hours across 22 sprints)
 **Dependencies**: Phase 0 complete
+
+**📋 [Detailed Phase Plan](./phases/phase-1-core-mvp.md)** - Sprint-by-sprint breakdown
 
 **Objective**: Implement core audio processing pipeline with Deepgram transcription, preprocessing, and job management.
 
@@ -163,8 +167,10 @@ git checkout -b feat/phase-0-foundation
 ### Phase 2: Integration & Enhancement (Week 3-4)
 
 **Branch**: `feat/phase-2-integration`
-**Duration**: 1-2 weeks
+**Duration**: 1-2 weeks (~37 hours across 10 sprints)
 **Dependencies**: Phase 1 complete
+
+**📋 [Detailed Phase Plan](./phases/phase-2-integration.md)** - Sprint-by-sprint breakdown
 
 **Objective**: Implement Docling DOM output format and result retrieval endpoints.
 
@@ -196,8 +202,10 @@ git checkout -b feat/phase-0-foundation
 ### Phase 3: Polish & Deploy (Week 4)
 
 **Branch**: `feat/phase-3-polish`
-**Duration**: 1 week
+**Duration**: 1 week (~30 hours across 8 sprints)
 **Dependencies**: Phase 2 complete
+
+**📋 [Detailed Phase Plan](./phases/phase-3-polish.md)** - Sprint-by-sprint breakdown
 
 **Objective**: Achieve production readiness through testing, documentation, and deployment validation.
 
