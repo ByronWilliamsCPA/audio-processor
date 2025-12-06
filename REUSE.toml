@@ -48,6 +48,7 @@ path = [
     ".gitattributes",
     ".pre-commit-config.yaml",
     ".readthedocs.yaml",
+    ".trivyignore",  # Trivy vulnerability scanner ignore file
     "mkdocs.yml",
     "poetry.lock",  # Dependency lockfile for reproducible builds
     "requirements/**/*.txt",  # Generated from poetry export

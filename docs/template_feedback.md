@@ -137,9 +137,11 @@ with:
 
 **Context**: The REUSE 3.2 specification uses `GPL-3.0-or-later` or `GPL-3.0-only` instead of the deprecated `GPL-3.0` identifier.
 
-**Current**: Template likely uses `GPL-3.0` in LICENSES/ directory or REUSE.toml
+**Current**: Template likely uses GPL-3.0 in LICENSES/ directory or REUSE.toml
 
 **Suggested Fix**: Update license identifier format:
+
+<!-- REUSE-IgnoreStart -->
 ```toml
 # REUSE.toml (if GPL-3.0 is used)
 [[annotations]]
@@ -151,11 +153,14 @@ SPDX-License-Identifier = "GPL-3.0-or-later"  # ✅ Not GPL-3.0
 Or if using LICENSES/ directory:
 - Rename `LICENSES/GPL-3.0.txt` → `LICENSES/GPL-3.0-or-later.txt`
 - Update all file headers from `GPL-3.0` → `GPL-3.0-or-later`
+<!-- REUSE-IgnoreEnd -->
 
 **Affected Files**:
+<!-- REUSE-IgnoreStart -->
 - `{{cookiecutter.project_slug}}/LICENSES/` (license files)
 - `{{cookiecutter.project_slug}}/REUSE.toml` (if using bulk annotations)
 - Any files with inline `SPDX-License-Identifier: GPL-3.0` headers
+<!-- REUSE-IgnoreEnd -->
 
 **Impact**: REUSE compliance check fails, preventing PR merges if this check is required. This affects legal compliance and open-source licensing clarity.
 
@@ -216,6 +221,7 @@ An action could not be found at the URI 'https://api.github.com/repos/google/clu
 
 **Suggested Fix**: Add REUSE headers to all planning document templates:
 
+<!-- REUSE-IgnoreStart -->
 ```markdown
 ---
 title: "Audio Processor - Project Vision & Scope"
@@ -232,6 +238,7 @@ Files: docs/planning/*.md docs/planning/adr/*.md
 Copyright: {{cookiecutter.author_name}} <{{cookiecutter.author_email}}>
 License: {{cookiecutter.license}}
 ```
+<!-- REUSE-IgnoreEnd -->
 
 **Affected Files**:
 - All files in `{{cookiecutter.project_slug}}/docs/planning/`
