@@ -50,14 +50,14 @@ jobs:
 
       - name: Build Fuzzers
         id: build
-        uses: google/clusterfuzzlite/actions/build_fuzzers@f090cc7d581f82fb0e0b04f0c9e56ff7f4a24e76 # v1
+        uses: google/clusterfuzzlite/actions/build_fuzzers@40f9a53e632516d2ec9f738eadd284635529fbad # main
         with:
           language: python
           sanitizer: ${{  matrix.sanitizer  }}
 
       - name: Run Fuzzers
         id: run
-        uses: google/clusterfuzzlite/actions/run_fuzzers@f090cc7d581f82fb0e0b04f0c9e56ff7f4a24e76 # v1
+        uses: google/clusterfuzzlite/actions/run_fuzzers@40f9a53e632516d2ec9f738eadd284635529fbad # main
         with:
           github-token: ${{  secrets.GITHUB_TOKEN  }}
           fuzz-seconds: 600
