@@ -106,7 +106,10 @@ class FipsCodeVisitor(ast.NodeVisitor):
         """
         for keyword in keywords:
             if keyword.arg == "usedforsecurity":
-                if isinstance(keyword.value, ast.Constant) and keyword.value.value is False:
+                if (
+                    isinstance(keyword.value, ast.Constant)
+                    and keyword.value.value is False
+                ):
                     return True
         return False
 

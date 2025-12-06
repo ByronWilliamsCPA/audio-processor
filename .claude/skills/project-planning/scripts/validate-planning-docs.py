@@ -295,9 +295,7 @@ def validate_file(
     return 1
 
 
-def validate_adr_directory(
-    adr_dir: Path, docs_dir: Path, all_issues: list[str]
-) -> int:
+def validate_adr_directory(adr_dir: Path, docs_dir: Path, all_issues: list[str]) -> int:
     """Validate all ADR files in a directory.
 
     Args:
