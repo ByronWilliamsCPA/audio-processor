@@ -1,21 +1,18 @@
 ---
-schema_type: adr
+schema_type: common
 title: "ADR-NNN: Short Descriptive Title of the Decision"
 description: "Brief one-sentence description of what decision this ADR documents"
 tags:
   - architecture
-  - decision
-  - your-topic
-  - relevant-area
-status: proposed
-owner: "Your Team Role or Name"
+status: draft
+owner: core-maintainer
 authors:
   - name: "Author Name"
     email: "author@example.com"
-purpose: "Document the decision to [choose X approach] for [problem area], with rationale for alternatives considered"
+purpose: "Document the decision to [choose X approach] for [problem area], with rationale for alternatives considered."
 ---
 
-> **Status**: `proposed` → Change to `published` once approved, or `deprecated`/`superseded` if no longer valid
+> **Status**: `draft` → Change to `in-review` during review, then `published` once approved
 >
 > For help with this template, see [ADRs/README.md](README.md)
 
@@ -258,8 +255,8 @@ How will we validate that this decision achieved its goals?
 
 ### Related ADRs
 
-- [ADR-001: Previous Decision](0001-previous-decision.md) - Related context
-- [ADR-005: Future Decision](0005-future-decision.md) - Builds on this ADR
+- ADR-001: Previous Decision - Related context (update link when created)
+- ADR-005: Future Decision - Builds on this ADR (update link when created)
 
 ### External References
 
@@ -269,9 +266,9 @@ How will we validate that this decision achieved its goals?
 
 ### Implementation References
 
-- [Implementation File](../../src/component.py)
-- [Test Coverage](../../tests/test_component.py)
-- [Configuration](../../config.yaml)
+- Implementation: `src/your_module/component.py` (add actual path)
+- Tests: `tests/unit/test_component.py` (add actual path)
+- Configuration: `config.yaml` or environment variables
 
 ## Questions & Discussion
 

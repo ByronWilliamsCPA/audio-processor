@@ -6,8 +6,6 @@ owner: core-maintainer
 purpose: "Document the audio signal conditioning pipeline required before ASR transcription."
 tags:
   - adr
-  - audio-processing
-  - signal-processing
 component: Development-Tools
 source: "Audio preprocessing research paper analysis"
 ---
@@ -197,35 +195,35 @@ soundfile==0.12+       # Audio file I/O and validation
 async def preprocess_audio(input_path: Path) -> PreprocessedAudio:
     # 1. Validate and detect format
     audio_info = await validate_audio(input_path)
-    
+
     # 2. Convert to WAV PCM (lossless intermediate)
     wav_path = await ffmpeg_convert_to_wav(input_path)
-    
+
     # 3. Load with librosa for signal analysis
     audio, sr = librosa.load(wav_path, sr=None, mono=False)
-    
+
     # 4. Assess quality BEFORE modifications
     quality = assess_quality(audio, sr)
-    
+
     # 5. Resample to 16kHz if needed
     if sr != 16000:
         audio = librosa.resample(audio, orig_sr=sr, target_sr=16000)
         sr = 16000
-    
+
     # 6. Convert stereo to mono (energy-based channel selection)
     if audio.ndim == 2:
         audio = smart_mono_mix(audio)
-    
+
     # 7. RMS normalization to -20dBFS
     audio = normalize_rms(audio, target_dbfs=-20.0)
-    
+
     # 8. Voice Activity Detection (remove silence)
     speech_segments, vad_timeline = silero_vad(audio, sr)
     audio_filtered = concatenate_speech_segments(audio, speech_segments)
-    
+
     # 9. Save conditioned audio
     output_path = save_wav(audio_filtered, sr=16000, bit_depth=16)
-    
+
     return PreprocessedAudio(
         path=output_path,
         original_duration_ms=len(audio) / sr * 1000,

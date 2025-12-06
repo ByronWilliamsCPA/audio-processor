@@ -5,7 +5,7 @@ status: published
 owner: core-maintainer
 purpose: "License information for Audio Processor."
 tags:
-  - project
+  - documentation
   - license
 ---
 

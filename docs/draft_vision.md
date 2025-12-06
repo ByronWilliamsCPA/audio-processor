@@ -1,4 +1,12 @@
-# Project E
+---
+title: "Project E - Audio Preprocessing Engine - Vision & Scope Document"
+schema_type: common
+status: draft
+owner: core-maintainer
+purpose: "Draft vision and scope document for Project E audio preprocessing engine."
+tags:
+  - research
+---
 
 ## Audio Preprocessing Engine
 

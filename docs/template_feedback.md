@@ -5,8 +5,7 @@ status: published
 owner: core-maintainer
 purpose: "Document template issues for upstream fixes."
 tags:
-  - feedback
-  - template
+  - documentation
 ---
 <!--
 SPDX-FileCopyrightText: 2025 Byron Williams <byron@williamshome.family>
@@ -69,6 +68,7 @@ When working on this project, if you discover any issue that originates from the
 ```
 
 **Suggested Fix**: Correct the indentation of `except` to align with `try:`:
+
 ```python
     try:
         import sentry_sdk
@@ -137,9 +137,11 @@ with:
 
 **Context**: The REUSE 3.2 specification uses `GPL-3.0-or-later` or `GPL-3.0-only` instead of the deprecated `GPL-3.0` identifier.
 
-**Current**: Template likely uses `GPL-3.0` in LICENSES/ directory or REUSE.toml
+**Current**: Template likely uses GPL-3.0 in LICENSES/ directory or REUSE.toml
 
 **Suggested Fix**: Update license identifier format:
+
+<!-- REUSE-IgnoreStart -->
 ```toml
 # REUSE.toml (if GPL-3.0 is used)
 [[annotations]]
@@ -151,11 +153,14 @@ SPDX-License-Identifier = "GPL-3.0-or-later"  # ✅ Not GPL-3.0
 Or if using LICENSES/ directory:
 - Rename `LICENSES/GPL-3.0.txt` → `LICENSES/GPL-3.0-or-later.txt`
 - Update all file headers from `GPL-3.0` → `GPL-3.0-or-later`
+<!-- REUSE-IgnoreEnd -->
 
 **Affected Files**:
+<!-- REUSE-IgnoreStart -->
 - `{{cookiecutter.project_slug}}/LICENSES/` (license files)
 - `{{cookiecutter.project_slug}}/REUSE.toml` (if using bulk annotations)
 - Any files with inline `SPDX-License-Identifier: GPL-3.0` headers
+<!-- REUSE-IgnoreEnd -->
 
 **Impact**: REUSE compliance check fails, preventing PR merges if this check is required. This affects legal compliance and open-source licensing clarity.
 
@@ -216,6 +221,7 @@ An action could not be found at the URI 'https://api.github.com/repos/google/clu
 
 **Suggested Fix**: Add REUSE headers to all planning document templates:
 
+<!-- REUSE-IgnoreStart -->
 ```markdown
 ---
 title: "Audio Processor - Project Vision & Scope"
@@ -232,6 +238,7 @@ Files: docs/planning/*.md docs/planning/adr/*.md
 Copyright: {{cookiecutter.author_name}} <{{cookiecutter.author_email}}>
 License: {{cookiecutter.license}}
 ```
+<!-- REUSE-IgnoreEnd -->
 
 **Affected Files**:
 - All files in `{{cookiecutter.project_slug}}/docs/planning/`
@@ -271,41 +278,48 @@ An action could not be found at the URI 'https://api.github.com/repos/astral-sh/
 
 ### Python Compatibility Matrix Output Format Error
 
-- **Priority**: Medium
-- **Category**: CI/CD
+- **Priority**: High
+- **Category**: CI/CD (Reusable Workflow)
 - **Discovered**: 2025-12-04
+- **Updated**: 2025-12-06
 
-**Issue**: Python compatibility matrix workflow has malformed JSON output causing the build test matrix step to fail.
+**Issue**: Python compatibility matrix workflow fails in the "Build Test Matrix" step with malformed JSON output from the reusable workflow.
 
-**Context**: The "Build Test Matrix" job produces invalid JSON output that cannot be parsed by subsequent steps.
+**Context**: The local workflow calls `ByronWilliamsCPA/.github/.github/workflows/python-compatibility.yml@main` which produces invalid JSON in the matrix output step.
 
 **Error**:
 ```
+##[error]Unable to process file command 'output' successfully.
 ##[error]Invalid format '  "python": ['
 jq: parse error: Unfinished JSON term at EOF at line 2, column 0
 ```
 
-**Suggested Fix**: Review the matrix generation script to ensure it produces valid JSON:
+**Root Cause**: Issue is in the **org-level reusable workflow** (`ByronWilliamsCPA/.github`), not the project-level template. The matrix generation logic in the reusable workflow has malformed JSON output.
+
+**Suggested Fix**: Fix the reusable workflow at `ByronWilliamsCPA/.github/.github/workflows/python-compatibility.yml`:
 
 ```yaml
-# Ensure proper JSON array formatting
-outputs:
-  matrix: ${{ steps.set-matrix.outputs.matrix }}
-
-# In the step that sets matrix:
+# Ensure proper JSON array formatting in GITHUB_OUTPUT
 - id: set-matrix
   run: |
-    MATRIX=$(jq -n '{
-      "python": ["3.11", "3.12", "3.13"],
-      "os": ["ubuntu-latest", "windows-latest", "macos-latest"]
-    }')
+    # Generate valid JSON without line breaks or invalid formatting
+    MATRIX=$(jq -nc --arg pythons "${{ inputs.python-versions }}" \
+                     --arg oses "${{ inputs.operating-systems }}" \
+      '{
+        python: ($pythons | fromjson),
+        os: ($oses | fromjson)
+      }')
     echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
 ```
 
-**Affected Files**:
-- `{{cookiecutter.project_slug}}/.github/workflows/python-compatibility.yml` (or similar)
+### Affected Files
 
-**Impact**: Prevents multi-Python version testing which is valuable for validating broad compatibility. Not critical for single-version projects but important for libraries.
+- `ByronWilliamsCPA/.github/.github/workflows/python-compatibility.yml` (org-level reusable workflow)
+- Projects calling this workflow will fail until fixed upstream
+
+**Impact**: Prevents multi-Python version testing for ALL projects using the org-level reusable workflow. This is a critical blocker affecting the entire organization's CI infrastructure, not just template-generated projects.
+
+**Workaround**: Until fixed, disable or skip python-compatibility workflow in project CI.
 
 ---
 
@@ -358,6 +372,71 @@ outputs:
 - `{{cookiecutter.project_slug}}/src/{{cookiecutter.package_name}}/jobs/worker.py`
 
 **Impact**: Blocks CI pipeline on ALL projects generated from template. Code Quality Checks fail immediately, preventing merges and blocking development workflow. This is a critical blocker affecting template usability.
+
+---
+
+### Organization Reusable Workflows Experiencing startup_failure
+
+- **Priority**: Critical
+- **Category**: CI/CD (Organization Workflows)
+- **Discovered**: 2025-12-06
+
+**Issue**: Multiple organization-level reusable workflows are experiencing `startup_failure` errors, preventing CI checks from running on ALL projects that use them.
+
+**Context**: During PR CI pipeline execution, three critical org-level workflows fail with `startup_failure` status before any jobs can start:
+
+1. **Security Analysis** (`python-security-analysis.yml@main`) - ID: 19984575923
+2. **SBOM & Security Scan** (`python-sbom.yml@main`) - ID: 19984575931
+3. **PR Validation** (`python-pr-validation.yml@main`) - ID: 19984575936
+
+**Error Symptoms**:
+
+- Workflow status: `startup_failure`
+- No logs available (`gh run view <id> --log` returns "log not found")
+- Workflows fail before any jobs execute
+- All recent runs show same failure pattern
+
+**Affected Workflows in ByronWilliamsCPA/.github**:
+- `.github/workflows/python-security-analysis.yml`
+- `.github/workflows/python-sbom.yml`
+- `.github/workflows/python-pr-validation.yml`
+
+**Calling Pattern** (from project workflows):
+
+```yaml
+jobs:
+  security:
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-security-analysis.yml@main
+    with:
+      source-directory: 'src'
+      python-version: '3.12'
+      # ... other inputs
+```
+
+**Possible Causes**:
+
+1. **Syntax error** in the reusable workflow YAML
+2. **Invalid action reference** within the workflow
+3. **Missing required secrets/inputs** not properly defined
+4. **Recent breaking change** to workflow syntax or GitHub Actions runtime
+
+**Suggested Investigation Steps**:
+
+1. Validate YAML syntax in all three org workflows
+2. Check for invalid action references (wrong SHAs, deprecated actions)
+3. Verify `workflow_call` input definitions match what callers provide
+4. Check GitHub Actions status page for platform issues
+5. Review recent commits to org workflows for breaking changes
+
+**Impact**: CRITICAL - Blocks all security scanning, SBOM generation, and PR validation for ALL projects in the organization. This affects:
+
+- Security vulnerability detection
+- Dependency scanning
+- License compliance
+- PR quality checks
+- Conventional commit enforcement
+
+**Workaround**: Projects cannot fix this locally as the issue is in org-level reusable workflows. Must be fixed in `ByronWilliamsCPA/.github` repository.
 
 ---
 

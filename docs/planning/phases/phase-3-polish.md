@@ -6,7 +6,6 @@ owner: core-maintainer
 purpose: "Detailed sprint breakdown for Phase 3 Polish with 3-4 hour increments."
 tags:
   - planning
-  - phase_plan
 component: Development-Tools
 source: "Derived from roadmap.md Phase 3"
 ---
@@ -15,7 +14,6 @@ SPDX-FileCopyrightText: 2025 Byron Williams <byron@williamshome.family>
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# Phase 3: Polish - Detailed Plan
 
 > **Branch**: `feat/phase-3-polish`
 > **Duration**: Week 4 (~30 hours across 8 sprints)
@@ -265,5 +263,5 @@ A deployment is production-ready when:
 - [Tech Spec - Testing Strategy](../tech-spec.md#9-testing-strategy)
 - [Tech Spec - Security](../tech-spec.md#6-security)
 - [Previous: Phase 2 Integration](./phase-2-integration.md)
-- [Contributing Guide](../../../CONTRIBUTING.md)
-- [Security Policy](../../../SECURITY.md)
+- Contributing Guide: `CONTRIBUTING.md` (see project root)
+- Security Policy: `SECURITY.md` (see project root)

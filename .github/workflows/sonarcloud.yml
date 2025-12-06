@@ -115,13 +115,15 @@ jobs:
             -Dsonar.organization=williaby
             -Dsonar.projectKey=ByronWilliamsCPA_audio_processor
             -Dsonar.python.version=3.12
+        continue-on-error: true  # Don't fail if project doesn't exist yet
 
       - name: Check Quality Gate
-        uses: sonarsource/sonarqube-quality-gate-action@master
+        uses: sonarsource/sonarqube-quality-gate-action@cf038b0e0cdecfa9e56c198bbb7d21d751d62c3b # v1.2.0
         timeout-minutes: 5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        continue-on-error: true  # Don't fail workflow, just report status
+        continue-on-error: true  # Don't fail workflow until SonarCloud project is fully configured
+        if: success()  # Only run if scan succeeded
 
       - name: Quality Gate Summary
         if: always()

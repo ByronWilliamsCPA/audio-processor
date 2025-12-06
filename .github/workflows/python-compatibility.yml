@@ -1,10 +1,12 @@
 # Python Compatibility Matrix Testing for Audio Processor
 # Tests the project across multiple Python versions and operating systems.
 #
-# This is a thin caller to the org-level reusable workflow.
+# NOTE: This is a local copy of the org-level reusable workflow with fixes
+# for the JSON output format issue. Once the upstream workflow is fixed,
+# this can be replaced with the reusable workflow call.
 name: Python Compatibility
 
-on:
+"on":
   push:
     branches: [main, master]
     paths:
@@ -33,17 +35,85 @@ permissions:
   contents: read
 
 jobs:
-  compatibility:
-    name: Python Compatibility Matrix
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-compatibility.yml@main
-    with:
-      python-versions: '["3.10", "3.11", "3.12", "3.13"]'
-      operating-systems: '["ubuntu-latest"]'
-      include-macos: true
-      include-windows: true
-      source-directory: 'src'
-      test-command: 'pytest tests/ -v --tb=short -x --ignore=tests/integration --ignore=tests/load -m "not slow and not integration"'
-      coverage-report: false
+  # Build dynamic matrix based on configuration
+  build-matrix:
+    name: Build Test Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+
+    steps:
+      - name: Build matrix configuration
+        id: set-matrix
+        run: |
+          # Start with the base operating systems
+          OS_LIST='["ubuntu-latest"]'
+
+          # Add Windows
+          OS_LIST=$(echo "$OS_LIST" | jq '. + ["windows-latest"] | unique')
+
+          # Add macOS
+          OS_LIST=$(echo "$OS_LIST" | jq '. + ["macos-latest"] | unique')
+
+          # Build the full matrix (compact JSON for single-line output)
+          MATRIX=$(jq -nc \
+            --argjson python '["3.10", "3.11", "3.12", "3.13"]' \
+            --argjson os "$OS_LIST" \
+            '{python: $python, os: $os}')
+
+          # FIXED: Use compact JSON output to avoid multi-line format issues
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          echo "Generated matrix:"
+          echo "$MATRIX" | jq '.'
+
+  test-matrix:
+    name: Test (Python ${{ matrix.python }}, ${{ matrix.os }})
+    needs: build-matrix
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+
+    strategy:
       fail-fast: false
-      timeout-minutes: 30
-    secrets: inherit
+      matrix: ${{ fromJson(needs.build-matrix.outputs.matrix) }}
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2  # v2.13.3
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b  # v5.3.0
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@1e862dfacbd1d6d858c55d9b792c756523627244  # v7.1.4
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run tests
+        # yamllint disable-line rule:line-length
+        run: uv run pytest tests/ -v --tb=short -x --ignore=tests/integration --ignore=tests/load -m "not slow and not integration"
+
+  # Summary job for overall status
+  compatibility-summary:
+    name: Compatibility Summary
+    needs: test-matrix
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Check matrix results
+        run: |
+          if [ "${{ needs.test-matrix.result }}" != "success" ]; then
+            echo "::error::Python compatibility tests failed"
+            exit 1
+          fi
+          echo "✅ All Python compatibility tests passed"

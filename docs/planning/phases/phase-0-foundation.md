@@ -6,7 +6,6 @@ owner: core-maintainer
 purpose: "Detailed sprint breakdown for Phase 0 Foundation with 3-4 hour increments."
 tags:
   - planning
-  - phase_plan
 component: Development-Tools
 source: "Derived from roadmap.md Phase 0"
 ---
@@ -14,8 +13,6 @@ source: "Derived from roadmap.md Phase 0"
 SPDX-FileCopyrightText: 2025 Byron Williams <byron@williamshome.family>
 SPDX-License-Identifier: CC-BY-4.0
 -->
-
-# Phase 0: Foundation - Detailed Plan
 
 > **Branch**: `feat/phase-0-foundation`
 > **Duration**: Week 1 (~14 hours across 4 sprints)

@@ -1,0 +1,19 @@
+# Hadolint configuration for Audio Processor
+# https://github.com/hadolint/hadolint
+
+# Ignore specific rules that are too strict or not applicable
+ignored:
+  # DL3008: Pin versions in apt get install
+  # Rationale: Pinning apt package versions makes builds fragile and hard to maintain.
+  # We use --no-install-recommends and clean apt cache instead for reproducibility.
+  # See: https://github.com/hadolint/hadolint/wiki/DL3008
+  - DL3008
+
+# Optionally, set the failure threshold
+failure-threshold: warning
+
+# Trustedregistries for base images
+trustedRegistries:
+  - docker.io
+  - gcr.io
+  - ghcr.io

@@ -27,6 +27,8 @@ dependencies = [
     "structlog>=23.1.0",
     "rich>=13.5.0",
     "click>=8.1.0",
+    # Security: Force patched version for CVE-2025-66418, CVE-2025-66471
+    "urllib3>=2.6.0",
     # Cross-Version Compatibility Dependencies
     # =========================================
     # This template targets Python 3.10-3.14. Add version-specific dependencies
@@ -141,6 +143,34 @@ monitoring = [
 jobs = [
     "arq>=0.25.0",  # Async task queue
     "redis[hiredis]>=5.0.0",  # Redis client with C parser
+]
+
+# Audio processing pipeline (Phase 1-3)
+# Includes web framework, audio processing, ASR, and job queue dependencies
+audio = [
+    # Web framework for API endpoints
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "python-multipart>=0.0.6",  # File upload support
+
+    # Audio signal processing
+    "librosa>=0.10.0",
+    "pydub>=0.25.1",
+    "ffmpeg-python>=0.2.0",
+    "soundfile>=0.12.1",
+
+    # Voice Activity Detection (VAD)
+    "silero-vad>=5.1",
+
+    # Speech-to-text (Deepgram Nova-2)
+    "deepgram-sdk>=3.0.0",
+
+    # Job queue for async processing
+    "rq>=1.16.0",
+    "redis[hiredis]>=5.0.0",  # Redis client (shared with jobs extra)
+
+    # Output format for RAG pipeline integration
+    "docling-core>=2.3.0",
 ]
 
 

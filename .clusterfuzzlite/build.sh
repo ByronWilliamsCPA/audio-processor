@@ -4,6 +4,9 @@
 #
 # Reference: https://google.github.io/clusterfuzzlite/build-integration/python/
 
+# Install atheris fuzzing engine
+pip3 install atheris
+
 # Install the package with fuzzing support
 pip3 install -e .
 
@@ -14,5 +17,17 @@ for fuzzer in $SRC/audio_processor/fuzz/fuzz_*.py; do
         fuzzer_basename=$(basename -s .py $fuzzer)
         cp $fuzzer $OUT/$fuzzer_basename
         chmod +x $OUT/$fuzzer_basename
+        echo "Copied fuzzer: $fuzzer_basename"
     fi
 done
+
+# Verify at least one fuzzer was copied
+if [ -z "$(ls -A $OUT/fuzz_* 2>/dev/null)" ]; then
+    echo "ERROR: No fuzz targets were copied to $OUT"
+    echo "Contents of $SRC/audio_processor/fuzz/:"
+    ls -la $SRC/audio_processor/fuzz/ || true
+    exit 1
+fi
+
+echo "Successfully built fuzz targets:"
+ls -la $OUT/fuzz_*

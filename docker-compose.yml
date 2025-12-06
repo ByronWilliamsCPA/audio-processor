@@ -1,83 +1,147 @@
 # Docker Compose configuration for Audio Processor
-# Development and production-ready setup with common services
-
-version: '3.9'
+# Development environment with FastAPI app, Redis queue, and ARQ worker
 
 services:
   # =============================================================================
-  # Application Service
+  # Application Service (FastAPI API Server)
   # =============================================================================
   app:
     build:
       context: .
       dockerfile: Dockerfile
+      target: runtime
       args:
         BUILD_ENV: ${ENVIRONMENT:-development}
     image: audio_processor:${VERSION:-latest}
     container_name: audio_processor-app
+    command: ["uvicorn", "audio_processor.api:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     environment:
       # Core settings
       ENVIRONMENT: ${ENVIRONMENT:-development}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       JSON_LOGS: ${JSON_LOGS:-false}
 
-      # Redis cache (if applicable)
-      # REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      # Redis connection
+      REDIS_URL: redis://redis:6379/0
 
-      # Sentry (error tracking)
-      # SENTRY_DSN: ${SENTRY_DSN:-}
-      # SENTRY_ENVIRONMENT: ${ENVIRONMENT:-development}
+      # Deepgram API (required for transcription)
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
+      DEEPGRAM_MODEL: ${DEEPGRAM_MODEL:-nova-2}
+      DEEPGRAM_DIARIZE: ${DEEPGRAM_DIARIZE:-true}
+      DEEPGRAM_SMART_FORMAT: ${DEEPGRAM_SMART_FORMAT:-true}
+      DEEPGRAM_SUMMARIZE: ${DEEPGRAM_SUMMARIZE:-true}
 
-      # Google Cloud credentials (if using Assured OSS)
-      # GOOGLE_APPLICATION_CREDENTIALS_B64: ${GOOGLE_APPLICATION_CREDENTIALS_B64:-}
-      # GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+      # Sentry (error tracking - optional)
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${ENVIRONMENT:-development}
 
     volumes:
       # Development: Mount source code for hot reload
       - ./src:/app/src:ro
       - ./tests:/app/tests:ro
-      # Logs (optional)
-      # - ./logs:/app/logs
+      # Temporary audio files for processing
+      - audio-temp:/app/temp
+
+    ports:
+      - "${APP_PORT:-8000}:8000"
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
     restart: unless-stopped
 
-    # Security: Run as non-root user
-    user: "1000:1000"
+    networks:
+      - audio_processor-network
+
+  # =============================================================================
+  # Redis Service (Job Queue + Caching)
+  # =============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: audio_processor-redis
+    command: redis-server --appendonly yes
+
+    volumes:
+      - redis-data:/data
+
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+    restart: unless-stopped
+
+    networks:
+      - audio_processor-network
+
+  # =============================================================================
+  # ARQ Worker Service (Background Job Processing)
+  # =============================================================================
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+      args:
+        BUILD_ENV: ${ENVIRONMENT:-development}
+    image: audio_processor:${VERSION:-latest}
+    container_name: audio_processor-worker
+    command: ["arq", "audio_processor.jobs.worker.WorkerSettings"]
+    environment:
+      # Core settings
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      JSON_LOGS: ${JSON_LOGS:-false}
+
+      # Redis connection
+      REDIS_URL: redis://redis:6379/0
+
+      # Deepgram API (required for transcription)
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
+      DEEPGRAM_MODEL: ${DEEPGRAM_MODEL:-nova-2}
+      DEEPGRAM_DIARIZE: ${DEEPGRAM_DIARIZE:-true}
+      DEEPGRAM_SMART_FORMAT: ${DEEPGRAM_SMART_FORMAT:-true}
+      DEEPGRAM_SUMMARIZE: ${DEEPGRAM_SUMMARIZE:-true}
+
+      # Sentry (error tracking - optional)
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${ENVIRONMENT:-development}
+
+    volumes:
+      # Development: Mount source code for hot reload
+      - ./src:/app/src:ro
+      # Temporary audio files for processing (shared with app)
+      - audio-temp:/app/temp
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
+    restart: unless-stopped
 
     networks:
       - audio_processor-network
 
 # =============================================================================
-  # Redis Service (Caching/Sessions)
-  # =============================================================================
-  # redis:
-  #   image: redis:7-alpine
-  #   container_name: audio_processor-redis
-  #   command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redispassword}
-  #
-  #   volumes:
-  #     - redis-data:/data
-  #
-  #   ports:
-  #     - "${REDIS_PORT:-6379}:6379"
-  #
-  #   healthcheck:
-  #     test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-  #     interval: 10s
-  #     timeout: 3s
-  #     retries: 5
-  #
-  #   restart: unless-stopped
-  #
-  #   networks:
-  #     - audio_processor-network
-
-# =============================================================================
 # Volumes (Persistent Storage)
 # =============================================================================
 volumes:
-# redis-data:
-  #   driver: local
+  redis-data:
+    driver: local
+  audio-temp:
+    driver: local
 
 # =============================================================================
 # Networks
@@ -95,16 +159,17 @@ networks:
 # Development:
 #   docker-compose up -d
 #   docker-compose logs -f app
+#   docker-compose logs -f worker
 #   docker-compose exec app bash
-#
-# Production:
-#   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 #
 # Rebuild after dependency changes:
 #   docker-compose up -d --build
 #
-# View logs:
+# View all logs:
 #   docker-compose logs -f
+#
+# Scale workers:
+#   docker-compose up -d --scale worker=3
 #
 # Stop services:
 #   docker-compose down

@@ -16,7 +16,7 @@ configuration.
 
 import logging
 import sys
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import structlog
 from rich.console import Console
@@ -24,7 +24,12 @@ from rich.logging import RichHandler
 from structlog.stdlib import BoundLogger
 
 if TYPE_CHECKING:
-    from structlog.types import EventDict, Processor, WrappedLogger
+    from structlog.types import EventDict, Processor
+else:
+    # Type aliases for runtime - only used during static type checking, not at runtime
+    # These provide fallback definitions when TYPE_CHECKING is False
+    EventDict = dict
+    Processor = object
 
 # Global console for rich output (stderr for proper output separation)
 console = Console(stderr=True)
@@ -81,11 +86,20 @@ def setup_logging(
 
     # Define a no-op processor for when timestamp is disabled
     def noop_processor(
-        _logger: "WrappedLogger",
+        _logger: object,  # WrappedLogger from structlog - opaque type
         _method_name: str,
-        event_dict: "EventDict",
-    ) -> "EventDict":
-        """No-op processor that passes through the event dict unchanged."""
+        event_dict: EventDict,
+    ) -> EventDict:
+        """No-op processor that passes through the event dict unchanged.
+
+        Args:
+            _logger: Structlog wrapped logger instance (unused).
+            _method_name: Log method name (unused).
+            event_dict: Event dictionary to process.
+
+        Returns:
+            Unmodified event dictionary.
+        """
         return event_dict
 
     # Configure structlog processors
@@ -144,8 +158,7 @@ def get_logger(name: str) -> BoundLogger:
     """
     # Cast to BoundLogger for type checking - structlog.get_logger returns
     # a BoundLogger when configured with stdlib LoggerFactory
-    result: BoundLogger = structlog.get_logger(name)  # pyright: ignore[reportAssignmentType]
-    return result
+    return cast("BoundLogger", structlog.get_logger(name))
 
 
 def log_performance(
@@ -209,11 +222,15 @@ if __name__ == "__main__":
 
     # Example of structured error logging
     def _raise_example_error() -> None:
-        """Helper function to demonstrate error logging."""
+        """Helper function to demonstrate error logging.
+
+        Raises:
+            ValueError: Always raised with example error message.
+        """
         error_msg = "Example error for demonstration"
         raise ValueError(error_msg)
 
     try:
         _raise_example_error()
-    except Exception:
+    except ValueError:  # Narrow exception to expected type
         logger.exception("Unexpected error during processing")

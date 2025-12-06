@@ -31,13 +31,24 @@ import hashlib
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
-from redis.asyncio import Redis, from_url
+from redis.asyncio import Redis, from_url  # pyright: ignore[reportUnknownVariableType]
 from redis.exceptions import RedisError
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
+
+    # Type for cacheable JSON-serializable values
+    CacheValue = (
+        dict[str, str | int | float | bool | None]
+        | list[str | int | float | bool | None]
+        | str
+        | int
+        | float
+        | bool
+        | None
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +80,8 @@ async def get_redis() -> Redis:
         # Get Redis URL from environment
         redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
-        _redis_pool = from_url(
+        # Redis library has incomplete type stubs for from_url
+        _redis_pool = from_url(  # pyright: ignore[reportUnknownVariableType]
             redis_url,
             encoding="utf-8",
             decode_responses=True,
@@ -107,7 +119,7 @@ def cached(
     ttl: int = 3600,
     key_prefix: str = "",
     key_builder: Callable[..., str] | None = None,
-) -> Callable:
+) -> Callable[[Callable[..., Awaitable[T]]], Callable[..., Awaitable[T]]]:
     """Cache async function results in Redis.
 
     Args:
@@ -133,7 +145,7 @@ def cached(
 
     def decorator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         @functools.wraps(func)
-        async def wrapper(*args: Any, **kwargs: Any) -> T:
+        async def wrapper(*args: object, **kwargs: object) -> T:
             # Build cache key
             if key_builder:
                 cache_key = key_builder(*args, **kwargs)
@@ -150,10 +162,11 @@ def cached(
                 redis = await get_redis()
 
                 # Try to get from cache
-                cached_value = await redis.get(cache_key)
+                # Redis library returns unknown types - safe to ignore since we control serialization
+                cached_value = await redis.get(cache_key)  # pyright: ignore[reportUnknownVariableType, reportAny]
                 if cached_value is not None:
                     logger.debug("cache_hit", key=cache_key)  # type: ignore[call-arg]
-                    return json.loads(cached_value)
+                    return json.loads(cached_value)  # pyright: ignore[reportUnknownArgumentType, reportAny]
 
                 # Cache miss - call original function
                 logger.debug("cache_miss", key=cache_key)  # type: ignore[call-arg]
@@ -177,13 +190,18 @@ def cached(
     return decorator
 
 
-def cache_invalidate(key_pattern: str) -> Callable:
+def cache_invalidate(
+    key_pattern: str,
+) -> Callable[[Callable[..., Awaitable[T]]], Callable[..., Awaitable[T]]]:
     """Decorator to invalidate cache keys matching a pattern.
 
     Useful for cache invalidation on data updates.
 
     Args:
         key_pattern: Redis key pattern (supports * wildcard)
+
+    Returns:
+        Decorator function that wraps async functions to invalidate cache.
 
     Example:
         >>> @cache_invalidate("user:*")
@@ -195,7 +213,7 @@ def cache_invalidate(key_pattern: str) -> Callable:
 
     def decorator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         @functools.wraps(func)
-        async def wrapper(*args: Any, **kwargs: Any) -> T:
+        async def wrapper(*args: object, **kwargs: object) -> T:
             # Call original function first
             result = await func(*args, **kwargs)
 
@@ -221,7 +239,7 @@ def cache_invalidate(key_pattern: str) -> Callable:
 # =============================================================================
 
 
-async def get_cached(key: str, default: Any = None) -> Any:
+async def get_cached(key: str, default: CacheValue = None) -> CacheValue:
     """Get value from cache.
 
     Args:
@@ -233,19 +251,20 @@ async def get_cached(key: str, default: Any = None) -> Any:
     """
     try:
         redis = await get_redis()
-        value = await redis.get(key)
+        # Redis library returns unknown types - safe to ignore since we control serialization
+        value = await redis.get(key)  # pyright: ignore[reportUnknownVariableType, reportAny]
 
         if value is None:
             return default
 
-        return json.loads(value)
+        return json.loads(value)  # pyright: ignore[reportUnknownArgumentType, reportAny]
 
     except RedisError as e:
         logger.warning("cache_get_failed", key=key, error=str(e))  # type: ignore[call-arg]
         return default
 
 
-async def set_cached(key: str, value: Any, ttl: int = 3600) -> bool:
+async def set_cached(key: str, value: CacheValue, ttl: int = 3600) -> bool:
     """Set value in cache.
 
     Args:
@@ -276,8 +295,9 @@ async def delete_cached(key: str) -> bool:
     """
     try:
         redis = await get_redis()
-        deleted = await redis.delete(key)
-        return deleted > 0  # noqa: TRY300
+        # Redis library returns unknown types - safe comparison
+        deleted = await redis.delete(key)  # pyright: ignore[reportUnknownVariableType, reportAny]
+        return deleted > 0  # noqa: TRY300  # pyright: ignore[reportAny]
     except RedisError as e:
         logger.warning("cache_delete_failed", key=key, error=str(e))  # type: ignore[call-arg]
         return False
@@ -303,13 +323,14 @@ async def invalidate_pattern(pattern: str) -> int:
         redis = await get_redis()
 
         # Find all matching keys
-        keys = [key async for key in redis.scan_iter(match=pattern, count=100)]
+        # Redis library has incomplete type stubs for scan_iter
+        keys = [key async for key in redis.scan_iter(match=pattern, count=100)]  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
 
         # Delete in batches
         if keys:
-            deleted = await redis.delete(*keys)
+            deleted = await redis.delete(*keys)  # pyright: ignore[reportUnknownArgumentType, reportAny]
             logger.info("cache_invalidated", pattern=pattern, count=deleted)  # type: ignore[call-arg]
-            return deleted
+            return deleted  # pyright: ignore[reportAny]
 
         return 0  # noqa: TRY300
     except RedisError as e:
@@ -324,7 +345,7 @@ async def invalidate_pattern(pattern: str) -> int:
 
 async def warm_cache(
     key: str,
-    value_fn: Callable[[], Awaitable[Any]],
+    value_fn: Callable[[], Awaitable[CacheValue]],
     ttl: int = 3600,
     force: bool = False,
 ) -> bool:
@@ -357,7 +378,7 @@ async def warm_cache(
             return False
 
         # Get value and cache it
-        value = await value_fn()
+        value = await value_fn()  # pyright: ignore[reportUnknownVariableType]
         await redis.setex(key, ttl, json.dumps(value, default=str))
 
         logger.info("cache_warmed", key=key, ttl=ttl)  # type: ignore[call-arg]
@@ -420,7 +441,7 @@ async def update_user(user_id: str, data: dict):
 # =============================================================================
 
 
-async def get_cache_stats() -> dict[str, Any]:
+async def get_cache_stats() -> dict[str, int | float | str]:
     """Get cache statistics.
 
     Returns:
@@ -428,18 +449,19 @@ async def get_cache_stats() -> dict[str, Any]:
     """
     try:
         redis = await get_redis()
-        info = await redis.info("stats")
+        # Redis library has incomplete type stubs for info()
+        info = await redis.info("stats")  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType, reportAny]
 
-        return {
-            "hits": info.get("keyspace_hits", 0),
-            "misses": info.get("keyspace_misses", 0),
-            "hit_rate": (
-                info.get("keyspace_hits", 0)
-                / max(info.get("keyspace_hits", 0) + info.get("keyspace_misses", 0), 1)
+        return {  # pyright: ignore[reportAny]
+            "hits": info.get("keyspace_hits", 0),  # pyright: ignore[reportAny]
+            "misses": info.get("keyspace_misses", 0),  # pyright: ignore[reportAny]
+            "hit_rate": (  # pyright: ignore[reportAny]
+                info.get("keyspace_hits", 0)  # pyright: ignore[reportAny]
+                / max(info.get("keyspace_hits", 0) + info.get("keyspace_misses", 0), 1)  # pyright: ignore[reportAny]
             )
             * 100,
-            "memory_used": info.get("used_memory_human", "N/A"),
-            "connected_clients": info.get("connected_clients", 0),
+            "memory_used": info.get("used_memory_human", "N/A"),  # pyright: ignore[reportAny]
+            "connected_clients": info.get("connected_clients", 0),  # pyright: ignore[reportAny]
         }
 
     except RedisError as e:
