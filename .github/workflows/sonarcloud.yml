@@ -121,7 +121,8 @@ jobs:
         timeout-minutes: 5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        continue-on-error: true  # Don't fail workflow, just report status
+        continue-on-error: true  # Don't fail workflow until SonarCloud project is fully configured
+        if: success()  # Only run if scan succeeded
 
       - name: Quality Gate Summary
         if: always()

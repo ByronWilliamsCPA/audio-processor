@@ -35,7 +35,7 @@ jobs:
       coverage-threshold: 80
       source-directory: 'src'
       test-directory: 'tests'
-      enable-sonarcloud: true
+      enable-sonarcloud: false  # TODO: Enable after setting up project on SonarCloud
       sonarcloud-organization: 'ByronWilliamsCPA'
       sonarcloud-project-key: 'ByronWilliamsCPA_audio_processor'
       enable-codecov: true
