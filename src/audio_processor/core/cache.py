@@ -205,7 +205,7 @@ def cache_invalidate(key_pattern: str) -> Callable:
             except RedisError as e:
                 logger.warning(
                     "cache_invalidation_failed",
-                    pattern=key_pattern,
+                    pattern=key_pattern,  # type: ignore[call-arg]
                     error=str(e),  # type: ignore[call-arg]
                 )
 
