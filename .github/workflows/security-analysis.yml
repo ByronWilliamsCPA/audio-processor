@@ -27,6 +27,7 @@ permissions:
   contents: read
   security-events: write
   pull-requests: write
+  actions: read
 
 # Uses org-level reusable workflow
 jobs:
