@@ -104,8 +104,13 @@ async def send_email_task(
     """
     logger.info("sending_email", recipient=recipient, subject=subject)  # type: ignore[call-arg]
 
-    # TODO: Integrate with your email provider
-    # Example with SendGrid, AWS SES, etc.
+    # NOTE: Email integration required - configure provider in production
+    # Supported options: SendGrid, AWS SES, Mailgun, Postmark
+    # Example with SendGrid:
+    #   from sendgrid import SendGridAPIClient  # noqa: ERA001
+    #   from sendgrid.helpers.mail import Mail  # noqa: ERA001
+    #   sg = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))  # noqa: ERA001
+    #   sg.send(Mail(from_email=..., to_emails=..., subject=..., html_content=...))  # noqa: ERA001
 
     await asyncio.sleep(1)  # Simulate email sending
 

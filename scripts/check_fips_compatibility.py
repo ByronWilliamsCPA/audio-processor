@@ -95,76 +95,122 @@ class FipsCodeVisitor(ast.NodeVisitor):
         self.issues: list[FipsIssue] = []
         self._in_hashlib_call = False
 
+    def _has_usedforsecurity_false(self, keywords: list[ast.keyword]) -> bool:
+        """Check if usedforsecurity=False keyword argument is present.
+
+        Args:
+            keywords: List of keyword arguments from AST node.
+
+        Returns:
+            True if usedforsecurity=False is found, False otherwise.
+        """
+        for keyword in keywords:
+            if keyword.arg == "usedforsecurity":
+                if isinstance(keyword.value, ast.Constant) and keyword.value.value is False:
+                    return True
+        return False
+
+    def _check_hashlib_call(self, node: ast.Call, func_name: str) -> None:
+        """Check hashlib function call for FIPS compliance.
+
+        Args:
+            node: AST Call node.
+            func_name: Name of the hashlib function (e.g., 'md5', 'sha1').
+        """
+        if func_name not in NON_FIPS_HASHES:
+            return
+
+        if self._has_usedforsecurity_false(node.keywords):
+            return
+
+        severity = "error" if func_name in {"md5", "md4"} else "warning"
+        self.issues.append(
+            FipsIssue(
+                file_path=self.file_path,
+                line_number=node.lineno,
+                severity=severity,
+                category="hash",
+                message=f"hashlib.{func_name}() is not FIPS-approved",
+                fix_hint=f"Add usedforsecurity=False if not used for security: "
+                f"hashlib.{func_name}(..., usedforsecurity=False)",
+            )
+        )
+
+    def _check_cipher_call(self, node: ast.Call, func_name: str) -> None:
+        """Check cipher function call for FIPS compliance.
+
+        Args:
+            node: AST Call node.
+            func_name: Name of the cipher function.
+        """
+        if func_name not in NON_FIPS_CIPHERS and not any(
+            c in func_name for c in NON_FIPS_CIPHERS
+        ):
+            return
+
+        self.issues.append(
+            FipsIssue(
+                file_path=self.file_path,
+                line_number=node.lineno,
+                severity="error",
+                category="cipher",
+                message=f"Non-FIPS cipher detected: {func_name}",
+                fix_hint="Use AES, ChaCha20-Poly1305, or other FIPS-approved algorithms",
+            )
+        )
+
+    def _check_new_call_with_algo(self, node: ast.Call) -> None:
+        """Check new() calls with algorithm name arguments.
+
+        Args:
+            node: AST Call node with 'new' attribute.
+        """
+        for arg in node.args:
+            if not isinstance(arg, ast.Constant) or not isinstance(arg.value, str):
+                continue
+
+            algo = arg.value.lower()
+            if algo not in NON_FIPS_HASHES and algo not in NON_FIPS_CIPHERS:
+                continue
+
+            category = "cipher" if algo in NON_FIPS_CIPHERS else "hash"
+            self.issues.append(
+                FipsIssue(
+                    file_path=self.file_path,
+                    line_number=node.lineno,
+                    severity="error",
+                    category=category,
+                    message=f"Non-FIPS algorithm: {algo}",
+                    fix_hint="Use FIPS-approved algorithms (AES, SHA-256, etc.)",
+                )
+            )
+
+    def _check_attribute_call(self, node: ast.Call) -> None:
+        """Check attribute-based function calls (e.g., hashlib.md5()).
+
+        Args:
+            node: AST Call node with Attribute func.
+        """
+        if not isinstance(node.func, ast.Attribute):
+            return
+
+        func_name = node.func.attr.lower()
+
+        # Check for hashlib calls
+        if isinstance(node.func.value, ast.Name) and node.func.value.id == "hashlib":
+            self._check_hashlib_call(node, func_name)
+            return
+
+        # Check for cipher calls
+        self._check_cipher_call(node, func_name)
+
+        # Check for new() calls with algorithm names
+        if node.func.attr == "new":
+            self._check_new_call_with_algo(node)
+
     def visit_Call(self, node: ast.Call) -> None:
         """Visit function calls to detect crypto usage."""
-        # Check for hashlib.md5(), hashlib.sha1(), etc.
-        if isinstance(node.func, ast.Attribute):
-            func_name = node.func.attr.lower()
-
-            # Check for hashlib calls
-            if (
-                isinstance(node.func.value, ast.Name)
-                and node.func.value.id == "hashlib"
-            ):
-                if func_name in NON_FIPS_HASHES:
-                    # Check if usedforsecurity=False is set
-                    has_usedforsecurity_false = False
-                    for keyword in node.keywords:
-                        if keyword.arg == "usedforsecurity":
-                            if (
-                                isinstance(keyword.value, ast.Constant)
-                                and keyword.value.value is False
-                            ):
-                                has_usedforsecurity_false = True
-
-                    if not has_usedforsecurity_false:
-                        severity = "error" if func_name in {"md5", "md4"} else "warning"
-                        self.issues.append(
-                            FipsIssue(
-                                file_path=self.file_path,
-                                line_number=node.lineno,
-                                severity=severity,
-                                category="hash",
-                                message=f"hashlib.{func_name}() is not FIPS-approved",
-                                fix_hint=f"Add usedforsecurity=False if not used for security: "
-                                f"hashlib.{func_name}(..., usedforsecurity=False)",
-                            )
-                        )
-
-            # Check for Crypto/Cryptodome cipher usage
-            if func_name in NON_FIPS_CIPHERS or any(
-                c in func_name for c in NON_FIPS_CIPHERS
-            ):
-                self.issues.append(
-                    FipsIssue(
-                        file_path=self.file_path,
-                        line_number=node.lineno,
-                        severity="error",
-                        category="cipher",
-                        message=f"Non-FIPS cipher detected: {func_name}",
-                        fix_hint="Use AES, ChaCha20-Poly1305, or other FIPS-approved algorithms",
-                    )
-                )
-
-        # Check for direct new() calls with algorithm names
-        if isinstance(node.func, ast.Attribute) and node.func.attr == "new":
-            for arg in node.args:
-                if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
-                    algo = arg.value.lower()
-                    if algo in NON_FIPS_HASHES or algo in NON_FIPS_CIPHERS:
-                        self.issues.append(
-                            FipsIssue(
-                                file_path=self.file_path,
-                                line_number=node.lineno,
-                                severity="error",
-                                category="cipher"
-                                if algo in NON_FIPS_CIPHERS
-                                else "hash",
-                                message=f"Non-FIPS algorithm: {algo}",
-                                fix_hint="Use FIPS-approved algorithms (AES, SHA-256, etc.)",
-                            )
-                        )
-
+        self._check_attribute_call(node)
         self.generic_visit(node)
 
     def visit_Import(self, node: ast.Import) -> None:
@@ -222,6 +268,64 @@ def check_python_file(file_path: Path) -> list[FipsIssue]:
     return issues
 
 
+def _get_package_patterns(package: str) -> list[str]:
+    """Get regex patterns for finding a package in dependency files.
+
+    Args:
+        package: Package name to search for.
+
+    Returns:
+        List of regex patterns to match the package.
+    """
+    return [
+        rf'"{package}["\s\[<>=]',
+        rf"'{package}['\s\[<>=]",
+        rf"^{package}\s*[<>=\[]",
+    ]
+
+
+def _check_package_in_content(
+    content: str,
+    file_path: Path,
+    package: str,
+    message: str,
+    severity: str,
+) -> list[FipsIssue]:
+    """Check for a package in file content and create issues.
+
+    Args:
+        content: File content to search.
+        file_path: Path to the file being checked.
+        package: Package name to find.
+        message: Issue message/fix hint.
+        severity: Issue severity level.
+
+    Returns:
+        List of FipsIssue objects found.
+    """
+    issues: list[FipsIssue] = []
+    patterns = _get_package_patterns(package)
+
+    for pattern in patterns:
+        matches = list(re.finditer(pattern, content, re.MULTILINE | re.IGNORECASE))
+        for match in matches:
+            line_num = content[: match.start()].count("\n") + 1
+            issues.append(
+                FipsIssue(
+                    file_path=file_path,
+                    line_number=line_num,
+                    severity=severity,
+                    category="package",
+                    message=f"FIPS-incompatible package: {package}"
+                    if severity == "error"
+                    else f"Package may need FIPS verification: {package}",
+                    fix_hint=message,
+                )
+            )
+
+    return issues
+
+
 def check_pyproject_toml(file_path: Path) -> list[FipsIssue]:
     """Check pyproject.toml for FIPS-incompatible dependencies."""
     issues: list[FipsIssue] = []
@@ -234,51 +338,15 @@ def check_pyproject_toml(file_path: Path) -> list[FipsIssue]:
 
         # Check for incompatible packages
         for package, message in FIPS_INCOMPATIBLE_PACKAGES.items():
-            # Match package in dependencies (various formats)
-            patterns = [
-                rf'"{package}["\s\[<>=]',
-                rf"'{package}['\s\[<>=]",
-                rf"^{package}\s*[<>=\[]",
-            ]
-            for pattern in patterns:
-                matches = list(
-                    re.finditer(pattern, content, re.MULTILINE | re.IGNORECASE)
-                )
-                for match in matches:
-                    line_num = content[: match.start()].count("\n") + 1
-                    issues.append(
-                        FipsIssue(
-                            file_path=file_path,
-                            line_number=line_num,
-                            severity="error",
-                            category="package",
-                            message=f"FIPS-incompatible package: {package}",
-                            fix_hint=message,
-                        )
-                    )
+            issues.extend(
+                _check_package_in_content(content, file_path, package, message, "error")
+            )
 
         # Check for packages that need verification
         for package, message in FIPS_VERIFY_PACKAGES.items():
-            patterns = [
-                rf'"{package}["\s\[<>=]',
-                rf"'{package}['\s\[<>=]",
-            ]
-            for pattern in patterns:
-                matches = list(
-                    re.finditer(pattern, content, re.MULTILINE | re.IGNORECASE)
-                )
-                for match in matches:
-                    line_num = content[: match.start()].count("\n") + 1
-                    issues.append(
-                        FipsIssue(
-                            file_path=file_path,
-                            line_number=line_num,
-                            severity="info",
-                            category="package",
-                            message=f"Package may need FIPS verification: {package}",
-                            fix_hint=message,
-                        )
-                    )
+            issues.extend(
+                _check_package_in_content(content, file_path, package, message, "info")
+            )
 
     except Exception as e:
         issues.append(
@@ -378,6 +446,133 @@ def print_issue(issue: FipsIssue, show_hints: bool = False) -> None:
     print()
 
 
+def _collect_all_issues(args: argparse.Namespace) -> list[FipsIssue]:
+    """Collect all FIPS issues from source and dependency files.
+
+    Args:
+        args: Parsed command-line arguments.
+
+    Returns:
+        List of all FipsIssue objects found.
+    """
+    all_issues: list[FipsIssue] = []
+
+    # Check Python source files
+    dirs_to_check = [args.src_dir]
+    if args.include_tests:
+        dirs_to_check.append(Path("tests"))
+
+    for file_path in find_python_files(dirs_to_check):
+        if "__pycache__" in str(file_path):
+            continue
+        all_issues.extend(check_python_file(file_path))
+
+    # Check dependency files
+    all_issues.extend(check_pyproject_toml(Path("pyproject.toml")))
+    all_issues.extend(check_requirements_file(Path("requirements.txt")))
+    all_issues.extend(check_requirements_file(Path("requirements-dev.txt")))
+
+    return all_issues
+
+
+def _output_json(
+    errors: list[FipsIssue], warnings: list[FipsIssue], infos: list[FipsIssue]
+) -> None:
+    """Output results in JSON format.
+
+    Args:
+        errors: List of error-level issues.
+        warnings: List of warning-level issues.
+        infos: List of info-level issues.
+    """
+    import json  # noqa: PLC0415
+
+    all_issues = errors + warnings + infos
+    output = {
+        "summary": {
+            "errors": len(errors),
+            "warnings": len(warnings),
+            "info": len(infos),
+        },
+        "issues": [
+            {
+                "file": str(i.file_path),
+                "line": i.line_number,
+                "severity": i.severity,
+                "category": i.category,
+                "message": i.message,
+                "fix_hint": i.fix_hint,
+            }
+            for i in all_issues
+        ],
+    }
+    print(json.dumps(output, indent=2))
+
+
+def _output_human_readable(
+    errors: list[FipsIssue],
+    warnings: list[FipsIssue],
+    infos: list[FipsIssue],
+    show_hints: bool,
+) -> None:
+    """Output results in human-readable format.
+
+    Args:
+        errors: List of error-level issues.
+        warnings: List of warning-level issues.
+        infos: List of info-level issues.
+        show_hints: Whether to show fix hints.
+    """
+    print("=" * 60)
+    print("FIPS 140-2/140-3 Compatibility Check")
+    print("=" * 60)
+    print()
+
+    all_issues = errors + warnings + infos
+    if all_issues:
+        for issue in all_issues:
+            print_issue(issue, show_hints=show_hints)
+    else:
+        print("✓ No FIPS compatibility issues found")
+        print()
+
+    # Summary
+    print("-" * 60)
+    print(
+        f"Summary: {len(errors)} error(s), {len(warnings)} warning(s), {len(infos)} info"
+    )
+    print()
+
+    if errors:
+        print("FIPS Compliance: ❌ FAILED")
+        print("  Address errors before deploying to FIPS-enabled systems.")
+    elif warnings:
+        print("FIPS Compliance: ⚠️  NEEDS REVIEW")
+        print("  Review warnings for potential FIPS issues.")
+    else:
+        print("FIPS Compliance: ✅ PASSED")
+
+
+def _determine_exit_code(
+    errors: list[FipsIssue], warnings: list[FipsIssue], strict: bool
+) -> int:
+    """Determine exit code based on issues found.
+
+    Args:
+        errors: List of error-level issues.
+        warnings: List of warning-level issues.
+        strict: Whether to treat warnings as errors.
+
+    Returns:
+        Exit code (0 for success, 1 for failure).
+    """
+    if errors:
+        return 1
+    if strict and warnings:
+        return 1
+    return 0
+
+
 def main() -> int:
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -419,22 +614,7 @@ Examples:
     )
     args = parser.parse_args()
 
-    all_issues: list[FipsIssue] = []
-
-    # Check Python source files
-    dirs_to_check = [args.src_dir]
-    if args.include_tests:
-        dirs_to_check.append(Path("tests"))
-
-    for file_path in find_python_files(dirs_to_check):
-        if "__pycache__" in str(file_path):
-            continue
-        all_issues.extend(check_python_file(file_path))
-
-    # Check dependency files
-    all_issues.extend(check_pyproject_toml(Path("pyproject.toml")))
-    all_issues.extend(check_requirements_file(Path("requirements.txt")))
-    all_issues.extend(check_requirements_file(Path("requirements-dev.txt")))
+    all_issues = _collect_all_issues(args)
 
     # Filter and count by severity
     errors = [i for i in all_issues if i.severity == "error"]
@@ -442,63 +622,11 @@ Examples:
     infos = [i for i in all_issues if i.severity == "info"]
 
     if args.json:
-        import json  # noqa: PLC0415
-
-        output = {
-            "summary": {
-                "errors": len(errors),
-                "warnings": len(warnings),
-                "info": len(infos),
-            },
-            "issues": [
-                {
-                    "file": str(i.file_path),
-                    "line": i.line_number,
-                    "severity": i.severity,
-                    "category": i.category,
-                    "message": i.message,
-                    "fix_hint": i.fix_hint,
-                }
-                for i in all_issues
-            ],
-        }
-        print(json.dumps(output, indent=2))
+        _output_json(errors, warnings, infos)
     else:
-        print("=" * 60)
-        print("FIPS 140-2/140-3 Compatibility Check")
-        print("=" * 60)
-        print()
+        _output_human_readable(errors, warnings, infos, args.fix_hints)
 
-        if all_issues:
-            # Print errors first, then warnings, then info
-            for issue in errors + warnings + infos:
-                print_issue(issue, show_hints=args.fix_hints)
-        else:
-            print("✓ No FIPS compatibility issues found")
-            print()
-
-        # Summary
-        print("-" * 60)
-        print(
-            f"Summary: {len(errors)} error(s), {len(warnings)} warning(s), {len(infos)} info"
-        )
-        print()
-
-        if errors:
-            print("FIPS Compliance: ❌ FAILED")
-            print("  Address errors before deploying to FIPS-enabled systems.")
-        elif warnings:
-            print("FIPS Compliance: ⚠️  NEEDS REVIEW")
-            print("  Review warnings for potential FIPS issues.")
-        else:
-            print("FIPS Compliance: ✅ PASSED")
-
-    # Determine exit code
-    if errors:
-        return 1
-    if args.strict and warnings:
-        return 1
-    return 0
+    return _determine_exit_code(errors, warnings, args.strict)
 
 
 if __name__ == "__main__":
