@@ -277,7 +277,7 @@ The output of the preprocessing engine is only as good as the retrieval strategy
 Trust is the currency of AI. Users rarely trust a summary of a recording without proof.
 The preprocessing engine should generate Signed URLs for every chunk.
 
-* The metadata for chunk $C\_i$ includes url: https://s3.bucket/file.mp3?start=120\&end=145.
+* The metadata for chunk $C\_i$ includes url: <https://s3.bucket/file.mp3?start=120\&end=145>.
 * When the RAG UI displays the answer, it renders a "Play" button allowing the user to listen to the *exact source sentence* that grounded the LLM's answer. This feature requires the preprocessing engine to maintain precise time-alignment maps throughout the entire conversion process.
 
 ## **9\. Benchmarks, Metrics, and Optimization**

@@ -12,7 +12,7 @@ authors:
 purpose: "Document the decision to [choose X approach] for [problem area], with rationale for alternatives considered."
 ---
 
-> **Status**: `proposed` → Change to `published` once approved, or `deprecated`/`superseded` if no longer valid
+> **Status**: `draft` → Change to `in-review` during review, then `published` once approved
 >
 > For help with this template, see [ADRs/README.md](README.md)
 

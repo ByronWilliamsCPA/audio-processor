@@ -305,7 +305,7 @@ jq: parse error: Unfinished JSON term at EOF at line 2, column 0
     echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
 ```
 
-**Affected Files**:
+### Affected Files
 
 - `ByronWilliamsCPA/.github/.github/workflows/python-compatibility.yml` (org-level reusable workflow)
 - Projects calling this workflow will fail until fixed upstream
