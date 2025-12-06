@@ -24,7 +24,11 @@ from rich.logging import RichHandler
 from structlog.stdlib import BoundLogger
 
 if TYPE_CHECKING:
-    from structlog.types import EventDict, Processor, WrappedLogger
+    from structlog.types import EventDict, Processor
+else:
+    # Runtime fallbacks - these are not used at runtime, just for imports
+    EventDict = dict
+    Processor = object
 
 # Global console for rich output (stderr for proper output separation)
 console = Console(stderr=True)
@@ -81,10 +85,10 @@ def setup_logging(
 
     # Define a no-op processor for when timestamp is disabled
     def noop_processor(
-        _logger: "WrappedLogger",
+        _logger: object,  # WrappedLogger from structlog - opaque type
         _method_name: str,
-        event_dict: "EventDict",
-    ) -> "EventDict":
+        event_dict: EventDict,
+    ) -> EventDict:
         """No-op processor that passes through the event dict unchanged."""
         return event_dict
 
@@ -144,8 +148,8 @@ def get_logger(name: str) -> BoundLogger:
     """
     # Cast to BoundLogger for type checking - structlog.get_logger returns
     # a BoundLogger when configured with stdlib LoggerFactory
-    result: BoundLogger = structlog.get_logger(name)  # pyright: ignore[reportAssignmentType]
-    return result
+    result = structlog.get_logger(name)  # pyright: ignore[reportAny]
+    return result  # type: ignore[return-value]  # pyright: ignore[reportReturnType]
 
 
 def log_performance(

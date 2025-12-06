@@ -52,9 +52,9 @@ def cli(ctx: click.Context, debug: bool) -> None:
 def hello(ctx: click.Context, name: str) -> None:
     """Greet the user with a personalized message."""
     try:
-        cli_ctx: CLIContext = (
-            ctx.obj if isinstance(ctx.obj, CLIContext) else CLIContext()
-        )
+        # Click's ctx.obj is typed as Any - this is expected
+        assert isinstance(ctx.obj, CLIContext)  # pyright: ignore[reportAny]
+        cli_ctx: CLIContext = ctx.obj
 
         logger.info(
             "Processing hello command",
@@ -81,9 +81,9 @@ def config(ctx: click.Context) -> None:
     Shows configuration values from environment variables or defaults.
     """
     try:
-        cli_ctx: CLIContext = (
-            ctx.obj if isinstance(ctx.obj, CLIContext) else CLIContext()
-        )
+        # Click's ctx.obj is typed as Any - this is expected
+        assert isinstance(ctx.obj, CLIContext)  # pyright: ignore[reportAny]
+        cli_ctx: CLIContext = ctx.obj
 
         logger.info("Retrieving configuration")
 
