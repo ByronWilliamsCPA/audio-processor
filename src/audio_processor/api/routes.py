@@ -4,6 +4,7 @@ This module defines the REST API endpoints for:
 - POST /api/v1/process - Submit audio for processing
 - GET /api/v1/status/{job_id} - Check job status
 - GET /api/v1/results/{job_id} - Get job results
+- GET /api/v1/artifacts/{job_id}/{artifact_name} - Download artifacts
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, status
+from fastapi.responses import Response
 
 from audio_processor.core.config import settings
 from audio_processor.core.exceptions import ValidationError
@@ -134,17 +136,16 @@ async def process_audio(
 
         # Create temp file with original extension
         suffix = Path(file.filename).suffix or ".wav"
-        temp_file = tempfile.NamedTemporaryFile(
+        with tempfile.NamedTemporaryFile(
             suffix=suffix,
             dir=temp_dir,
             delete=False,
-        )
-        temp_path = Path(temp_file.name)
+        ) as temp_file:
+            temp_path = Path(temp_file.name)
 
-        # Write file content
-        content = await file.read()
-        temp_file.write(content)
-        temp_file.close()
+            # Write file content
+            content = await file.read()
+            temp_file.write(content)
 
         # Validate audio file
         converter = AudioConverter()
@@ -301,15 +302,17 @@ async def get_job_status(
     description="Get the complete results of a finished audio processing job.",
 )
 async def get_job_results(
+    request: Request,
     job_id: str,
 ) -> dict[str, object]:
     """Get the complete results of a finished job.
 
     Args:
+        request: FastAPI request object.
         job_id: Unique job identifier.
 
     Returns:
-        Dictionary with transcription results.
+        Dictionary with transcription results and artifact URLs.
 
     Raises:
         HTTPException: If job not found or not completed.
@@ -337,11 +340,132 @@ async def get_job_results(
             detail="Results not available",
         )
 
+    # Build artifact URLs
+    base_url = str(request.base_url).rstrip("/")
+    artifact_base = f"{base_url}/api/v1/artifacts/{job_id}"
+
+    # Available artifact formats
+    artifacts = {
+        "docling_dom": f"{artifact_base}/docling_dom.json",
+        "transcript_txt": f"{artifact_base}/transcript.txt",
+        "transcript_simple": f"{artifact_base}/transcript_simple.txt",
+        "transcript_srt": f"{artifact_base}/transcript.srt",
+        "transcript_vtt": f"{artifact_base}/transcript.vtt",
+    }
+
+    # Extract transcription metadata from result
+    transcription_meta = {}
+    if isinstance(result, dict):
+        transcription_meta = {
+            "language": result.get("language", "en"),
+            "word_count": result.get("word_count", 0),
+            "speaker_count": result.get("speaker_count", 0),
+            "duration_ms": result.get("duration_ms", 0),
+        }
+
     return {
         "job_id": job_id,
         "status": job["status"],
-        "result": result,
+        "processing": {
+            "created_at": job.get("created_at"),
+            "completed_at": job.get("completed_at"),
+        },
+        "transcription": transcription_meta,
         "quality": job.get("quality"),
-        "created_at": job.get("created_at"),
-        "completed_at": job.get("completed_at"),
+        "artifacts": artifacts,
+        "result": result,
     }
+
+
+# Supported artifact formats with their content types
+ARTIFACT_CONTENT_TYPES: dict[str, str] = {
+    "docling_dom.json": "application/json",
+    "transcript.txt": "text/plain; charset=utf-8",
+    "transcript_simple.txt": "text/plain; charset=utf-8",
+    "transcript.srt": "text/plain; charset=utf-8",
+    "transcript.vtt": "text/vtt; charset=utf-8",
+}
+
+
+@router.get(
+    "/artifacts/{job_id}/{artifact_name}",
+    summary="Download artifact",
+    description="Download a specific artifact from a completed job.",
+)
+async def get_artifact(
+    job_id: str,
+    artifact_name: str,
+) -> Response:
+    """Download a specific artifact from a completed job.
+
+    Available artifacts:
+    - docling_dom.json: Docling DOM document format
+    - transcript.txt: Plain text with timestamps and speakers
+    - transcript_simple.txt: Plain text without timestamps
+    - transcript.srt: SRT subtitle format
+    - transcript.vtt: WebVTT subtitle format
+
+    Args:
+        job_id: Unique job identifier.
+        artifact_name: Name of the artifact to download.
+
+    Returns:
+        Response with the artifact content.
+
+    Raises:
+        HTTPException: If job not found, not completed, or artifact unavailable.
+    """
+    jobs = _get_job_store()
+
+    if job_id not in jobs:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Job not found: {job_id}",
+        )
+
+    job = jobs[job_id]
+
+    if job["status"] != JobStatus.COMPLETED.value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Job not completed. Current status: {job['status']}",
+        )
+
+    # Check if artifact name is valid
+    if artifact_name not in ARTIFACT_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unknown artifact: {artifact_name}. Available: {list(ARTIFACT_CONTENT_TYPES.keys())}",
+        )
+
+    # Get artifacts from job (generated during processing)
+    artifacts = job.get("artifacts")
+    if not artifacts or not isinstance(artifacts, dict):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Artifacts not available for this job",
+        )
+
+    if artifact_name not in artifacts:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Artifact '{artifact_name}' not found",
+        )
+
+    content = artifacts[artifact_name]
+    content_type = ARTIFACT_CONTENT_TYPES[artifact_name]
+
+    logger.info(
+        "artifact_downloaded",
+        job_id=job_id,
+        artifact_name=artifact_name,
+        content_length=len(content),
+    )
+
+    return Response(
+        content=content,
+        media_type=content_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{artifact_name}"',
+        },
+    )
