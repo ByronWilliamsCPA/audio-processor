@@ -48,6 +48,9 @@ else:
 from arq import cron
 from arq.connections import RedisSettings
 
+from audio_processor.core.config import settings
+from audio_processor.jobs.audio_tasks import process_audio_job
+
 if TYPE_CHECKING:
     from arq.connections import ArqRedis
 
@@ -237,6 +240,9 @@ class WorkerSettings:
     # Task functions to register
     # ARQ worker expects a list of callable functions - type varies
     functions: ClassVar[list[object]] = [  # pyright: ignore[reportUnknownVariableType]
+        # Audio processing tasks
+        process_audio_job,
+        # Example/utility tasks
         example_background_task,
         send_email_task,
         process_file_upload,
@@ -247,18 +253,16 @@ class WorkerSettings:
         cron(cleanup_old_data, hour=2, minute=0),  # Run daily at 2 AM
     ]
 
-    # Redis connection
-    redis_settings = RedisSettings.from_dsn(
-        "redis://localhost:6379/0"  # Override with REDIS_URL env var
-    )
+    # Redis connection - use settings
+    redis_settings = RedisSettings.from_dsn(settings.redis_url)
 
     # Worker configuration
     max_jobs = 10  # Maximum concurrent jobs
-    job_timeout = 300  # Job timeout in seconds (5 minutes)
-    keep_result = 3600  # Keep job results for 1 hour
+    job_timeout = settings.job_timeout_seconds  # Job timeout from settings
+    keep_result = settings.job_result_ttl_seconds  # Result TTL from settings
 
     # Retry configuration
-    max_tries = 3  # Maximum retry attempts
+    max_tries = settings.job_max_retries  # Max retries from settings
     retry_jobs = True  # Enable automatic retries
 
     # Lifecycle hooks
