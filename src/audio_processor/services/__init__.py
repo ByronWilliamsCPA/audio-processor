@@ -10,12 +10,16 @@ This package contains the core services for audio file processing:
 
 from __future__ import annotations
 
+from audio_processor.services.audio_conditioner import AudioConditioner
 from audio_processor.services.audio_converter import AudioConverter
 from audio_processor.services.deepgram_client import DeepgramTranscriptionClient
 from audio_processor.services.quality_assessor import QualityAssessor
+from audio_processor.services.vad_processor import VADProcessor
 
 __all__ = [
+    "AudioConditioner",
     "AudioConverter",
     "DeepgramTranscriptionClient",
     "QualityAssessor",
+    "VADProcessor",
 ]

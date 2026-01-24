@@ -11,7 +11,7 @@ from __future__ import annotations
 import sys
 import tempfile
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated
 
@@ -33,7 +33,7 @@ from audio_processor.utils.logging import get_logger
 if sys.version_info >= (3, 11):  # noqa: UP036
     from datetime import UTC
 else:
-    UTC = UTC  # noqa: UP017
+    UTC = timezone.utc  # noqa: UP017
 
 logger = get_logger(__name__)
 

@@ -302,3 +302,223 @@ class TestDeepgramClientCostEstimate:
         )
         # Should be higher than base
         assert cost > Decimal("0.30")
+
+
+class TestAudioConditionerInit:
+    """Tests for AudioConditioner initialization."""
+
+    def test_default_initialization(self) -> None:
+        """Test default initialization."""
+        from audio_processor.services.audio_conditioner import AudioConditioner
+
+        conditioner = AudioConditioner()
+        assert conditioner.target_sample_rate == 16000
+        assert conditioner.target_channels == 1
+        assert conditioner.target_rms_db == -20.0
+
+    def test_custom_initialization(self) -> None:
+        """Test custom initialization."""
+        from audio_processor.services.audio_conditioner import AudioConditioner
+
+        conditioner = AudioConditioner(
+            target_sample_rate=44100,
+            target_channels=2,
+            target_rms_db=-18.0,
+            temp_dir="/custom/temp",
+        )
+        assert conditioner.target_sample_rate == 44100
+        assert conditioner.target_channels == 2
+        assert conditioner.target_rms_db == -18.0
+        assert conditioner.temp_dir == Path("/custom/temp")
+
+
+class TestAudioConditionerCondition:
+    """Tests for AudioConditioner.condition method."""
+
+    def test_condition_file_not_found(self) -> None:
+        """Test conditioning non-existent file."""
+        from audio_processor.services.audio_conditioner import AudioConditioner
+
+        conditioner = AudioConditioner()
+        with pytest.raises(ValidationError) as exc_info:
+            conditioner.condition("/nonexistent/file.wav")
+        assert "file not found" in str(exc_info.value).lower()
+
+    def test_estimate_improvement_file_not_found(self) -> None:
+        """Test estimate_improvement with non-existent file."""
+        from audio_processor.services.audio_conditioner import AudioConditioner
+
+        conditioner = AudioConditioner()
+        with pytest.raises(ValidationError) as exc_info:
+            conditioner.estimate_improvement("/nonexistent/file.wav")
+        assert "file not found" in str(exc_info.value).lower()
+
+
+class TestAudioConditionerRMS:
+    """Tests for AudioConditioner RMS calculations."""
+
+    def test_calculate_rms_db_silence(self) -> None:
+        """Test RMS calculation for silence."""
+        import numpy as np
+        from audio_processor.services.audio_conditioner import AudioConditioner
+
+        conditioner = AudioConditioner()
+        silence = np.zeros(1000)
+        rms_db = conditioner._calculate_rms_db(silence)
+        assert rms_db == -96.0  # Silence floor
+
+    def test_calculate_rms_db_full_scale(self) -> None:
+        """Test RMS calculation for full-scale sine wave."""
+        import numpy as np
+        from audio_processor.services.audio_conditioner import AudioConditioner
+
+        conditioner = AudioConditioner()
+        # Full-scale sine wave has RMS of ~0.707 (-3 dBFS)
+        t = np.linspace(0, 1, 44100)
+        sine_wave = np.sin(2 * np.pi * 440 * t)
+        rms_db = conditioner._calculate_rms_db(sine_wave)
+        assert -4 < rms_db < -2  # Approximately -3 dBFS
+
+
+class TestAudioConditionerNormalize:
+    """Tests for AudioConditioner normalization."""
+
+    def test_normalize_rms(self) -> None:
+        """Test RMS normalization."""
+        import numpy as np
+        from audio_processor.services.audio_conditioner import AudioConditioner
+
+        conditioner = AudioConditioner()
+
+        # Create a quiet signal
+        t = np.linspace(0, 1, 16000)
+        quiet_signal = 0.01 * np.sin(2 * np.pi * 440 * t)
+
+        # Normalize to -20 dBFS
+        normalized, gain_db = conditioner._normalize_rms(quiet_signal, -20.0)
+
+        # Should have applied positive gain
+        assert gain_db > 0
+        # Output should be louder
+        assert np.max(np.abs(normalized)) > np.max(np.abs(quiet_signal))
+
+    def test_normalize_rms_silence(self) -> None:
+        """Test RMS normalization with silence."""
+        import numpy as np
+        from audio_processor.services.audio_conditioner import AudioConditioner
+
+        conditioner = AudioConditioner()
+        silence = np.zeros(1000)
+        normalized, gain_db = conditioner._normalize_rms(silence, -20.0)
+
+        # Should not crash, gain should be 0
+        assert gain_db == 0.0
+        assert np.array_equal(normalized, silence)
+
+
+class TestVADProcessorInit:
+    """Tests for VADProcessor initialization."""
+
+    def test_default_initialization(self) -> None:
+        """Test default initialization."""
+        from audio_processor.services.vad_processor import VADProcessor
+
+        vad = VADProcessor()
+        assert vad.threshold == 0.5
+        assert vad.min_silence_duration_ms == 500
+        assert vad.min_speech_duration_ms == 250
+
+    def test_custom_initialization(self) -> None:
+        """Test custom initialization."""
+        from audio_processor.services.vad_processor import VADProcessor
+
+        vad = VADProcessor(
+            threshold=0.7,
+            min_silence_duration_ms=300,
+            min_speech_duration_ms=100,
+            temp_dir="/custom/temp",
+        )
+        assert vad.threshold == 0.7
+        assert vad.min_silence_duration_ms == 300
+        assert vad.min_speech_duration_ms == 100
+        assert vad.temp_dir == Path("/custom/temp")
+
+
+class TestVADProcessorDetect:
+    """Tests for VADProcessor.detect_speech method."""
+
+    def test_detect_speech_file_not_found(self) -> None:
+        """Test detecting speech in non-existent file."""
+        from audio_processor.services.vad_processor import VADProcessor
+
+        vad = VADProcessor()
+        with pytest.raises(ValidationError) as exc_info:
+            vad.detect_speech("/nonexistent/file.wav")
+        assert "file not found" in str(exc_info.value).lower()
+
+
+class TestVADProcessorProcess:
+    """Tests for VADProcessor.process_audio method."""
+
+    def test_process_audio_file_not_found(self) -> None:
+        """Test processing non-existent file."""
+        from audio_processor.services.vad_processor import VADProcessor
+
+        vad = VADProcessor()
+        with pytest.raises(ValidationError) as exc_info:
+            vad.process_audio("/nonexistent/file.wav")
+        assert "file not found" in str(exc_info.value).lower()
+
+
+class TestVADProcessorTimestamp:
+    """Tests for VADProcessor timestamp mapping."""
+
+    def test_map_timestamp_empty(self) -> None:
+        """Test timestamp mapping with empty map."""
+        from audio_processor.services.vad_processor import VADProcessor
+
+        vad = VADProcessor()
+        result = vad.map_timestamp(5.0, ())
+        assert result == 5.0
+
+    def test_map_timestamp_single_segment(self) -> None:
+        """Test timestamp mapping with single segment."""
+        from audio_processor.services.vad_processor import VADProcessor
+
+        vad = VADProcessor()
+        # Timeline: output time 0.0 maps to original time 2.0
+        timeline_map = ((0.0, 2.0),)
+        result = vad.map_timestamp(1.0, timeline_map)
+        assert result == 3.0  # 2.0 + 1.0
+
+    def test_map_timestamp_multiple_segments(self) -> None:
+        """Test timestamp mapping with multiple segments."""
+        from audio_processor.services.vad_processor import VADProcessor
+
+        vad = VADProcessor()
+        # Two segments: [0-2] maps to [1-3], [2-4] maps to [5-7]
+        timeline_map = ((0.0, 1.0), (2.0, 5.0))
+
+        # First segment
+        assert vad.map_timestamp(1.0, timeline_map) == 2.0  # 1.0 + 1.0
+
+        # Second segment
+        assert vad.map_timestamp(3.0, timeline_map) == 6.0  # 5.0 + 1.0
+
+
+class TestSpeechSegment:
+    """Tests for SpeechSegment dataclass."""
+
+    def test_speech_segment_duration(self) -> None:
+        """Test speech segment duration calculation."""
+        from audio_processor.services.vad_processor import SpeechSegment
+
+        segment = SpeechSegment(start=1.5, end=4.5)
+        assert segment.duration == 3.0
+
+    def test_speech_segment_with_confidence(self) -> None:
+        """Test speech segment with custom confidence."""
+        from audio_processor.services.vad_processor import SpeechSegment
+
+        segment = SpeechSegment(start=0.0, end=1.0, confidence=0.95)
+        assert segment.confidence == 0.95
