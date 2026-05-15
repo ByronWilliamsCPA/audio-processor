@@ -45,6 +45,111 @@ When working on this project, if you discover any issue that originates from the
 
 <!-- Add your feedback below this line -->
 
+### Several workflows missing harden-runner step
+
+- **Priority**: Medium
+- **Category**: CI/CD
+- **Discovered**: 2026-05-15
+
+**Issue**: Several workflow jobs that `runs-on: ubuntu-latest` are missing the `step-security/harden-runner` step. OpenSSF Scorecard "Pinned-Dependencies" and "Token-Permissions" checks expect every runner-executing job to start with `harden-runner` (with at minimum `egress-policy: audit`).
+
+**Context**: Discovered during a security review of the workflows. The CodeQL, fuzzing, SLSA provenance, release-sign, and dead-code/link-check jobs already use harden-runner, but several jobs do not:
+
+- `dependency-review.yml` -> `dependency-review` job
+- `codecov.yml` -> `report-failure` job
+- `fips-compatibility.yml` -> `fips-check` and `fips-runtime-test` jobs
+- `sonarcloud.yml` -> `check-secrets` and `sonarcloud` jobs
+- `pr-validation.yml` -> `validation-summary` job
+
+**Suggested Fix**: Add `harden-runner` (SHA-pinned) as the first step of every job that has `runs-on:` and `steps:`. Reusable-workflow "thin caller" jobs (only `uses:`) cannot host steps, so harden-runner must be added inside the called reusable workflow instead.
+
+```yaml
+steps:
+  - name: Harden the runner
+    uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450 # v2.19.1
+    with:
+      egress-policy: audit
+```
+
+**Affected Files**: Templates for the listed workflows under `{{cookiecutter.project_slug}}/.github/workflows/`.
+
+---
+
+### Unpinned third-party action in dependency-review.yml
+
+- **Priority**: High
+- **Category**: Security / Supply Chain
+- **Discovered**: 2026-05-15
+
+**Issue**: `dependency-review.yml` uses `actions/dependency-review-action@v4` (a floating tag), while every other workflow in the template SHA-pins its actions. Floating tags allow upstream tag re-points and undermine the SHA-pin policy.
+
+**Context**: Caught by `grep -rn 'uses:' .github/workflows/ | grep -vE '@[0-9a-f]{40}'`. Only the dependency-review action is unpinned.
+
+**Suggested Fix**: Pin to a specific commit SHA with version comment:
+
+```yaml
+uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+```
+
+**Affected Files**: `{{cookiecutter.project_slug}}/.github/workflows/dependency-review.yml`
+
+---
+
+### Workflows checkout without `persist-credentials: false`
+
+- **Priority**: Medium
+- **Category**: Security / CI/CD
+- **Discovered**: 2026-05-15
+
+**Issue**: Several `actions/checkout` invocations omit `persist-credentials: false`. The default behavior leaves `GITHUB_TOKEN` available in the runner's git config, which any subsequent step (including untrusted dependencies installed by `uv sync`) can use to push to the repo.
+
+**Context**: Discovered during security review. Workflows like `dependency-review.yml`, `fips-compatibility.yml`, `sonarcloud.yml`, `slsa-provenance.yml`, `release-sign.yml`, and `cifuzzy.yml` either omit it or only sometimes include it. `codeql.yml` already does this correctly.
+
+**Suggested Fix**: Add `persist-credentials: false` to every `actions/checkout` that does not need to push:
+
+```yaml
+- name: Checkout repository
+  uses: actions/checkout@<sha> # vX.Y.Z
+  with:
+    persist-credentials: false
+```
+
+**Affected Files**: All template workflows that perform `actions/checkout` without requiring git push.
+
+---
+
+### No path-traversal / file-validation helpers shipped for audio pipelines
+
+- **Priority**: Medium
+- **Category**: Security / Structure
+- **Discovered**: 2026-05-15
+
+**Issue**: The "audio" optional-dependency group declares an audio pipeline stack (`fastapi`, `python-multipart`, `librosa`, `pydub`, `ffmpeg-python`, `soundfile`, `silero-vad`, `deepgram-sdk`) but the template ships no reference implementation or helper utilities for the security-critical primitives every audio pipeline needs:
+
+1. Path-traversal-safe upload landing (`Path.resolve()` containment check inside a configured upload root).
+2. Content-based file-type detection (magic bytes via `python-magic` or `filetype`), not extension-based.
+3. Streaming size limits during upload (DoS via large files / decompression bombs).
+4. Safe external-process invocation patterns for `ffmpeg` (argument lists, absolute binary path, validated input paths, timeout, resource limits).
+
+When developers reach for this extras group they tend to introduce these primitives ad-hoc, often insecurely.
+
+**Context**: Discovered during a security review where the request was to audit "file upload, path construction, file format detection, ffmpeg invocation". The codebase had no such code yet, but the extras group invites it.
+
+**Suggested Fix**: Ship a `src/{{cookiecutter.package_name}}/audio/` reference module with:
+
+- `paths.py` — `safe_resolve_under(root: Path, candidate: Path) -> Path` that raises on traversal.
+- `detection.py` — `detect_audio_format(path: Path) -> AudioFormat` using magic bytes with a strict allow-list.
+- `processing.py` — `run_ffmpeg(input_path, output_path, *, timeout, max_output_size)` that constructs an argument list, never `shell=True`, validates both paths are under the configured roots, and enforces a wall-clock + output-size budget.
+- `uploads.py` — FastAPI dependency that streams to disk with a hard byte cap.
+
+Plus matching unit tests in `tests/unit/audio/` covering traversal, size-bomb, and bad-magic-bytes cases.
+
+**Affected Files**:
+- New: `{{cookiecutter.project_slug}}/src/{{cookiecutter.package_name}}/audio/*.py` (gated on `audio` extra being selected).
+- New: `{{cookiecutter.project_slug}}/tests/unit/audio/*.py`.
+
+---
+
 ### Python Syntax Error in sentry.py
 
 - **Priority**: Critical
