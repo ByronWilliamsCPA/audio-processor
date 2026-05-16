@@ -157,6 +157,7 @@ audio = [
     "pydub>=0.25.1",
     "ffmpeg-python>=0.2.0",
     "soundfile>=0.12.1",
+    "scipy>=1.11.0",
 
     # Voice Activity Detection (VAD)
     "silero-vad>=5.1",
