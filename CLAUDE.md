@@ -28,7 +28,7 @@ This feedback will be shared with the template team to improve the cookiecutter 
 **Name**: Audio Processor
 **Description**: Audio file conversion and processing for RAG content pipelines
 **Author**: Byron Williams <byron@williamshome.family>
-**Repository**: https://github.com/ByronWilliamsCPA/audio-processor
+**Repository**: <https://github.com/ByronWilliamsCPA/audio-processor>
 **Created**: 2025-12-04
 
 ### Technology Stack
@@ -41,6 +41,7 @@ This feedback will be shared with the template team to improve the cookiecutter 
 - **CLI Framework**: Click
 - **Documentation**: MkDocs Material
 - **Containerization**: Docker
+
 ---
 
 <!--
@@ -148,10 +149,11 @@ Claude MUST adopt a security-first approach in all development:
 
 When working on this project, always suggest appropriate security measures:
 
-- **Dependencies**: Suggest vulnerability scanning (`safety check`, `pip-audit`)
+- **Dependencies**: Suggest vulnerability scanning (`pip-audit`)
 - **APIs**: Suggest authentication, rate limiting, input validation
 - **Data**: Suggest encryption at rest and in transit, access controls
 - **Containers**: Suggest image vulnerability scanning (Trivy)
+
 ### 2. Never Bypass Security Issues
 
 - **ALL security findings** from scanners (Semgrep, SonarQube, Bandit, Checkov) should be addressed, not dismissed
@@ -175,11 +177,13 @@ When working on this project, always suggest appropriate security measures:
 For deployment on FIPS-enabled systems (Ubuntu LTS with fips-updates, government systems, healthcare, finance):
 
 **Prohibited algorithms** (will fail in FIPS mode):
+
 - MD5, MD4, SHA-1 (for security purposes)
 - DES, 3DES, RC2, RC4, Blowfish
 - Non-approved key exchange methods
 
 **Required patterns**:
+
 ```python
 # ✗ WRONG - Will fail on FIPS systems
 import hashlib
@@ -193,11 +197,13 @@ h = hashlib.sha256(data)
 ```
 
 **Check FIPS compatibility**:
+
 ```bash
 uv run python scripts/check_fips_compatibility.py --fix-hints
 ```
 
 **Problematic packages** (need verification or replacement):
+
 - `bcrypt` → Use `passlib` with PBKDF2 or `argon2-cffi`
 - `pycrypto` → Use `pycryptodome` with FIPS mode
 - Verify `cryptography` version >= 3.4.6 with OpenSSL FIPS provider
@@ -284,6 +290,14 @@ All projects must have:
 - Security scans (no high/critical)
 - Pre-commit hooks pass
 
+### CVE Citation Policy
+
+Any CHANGELOG entry that fixes a security vulnerability MUST include the CVE ID
+if one has been assigned. Format: `- fix(security): resolve CVE-YYYY-NNNNN: <brief description>`
+
+If no CVE has been assigned at release time, record the GitHub Security Advisory
+ID and update the entry when a CVE is allocated.
+
 ---
 
 ## Development Philosophy
@@ -331,7 +345,7 @@ END BASELINE DEVELOPMENT STANDARDS
 
 - Test coverage: Minimum 80%
 - All linters must pass: `uv run ruff check .`, `uv run basedpyright src/`
-- Security scans: `uv run bandit -r src`, `uv run safety check`
+- Security scans: `uv run bandit -r src`, `uv run pip-audit`
 
 ---
 
@@ -451,6 +465,7 @@ docs/                       # MkDocs documentation
 - Configuration: Use Pydantic Settings with `.env` files
 - Logging: Structured logging via `src/audio_processor/utils/logging.py`
 - Error Handling: Custom exceptions in `src/audio_processor/core/exceptions.py`
+
 ### Exception Hierarchy
 
 Use the centralized exception hierarchy for consistent error handling:
@@ -495,6 +510,7 @@ except ValidationError as e:
 | `APIError` | External API errors |
 | `DatabaseError` | Database operation errors |
 | `BusinessLogicError` | Domain rule violations |
+
 **Docstrings** (Google Style):
 
 ```python
@@ -599,6 +615,7 @@ uv run pytest tests/unit/test_example.py::test_function_name -v
 - BasedPyright type checking
 - Security scans (no high/critical)
 - Pre-commit hooks
+
 ---
 
 ## Third-Party Integrations
@@ -745,6 +762,37 @@ See `.standards/README.md` for detailed merge instructions.
 - **Template Feedback**: [docs/template_feedback.md](docs/template_feedback.md)
 - **UV Documentation**: <https://docs.astral.sh/uv/>
 - **Ruff Documentation**: <https://docs.astral.sh/ruff/>
+
+---
+
+---
+
+## Model Selection
+
+Use the right model for each task to balance quality and cost:
+
+| Task type | Model | When |
+| --- | --- | --- |
+| Architecture, planning, ADRs | Opus 4.7 | Multi-step decisions, deep code review |
+| Standard development | Sonnet 4.6 | Most coding and editing |
+| Read-only exploration | Haiku 4.5 | File scanning, quick lookups |
+
+> Per-agent model defaults and orchestration patterns: see `~/.claude/.claude/rules/supervisor.md`
+
+---
+
+## Global Rules Cross-References
+
+The following global rule files govern behavior in this project. Consult them when
+the relevant situation arises; the brief notes below describe the scope of each.
+
+| Rule file | Scope |
+| --- | --- |
+| `~/.claude/.claude/rules/writing.md` | AI pattern blacklist, grammar authority, full writing rules |
+| `~/.claude/.claude/rules/git-workflow.md` | Branch naming, worktree patterns, commit conventions |
+| `~/.claude/.claude/rules/python.md` | Python linting gates, function quality, BasedPyright config |
+| `~/.claude/.claude/rules/testing.md` | Testing scope, root-cause order, golden file protection |
+| `~/.claude/.claude/rules/supervisor.md` | Agent assignment patterns, model selection per agent |
 
 ---
 

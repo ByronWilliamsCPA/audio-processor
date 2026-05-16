@@ -34,10 +34,14 @@ permissions:
 
 env:
   INFISICAL_DOMAIN: https://infisical.williamshome.family
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   sbom:
     name: SBOM & Security
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-sbom.yml@main
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-sbom.yml@e7781b38647e3ea2550758ea4d6666bf31026660  # main
     with:
       python-version: '3.12'
       fail-on-vulnerabilities: true

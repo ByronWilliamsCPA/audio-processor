@@ -277,6 +277,54 @@ async def preprocess_audio(input_path: Path) -> PreprocessedAudio:
 - **Mid-Implementation**: Week 3 - WER comparison preprocessed vs. raw
 - **Ongoing**: Monthly review of quality warnings and user feedback
 
+## Security Considerations
+
+### Audio File Path Traversal
+
+The preprocessing pipeline accepts file paths from callers (API or CLI).
+A malicious or misconfigured caller could supply a path like
+`../../../etc/passwd` or an absolute path outside the intended upload
+directory. Every input path must be resolved to an absolute path with
+`pathlib.Path.resolve()` and validated against the configured upload
+directory before any read, write, or FFmpeg invocation. Failure to do
+so exposes the host filesystem via the preprocessing service.
+
+Temporary intermediate files (WAV PCM conversion output, VAD-filtered
+segments) must be written only inside a controlled temporary directory.
+The pipeline must delete all temporary files on both successful completion
+and on exception to prevent accumulation of sensitive audio data on disk.
+
+### FIPS-Approved Algorithm Choices
+
+If audio file integrity is verified with a hash (for example, to detect
+corrupt uploads or deduplicate jobs), use a FIPS-approved algorithm:
+SHA-256 or SHA-3. Do not use MD5 or SHA-1 for security purposes. When
+calling `hashlib.md5()` for non-security uses (such as a cache key), pass
+`usedforsecurity=False` to remain compatible with FIPS-enabled deployments.
+
+The audio libraries (librosa, pydub) internally use numpy for numerical
+operations. These operations are not cryptographic and do not require FIPS
+compliance.
+
+### Container Image Scanning Posture
+
+The preprocessing dependencies (librosa, pydub, ffmpeg-python, silero-vad,
+soundfile) pull in native shared libraries (libsndfile, FFmpeg binaries,
+PyTorch for Silero VAD) that may carry OS-level CVEs. Trivy scans the Docker
+image in CI on every build. The base image must be a supported Ubuntu or
+Debian LTS release with security updates applied. FFmpeg must not be installed
+from a third-party PPA; prefer the distribution package or an officially
+maintained image layer to preserve the supply-chain audit trail.
+
+### Pipeline Injection via Audio Metadata
+
+ID3 tags, EXIF-like fields, and codec metadata returned by format detection
+(soundfile, mutagen, or ffprobe) can contain attacker-controlled strings.
+These values must not be interpolated into FFmpeg argument lists via string
+concatenation. Use the `ffmpeg-python` Python API exclusively, which passes
+arguments as a list rather than a shell command string. Metadata included in
+structured log output must be sanitized or truncated to prevent log injection.
+
 ## Related
 
 - [ADR-001](./adr-001-initial-architecture.md): Deepgram Nova-2 ASR architecture

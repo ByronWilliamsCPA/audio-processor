@@ -175,6 +175,43 @@ The ASR engine choice determines accuracy, cost structure, infrastructure requir
 - **Initial**: Week 4 (MVP completion) - Validate metrics against targets
 - **Ongoing**: Monthly cost/accuracy review, quarterly vendor evaluation
 
+## Security Considerations
+
+### Authentication and Authorization
+
+The Deepgram API key is the primary credential for this architecture. It must
+be loaded exclusively from environment variables (via Pydantic Settings) and
+must never appear in source files, logs, or commit history. The pre-commit
+`detect-secrets` and TruffleHog hooks enforce this automatically.
+
+Access to the processing API endpoint should be gated by authentication
+(API key or JWT) before any audio is accepted. Authorization must be checked
+before audio files are retrieved from storage or queued for processing.
+
+### Dependency Scanning Posture
+
+The pipeline depends on `deepgram-sdk`, `redis[hiredis]`, `rq`, `docling-core`,
+and their transitive dependencies. `pip-audit` runs in CI on every push to
+detect known CVEs. Any new dependency added to the `audio` or `jobs` extras
+must be reviewed for known vulnerabilities before merging. Unfixed CVEs are
+documented in `docs/known-vulnerabilities.md` per the 60-day reassessment
+policy.
+
+### Supply Chain Controls
+
+Third-party GitHub Actions in CI workflows are pinned to commit SHAs. The
+`supply-chain` dependency group provides `cyclonedx-bom` for SBOM generation
+on tagged releases, enabling downstream consumers to audit the full dependency
+graph. Renovate automates dependency updates; PRs from Renovate trigger the
+full CI security scan before merge.
+
+### Audio Data Privacy
+
+Audio data sent to Deepgram leaves the local infrastructure. For PII, PHI,
+or legally privileged audio, the Phase 2 local Whisper fallback (noted under
+Technical Debt) must be used instead. The processing pipeline must not log
+audio content or expose it in error messages.
+
 ## Related
 
 - [Project Vision](../project-vision.md): Overall goals and constraints

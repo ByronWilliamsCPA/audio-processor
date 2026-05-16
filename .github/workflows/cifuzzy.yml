@@ -1,3 +1,4 @@
+# CI-013: Intentional unregistered workflow -- continuous fuzzing via ClusterFuzzLite for security testing.
 # {{ cookiecutter.project_name }} - Continuous Fuzzing
 # ClusterFuzzLite workflow for automated security testing
 #
@@ -28,6 +29,10 @@ on:
 permissions:
   contents: read
   security-events: write  # For SARIF upload
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   fuzzing:

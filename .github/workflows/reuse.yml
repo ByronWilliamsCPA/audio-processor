@@ -22,10 +22,14 @@ permissions:
   contents: read
 
 # Uses org-level reusable workflow
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   reuse:
     name: REUSE Compliance Check
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-reuse.yml@main
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-reuse.yml@e7781b38647e3ea2550758ea4d6666bf31026660  # main
     with:
       generate-spdx: true
       fail-on-missing: true

@@ -12,14 +12,14 @@
 ci:
   autoupdate_schedule: monthly
   autofix_prs: true
-  skip: [validate-front-matter, qlty-check, qlty-full, trufflehog, darglint, bandit, bandit-full]  # Skip local-only hooks
+  skip: [validate-front-matter, qlty-check, qlty-full, trufflehog, darglint, bandit, bandit-full, basedpyright]  # Skip local-only hooks
 
 repos:
   # ============================================================================
   # Fast File Checks (Lightweight, run on every commit)
   # ============================================================================
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: "c4a0b883114b00d8d76b479c820ce7950211c99b"  # v4.5.0  # pragma: allowlist secret
     hooks:
       - id: trailing-whitespace
         stages: [pre-commit]
@@ -52,20 +52,48 @@ repos:
         stages: [pre-commit]
 
   # ============================================================================
-  # Secret Detection - TruffleHog
+  # Code Formatting and Linting - Ruff
   # ============================================================================
-  # Advanced secret detection beyond detect-private-key
-  # Detects API keys, tokens, credentials, and other secrets
-  # Uses local system-installed trufflehog to avoid Go build issues
-  # Install: brew install trufflehog (macOS) or see https://github.com/trufflesecurity/trufflehog#installation
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: "5e2fb545eba1ea9dc051f6f962d52fe8f76a9794"  # v0.15.13  # pragma: allowlist secret
+    hooks:
+      - id: ruff
+        stages: [pre-commit]
+      - id: ruff-format
+        stages: [pre-commit]
+
+  # ============================================================================
+  # Type Checking - BasedPyright
+  # ============================================================================
   - repo: local
     hooks:
-      - id: trufflehog
-        name: TruffleHog Secret Scanner
-        description: Detect secrets in your data before committing
-        entry: bash -c 'command -v trufflehog >/dev/null 2>&1 && trufflehog git file://. --since-commit HEAD --results=verified,unknown --fail || echo "TruffleHog not installed - skipping"'
+      - id: basedpyright
+        name: BasedPyright Type Check
+        entry: uv run basedpyright src/
         language: system
         pass_filenames: false
+        stages: [pre-commit]
+
+  # ============================================================================
+  # Secret Detection - TruffleHog
+  # ============================================================================
+  # Fail-closed: scans staged files only; no silent-skip fallback
+  - repo: https://github.com/trufflesecurity/trufflehog
+    rev: "37b77001d0174ebec2fcca2bd83ff83a6d45a3ab"  # v3.95.3  # pragma: allowlist secret
+    hooks:
+      - id: trufflehog
+        entry: bash -c 'git diff --cached -z --name-only --diff-filter=d 2>/dev/null | tr "\0" "\n" | grep -v "^CHANGELOG\.md$" | grep -v "^\.submodules/" | grep -v "^uv\.lock$" | grep -v "^\.secrets\.baseline$" | grep -v "^$" | tr "\n" "\0" | xargs -0 -r trufflehog filesystem --fail --no-update'
+        pass_filenames: false
+        stages: [pre-commit]
+
+  # ============================================================================
+  # Secret Detection - detect-secrets (baseline regression)
+  # ============================================================================
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: "01886c8a910c64595c47f186ca1ffc0b77fa5458"  # v1.5.0  # pragma: allowlist secret
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
         stages: [pre-commit]
 
   # ============================================================================
@@ -75,7 +103,7 @@ repos:
   # Runs on changed files during pre-commit, full scan on pre-push
   # Configuration in pyproject.toml [tool.bandit]
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.10
+    rev: "36fd65054fc8864b4037d0918904f9331512feb5"  # 1.7.10  # pragma: allowlist secret
     hooks:
       - id: bandit
         name: Bandit Security Scan (changed files)
@@ -99,17 +127,24 @@ repos:
   # ============================================================================
   # Enforces conventional commit message format for semantic versioning
   - repo: https://github.com/compilerla/conventional-pre-commit
-    rev: v3.4.0
+    rev: "8dc49e5ea0cab89785161620aa22a26f263661ca"  # v3.4.0  # pragma: allowlist secret
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]
         args: [feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert]
 
+  # Commitizen commit-msg validation (complementary to conventional-pre-commit)
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: "0fedbbe40de438359fdf74bb0ef645ed23063999"  # v4.16.2  # pragma: allowlist secret
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
   # ============================================================================
   # pyproject.toml Validation
   # ============================================================================
   - repo: https://github.com/abravalheri/validate-pyproject
-    rev: v0.23
+    rev: "f45606bad11ad90ddac1212fa83ebe2a4d724351"  # v0.23  # pragma: allowlist secret
     hooks:
       - id: validate-pyproject
         stages: [pre-commit]
@@ -118,9 +153,28 @@ repos:
   # GitHub Workflow Validation
   # ============================================================================
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.29.4
+    rev: "37cd56d9d154dfb0648eaee8efc1040512700c47"  # 0.29.4  # pragma: allowlist secret
     hooks:
       - id: check-github-workflows
+        stages: [pre-commit]
+
+  # ============================================================================
+  # YAML Linting
+  # ============================================================================
+  - repo: https://github.com/adrienverge/yamllint
+    rev: "cba56bcde1fdd01c1deb3f945e69764c291a6530"  # v1.38.0  # pragma: allowlist secret
+    hooks:
+      - id: yamllint
+        stages: [pre-commit]
+
+  # ============================================================================
+  # Markdown Linting
+  # ============================================================================
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: "e72a3ca1632f0b11a07d171449fe447a7ff6795e"  # v0.48.0  # pragma: allowlist secret
+    hooks:
+      - id: markdownlint
+        args: ["--fix", "--disable", "MD013", "MD024", "MD033", "MD036", "MD041", "MD040", "MD060", "--"]
         stages: [pre-commit]
 
   # ============================================================================
@@ -184,7 +238,7 @@ repos:
   # Interrogate ensures all Python code has proper docstrings
   # Target: 85% coverage
   - repo: https://github.com/econchick/interrogate
-    rev: 1.7.0
+    rev: "a6268877efd41a21197445cc04cbf28f9c6facba"  # 1.7.0  # pragma: allowlist secret
     hooks:
       - id: interrogate
         args: ['-v', '-c', 'pyproject.toml', 'src/']
@@ -206,6 +260,25 @@ repos:
         types: [python]
         stages: [pre-commit]
         exclude: ^(tests|scripts|benchmarks|tools)/
+
+  # ============================================================================
+  # Em-dash Prevention
+  # ============================================================================
+  # Blocks em-dash characters (U+2014) in all text files.
+  # docs/draft_* and tools/validate_front_matter.py contain pre-existing
+  # em-dashes and are excluded to avoid blocking current commits.
+  # CHANGELOG.md is also excluded as release notes may contain legacy content.
+  # .pre-commit-config.yaml is excluded because the hook's own entry pattern
+  # must contain the literal em-dash codepoint to match em-dashes elsewhere.
+  - repo: local
+    hooks:
+      - id: no-em-dash
+        name: Block em-dash characters
+        language: pygrep
+        entry: '—'
+        types: [text]
+        exclude: '^(docs/draft_.*\.md|tools/validate_front_matter\.py|CHANGELOG\.md|\.pre-commit-config\.yaml)$'
+        stages: [pre-commit]
 
 # Exclude patterns
 exclude: |

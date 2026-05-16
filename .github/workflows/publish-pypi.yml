@@ -1,3 +1,4 @@
+# CI-013: Intentional unregistered workflow -- publishes package to PyPI on release using OIDC trusted publishing.
 # Publish to PyPI - Calls Org-Level Reusable Workflow
 # This is a lightweight caller workflow that invokes the organization's
 # shared PyPI publishing workflow with OIDC trusted publishing.
@@ -17,11 +18,12 @@ on:
 jobs:
   publish:
     name: Publish Package
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-publish-pypi.yml@main
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-publish-pypi.yml@e7781b38647e3ea2550758ea4d6666bf31026660  # main
     with:
       python-version: '3.12'
       package-name: 'audio-processor'
       test-pypi: ${{ github.event.inputs.test-pypi || false }}
+      environment: pypi
 
 permissions:
   contents: read

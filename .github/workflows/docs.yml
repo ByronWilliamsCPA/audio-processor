@@ -26,10 +26,14 @@ permissions:
   id-token: write
 
 # Uses org-level reusable workflow
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   docs:
     name: Build & Deploy Docs
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-docs.yml@main
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-docs.yml@e7781b38647e3ea2550758ea4d6666bf31026660  # main
     with:
       python-version: '3.12'
       deploy-to-pages: >-

@@ -287,10 +287,18 @@ tmp_cleanup/.tmp-*
 .sonar/
 
 # Qlty Code Quality Tool
-.qlty/logs/
-.qlty/out/
-.qlty/plugin_cachedir/
-.qlty/results/
+# Trailing slashes omitted because these are symlinks into ~/.qlty/cache/
+# (git ignore patterns with trailing slash only match real directories).
+.qlty/logs
+.qlty/out
+.qlty/plugin_cachedir
+.qlty/results
 
 
 docs/template_feedback.md
+
+# Git worktrees (always created inside project at .worktrees/<branch-slug>)
+.worktrees/
+
+# Compliance reports (generated artifacts, not source-controlled)
+docs/compliance-reports/

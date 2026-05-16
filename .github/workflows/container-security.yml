@@ -1,3 +1,4 @@
+# CI-013: Intentional unregistered workflow -- scans Docker images for vulnerabilities using org-level Trivy workflow.
 # Container Security Scanning for Audio Processor
 # Scans Docker images for vulnerabilities using Trivy and lints Dockerfile with Hadolint.
 #
@@ -39,7 +40,7 @@ permissions:
 jobs:
   container-security:
     name: Container Security Scan
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-container-security.yml@main
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-container-security.yml@e7781b38647e3ea2550758ea4d6666bf31026660  # main
     with:
       dockerfile-path: 'Dockerfile'
       build-context: '.'
