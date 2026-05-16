@@ -24,4 +24,13 @@ class AudioLoadError(ProjectBaseError):
     """
 
 
-__all__ = ["AudioLoadError"]
+class FfmpegConversionError(ProjectBaseError):
+    """Raised when an ffmpeg subprocess invocation fails.
+
+    Wraps a non-zero ffmpeg exit code (or a missing ffmpeg binary) in a
+    project-hierarchy exception so callers can handle preprocessing
+    failures alongside other ``ProjectBaseError`` subclasses.
+    """
+
+
+__all__ = ["AudioLoadError", "FfmpegConversionError"]

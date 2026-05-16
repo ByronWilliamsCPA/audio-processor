@@ -4,8 +4,12 @@ Provides a single ``convert_to_wav`` helper that shells out to ``ffmpeg``
 via ``subprocess`` with an argument list (never a shell string) to
 eliminate shell injection risk.
 
-The ``ffmpeg`` binary is required on ``PATH`` at import time; the module
-raises ``EnvironmentError`` with a clear message if it is missing.
+The ``ffmpeg`` binary is resolved on ``PATH`` at import time and cached;
+if it is missing, the lookup result is preserved and any subsequent call
+to ``convert_to_wav`` raises ``FfmpegConversionError`` with a clear
+remediation message. Importing the module never fails, which lets test
+suites mock ``subprocess`` without requiring the binary on hosts where
+the real conversion will not run.
 """
 
 from __future__ import annotations
@@ -14,35 +18,33 @@ import shutil
 import subprocess
 from typing import TYPE_CHECKING, Final
 
+from audio_processor.exceptions import FfmpegConversionError
+
 if TYPE_CHECKING:
     from pathlib import Path
 
 FFMPEG_BINARY: Final[str] = "ffmpeg"
 
+_FFMPEG_MISSING_MSG: Final[str] = (
+    "ffmpeg binary not found on PATH. Install ffmpeg "
+    "(e.g. `apt install ffmpeg` or `brew install ffmpeg`) "
+    "and ensure it is on PATH before calling convert_to_wav()."
+)
 
-def _locate_ffmpeg() -> str:
-    """Return the resolved path to the ``ffmpeg`` binary.
+
+def _locate_ffmpeg() -> str | None:
+    """Resolve the ``ffmpeg`` binary on ``PATH`` if present.
 
     Returns:
-        Absolute path to the ``ffmpeg`` executable found on ``PATH``.
-
-    Raises:
-        OSError: If ``ffmpeg`` is not available on ``PATH``.
+        Absolute path to the ``ffmpeg`` executable, or ``None`` when the
+        binary is not available.
     """
-    resolved = shutil.which(FFMPEG_BINARY)
-    if resolved is None:
-        msg = (
-            "ffmpeg binary not found on PATH. Install ffmpeg "
-            "(e.g. `apt install ffmpeg` or `brew install ffmpeg`) "
-            "and ensure it is on PATH before importing this module."
-        )
-        raise OSError(msg)
-    return resolved
+    return shutil.which(FFMPEG_BINARY)
 
 
-# Validate ffmpeg availability at import time so misconfigured environments
-# fail fast rather than at first conversion.
-_FFMPEG_PATH: Final[str] = _locate_ffmpeg()
+# Resolve once at import time so we pay the PATH lookup cost only once and
+# can surface a clear message at the first real call.
+_FFMPEG_PATH: Final[str | None] = _locate_ffmpeg()
 
 
 def convert_to_wav(input_path: Path, output_path: Path) -> Path:
@@ -60,9 +62,16 @@ def convert_to_wav(input_path: Path, output_path: Path) -> Path:
         The ``output_path`` argument, returned for call-chaining convenience.
 
     Raises:
-        RuntimeError: If the ffmpeg invocation exits with a non-zero status.
-            The original ``stderr`` output is included for diagnostics.
+        FfmpegConversionError: If the ``ffmpeg`` binary is not on ``PATH``
+            (resolved once at import; raised on first call so test suites
+            that mock ``subprocess`` can still import the module), or if
+            the ffmpeg invocation exits with a non-zero status. The
+            original ``stderr`` output is included in ``details`` for
+            diagnostics.
     """
+    if _FFMPEG_PATH is None:
+        raise FfmpegConversionError(_FFMPEG_MISSING_MSG)
+
     cmd: list[str] = [
         _FFMPEG_PATH,
         "-y",  # overwrite output without prompting
@@ -86,8 +95,16 @@ def convert_to_wav(input_path: Path, output_path: Path) -> Path:
         stderr = result.stderr.strip() or "<no stderr output>"
         msg = (
             f"ffmpeg failed (exit {result.returncode}) converting "
-            f"{input_path} -> {output_path}: {stderr}"
+            f"{input_path} -> {output_path}"
         )
-        raise RuntimeError(msg)
+        raise FfmpegConversionError(
+            msg,
+            details={
+                "input_path": str(input_path),
+                "output_path": str(output_path),
+                "exit_code": result.returncode,
+                "stderr": stderr,
+            },
+        )
 
     return output_path

@@ -22,9 +22,11 @@ def check_snr(audio: np.ndarray) -> float:
     """Estimate the signal-to-noise ratio of ``audio`` in decibels.
 
     The signal envelope is approximated by a 4th-order Butterworth
-    low-pass filter (``scipy.signal``) cut at the Nyquist quarter; the
-    high-frequency residual after subtracting the envelope is treated as
-    noise. The returned value is ``10 * log10(P_signal / P_noise)``.
+    low-pass filter (``scipy.signal``) with a normalized cutoff of
+    ``Wn=0.5``, i.e. half of Nyquist, or one quarter of the sample
+    rate. The high-frequency residual after subtracting the envelope is
+    treated as noise; the returned value is
+    ``10 * log10(P_signal / P_noise)``.
 
     Args:
         audio: 1-D floating-point mono audio array. An empty or all-zero
@@ -43,8 +45,8 @@ def check_snr(audio: np.ndarray) -> float:
     if signal_power <= _NOISE_FLOOR:
         return float("-inf")
 
-    # 4th-order Butterworth low-pass at Nyquist/2 (i.e. half the
-    # representable bandwidth) approximates the slow-varying signal
+    # 4th-order Butterworth low-pass at Wn=0.5 (half of Nyquist, one
+    # quarter of the sample rate) approximates the slow-varying signal
     # envelope; the residual captures broadband noise.
     sos = scipy_signal.butter(N=4, Wn=0.5, btype="low", output="sos")
     envelope = scipy_signal.sosfiltfilt(sos, samples)
