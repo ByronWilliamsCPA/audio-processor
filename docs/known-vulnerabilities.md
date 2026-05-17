@@ -23,8 +23,10 @@ tags:
 | --- | --- |
 | **ID** | PYSEC-2022-42969 |
 | **Package** | py 1.11.0 (transitive via interrogate, dev-only) |
-| **CVE** | PYSEC-2022-42969 (no CVE assigned) |
-| **Severity** | Medium (CVSS 7.5 disputed) |
+| **CVE** | CVE-2022-42969 |
+| **GHSA** | GHSA-w596-4wvx-j9j6 |
+| **Aliases** | PYSEC-2022-42969, CVE-2022-42969, GHSA-w596-4wvx-j9j6 (all three suppressed in `osv-scanner.toml`) |
+| **Severity** | High (CVSS 7.5; CVSS v3.x band 7.0-8.9). The CVE is DISPUTED by the maintainer, but the published score is High; reassessment must continue to treat it under the High-severity 60-day cadence. |
 | **CVSS Score** | 7.5 |
 | **Patched version** | None; the `py` library has been unmaintained since 2022 |
 | **Status** | Deferred (vulnerable code path unused in this project) |

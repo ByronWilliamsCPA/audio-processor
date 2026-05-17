@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial project setup and structure
 
 ### Security
-- fix(security): resolve CVE-2026-26007, CVE-2026-34073, CVE-2026-39892: bump cryptography to 46.0.7
+- fix(security): resolve CVE-2026-26007, CVE-2026-34073, CVE-2026-39892: bump cryptography to 48.0.0
 - fix(security): resolve CVE-2025-68146, CVE-2026-22701: bump filelock to 3.20.3
 - fix(security): resolve CVE-2026-42215, CVE-2026-42284, CVE-2026-44244, GHSA-mv93-w799-cj2w: bump gitpython to 3.1.50
 - fix(security): resolve CVE-2026-23949: bump jaraco-context to 6.1.0
