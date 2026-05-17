@@ -3,7 +3,7 @@
 #
 # Features:
 #   - Standard quality checks (tests, linting, type checking)
-#   - Security scanning (Bandit, Safety)
+#   - Security scanning (Bandit, pip-audit)
 #   - Optional SonarCloud/Codecov integration
 name: CI
 
@@ -39,3 +39,4 @@ jobs:
       run-integration-tests: true
       run-security-tests: true
       fail-on-llm-tags: false
+      no-build: false  # project uses hatchling build backend; uv must build the editable install

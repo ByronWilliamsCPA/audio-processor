@@ -56,3 +56,4 @@ jobs:
       run-tests: true
       attestations: true
       environment: pypi
+      no-build: false  # project uses hatchling build backend; uv must build the editable install

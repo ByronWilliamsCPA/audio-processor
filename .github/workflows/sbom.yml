@@ -48,6 +48,7 @@ jobs:
       severity-threshold: 'CRITICAL,HIGH'
       artifact-retention-days: 90
       fail-on-forbidden-licenses: false
+      no-build: false  # project uses hatchling build backend; uv must build the editable install
     secrets:
       INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_CLIENT_ID }}
       INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}

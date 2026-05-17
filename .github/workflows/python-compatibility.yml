@@ -44,3 +44,4 @@ jobs:
       test-command: 'pytest tests/ -v --tb=short -x --ignore=tests/integration --ignore=tests/load -m "not slow and not integration"'
       timeout-minutes: 30
       fail-fast: false
+      no-build: false  # project uses hatchling build backend; uv must build the editable install
