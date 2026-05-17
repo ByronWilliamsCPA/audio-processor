@@ -17,14 +17,11 @@ name: Continuous Fuzzing
 
 on:
   workflow_dispatch:  # Manual trigger
-  push:
-    branches:
-      - main
-      - develop
-  pull_request:
-    branches:
-      - main
-      - develop
+  schedule:
+    # Weekly fuzzing run on Sundays at 7 AM UTC; on-PR fuzzing was removed because
+    # no fuzz targets are defined yet (no src/audio_processor/fuzz/ directory).
+    # Restore push/pull_request triggers when fuzz harnesses are added.
+    - cron: '0 7 * * 0'
 
 permissions:
   contents: read
