@@ -815,6 +815,14 @@ dev = [
 # CVE IDs listed here are passed to pip-audit as --ignore-vuln.
 # Every entry must have a corresponding row in docs/known-vulnerabilities.md
 # documenting why it cannot be fixed and when to reassess.
+#
+# Wiring: pip-audit does NOT natively read this table. The org-level reusable
+# workflow `ByronWilliamsCPA/.github/.github/workflows/python-ci.yml` parses
+# this table with tomllib and passes the IDs to pip-audit via --ignore-vuln on
+# the command line. For LOCAL runs, bare `uv run pip-audit` will NOT pick up
+# these ignores; run instead:
+#   uv run pip-audit --ignore-vuln PYSEC-2022-42969
+# (add additional --ignore-vuln flags for each ID listed below).
 ignore-vuln = [
     "PYSEC-2022-42969",  # py 1.11.0 (transitive via interrogate, dev-only); vulnerable code path is py.path.svnwc which is unused
 ]
