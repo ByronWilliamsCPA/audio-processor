@@ -3,16 +3,17 @@ schema_type: common
 title: "Known Vulnerabilities"
 status: published
 owner: core-maintainer
-purpose: "Tracks CVEs that cannot be immediately resolved. Review quarterly; no entry may age past 60 days without reassessment."
+purpose: >-
+  Tracks CVEs that cannot be immediately resolved. No entry may age past
+  60 days without reassessment; escalate or resolve.
 tags:
   - security
   - dependencies
 ---
 
-> Tracks CVEs that cannot be immediately resolved. Review quarterly.
-> No entry may age past 60 days without reassessment; escalate or resolve.
-> See `docs/known-vulnerabilities-template.md` in the global `.claude/docs/` directory
-> for the entry schema to follow when adding new CVEs.
+> Tracks CVEs that cannot be immediately resolved. No entry may age past 60 days
+> without reassessment; escalate or resolve. See
+> `docs/known-vulnerabilities-template.md` for the entry schema.
 
 ## Status
 

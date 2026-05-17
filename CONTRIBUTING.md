@@ -15,7 +15,10 @@ Thank you for your interest in contributing to Audio Processor! This document pr
 
 ## Code of Conduct
 
-This project adheres to the [ByronWilliamsCPA organization Code of Conduct](https://github.com/ByronWilliamsCPA/.github/blob/main/CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to <byron@williamshome.family>.
+This project adheres to the
+[ByronWilliamsCPA organization Code of Conduct](https://github.com/ByronWilliamsCPA/.github/blob/main/CODE_OF_CONDUCT.md).
+By participating, you are expected to uphold this code. Please report
+unacceptable behavior to <byron@williamshome.family>.
 
 ## Getting Started
 
@@ -151,7 +154,7 @@ All contributions MUST meet these requirements:
 - **No Hardcoded Secrets**: Use environment variables or secure vaults
 - **Input Validation**: Validate all user inputs and file paths
 - **Path Sanitization**: Use `pathlib.Path.resolve()` to prevent directory traversal
-- **Dependency Security**: Run `uv run safety check` before submitting PRs
+- **Dependency Security**: Run `uv run pip-audit` before submitting PRs
 
 ### Dependency Management
 
@@ -174,7 +177,6 @@ uv add --dev package-name
 
 # Verify dependency security
 uv run pip-audit
-uv run safety check
 ```
 
 **Guidelines for Dependencies:**
@@ -365,7 +367,7 @@ See migration guide in docs/migration/v1.0.0.md
 Any CHANGELOG entry that fixes a security vulnerability MUST include the CVE ID
 if one has been assigned. Format:
 
-```
+```text
 - fix(security): resolve CVE-YYYY-NNNNN: <brief description>
 ```
 

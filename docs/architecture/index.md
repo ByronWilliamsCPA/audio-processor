@@ -28,7 +28,8 @@ ADRs for this project live in two locations:
   Selects Deepgram Nova-2 as the exclusive ASR engine with native diarization
   and Docling DOM output for RAG pipeline integration.
 
-- [ADR-002: Audio Signal Conditioning and Preprocessing Pipeline](../planning/adr/adr-002-audio-preprocessing-pipeline.md)
+- [ADR-002: Audio Signal Conditioning and Preprocessing
+  Pipeline](../planning/adr/adr-002-audio-preprocessing-pipeline.md)
   Defines the mandatory audio preprocessing pipeline (librosa, pydub, FFmpeg,
   Silero VAD) that standardizes all input to 16kHz mono PCM before
   transcription.

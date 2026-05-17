@@ -102,7 +102,7 @@ scanning runs via `detect-secrets` and TruffleHog pre-commit hooks.
 ## Security Practices
 
 - Static analysis: CodeQL, Bandit, Ruff security rules (`S` category)
-- Dependency scanning: `pip-audit` in CI, Safety as a secondary check
+- Dependency scanning: `pip-audit` in CI
 - Container scanning: Trivy on Docker images in CI
 - SBOM generation for tagged releases (CycloneDX format)
 - Secret scanning: `detect-secrets` and TruffleHog as pre-commit hooks

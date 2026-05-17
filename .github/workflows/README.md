@@ -68,7 +68,7 @@ Comprehensive CI with:
 Comprehensive security scanning with:
 - CodeQL advanced analysis
 - Bandit static security analysis
-- Safety dependency CVE scanning
+- pip-audit and OSV-Scanner for dependency CVE scanning
 - OSV Scanner
 - OWASP dependency check
 - Dependency review (PRs only)

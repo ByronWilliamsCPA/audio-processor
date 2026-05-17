@@ -37,7 +37,7 @@ This feedback will be shared with the template team to improve the cookiecutter 
 - **Package Manager**: UV
 - **Code Quality**: Ruff (linter/formatter), BasedPyright (type checker)
 - **Testing**: pytest, coverage
-- **Security**: Bandit, Safety
+- **Security**: Bandit, pip-audit
 - **CLI Framework**: Click
 - **Documentation**: MkDocs Material
 - **Containerization**: Docker
@@ -604,7 +604,7 @@ uv run pytest tests/unit/test_example.py::test_function_name -v
 **GitHub Actions Workflows**:
 
 1. **CI** (`.github/workflows/ci.yml`): Tests, linting, type checking
-2. **Security** (`.github/workflows/security-analysis.yml`): CodeQL, Bandit, Safety
+2. **Security** (`.github/workflows/security-analysis.yml`): CodeQL, Bandit, pip-audit, OSV
 3. **Docs** (`.github/workflows/docs.yml`): Build and deploy documentation
 4. **Publish** (`.github/workflows/publish-pypi.yml`): PyPI release automation
 

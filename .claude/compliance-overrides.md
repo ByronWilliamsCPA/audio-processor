@@ -14,3 +14,9 @@ input, but `pr-validation.yml` in this repo delegates to `python-ci.yml` (not
 standalone `pr-title.yml` was created to provide this enforcement.
 
 **Related file**: `.github/workflows/pr-validation.yml` (core validation via python-ci.yml)
+
+**Implementation note**: `pr-title.yml` uses harden-runner with
+`egress-policy: block` and an explicit `allowed-endpoints` list covering
+`api.github.com:443`, `github.com:443`, and `objects.githubusercontent.com:443`.
+A prior version omitted the allow-list and self-bricked the workflow; the
+allow-list was added after the first run failed.
