@@ -16,16 +16,19 @@
 
 name: SonarCloud
 
+# This workflow is restricted to manual triggers until the SonarCloud project
+# is registered under the byronwilliamscpa organization. PR-level Sonar analysis
+# is handled by the SonarSource GitHub App (the "SonarCloud Code Analysis" check
+# that posts directly to PRs from the SonarSource bot); the in-repo scanner here
+# is supplementary branch-level analysis that requires the project to exist on
+# the org's SonarCloud dashboard before it can succeed.
+#
+# To re-enable on push/pull_request:
+# 1. Verify the project exists at https://sonarcloud.io/project/overview?id=ByronWilliamsCPA_audio_processor
+#    under organization byronwilliamscpa.
+# 2. Confirm a manual run succeeds via workflow_dispatch.
+# 3. Restore the push and pull_request triggers below.
 on:
-  push:
-    branches:
-      - main
-      - develop
-  pull_request:
-    types: [opened, synchronize, reopened]
-    branches:
-      - main
-      - develop
   workflow_dispatch:
 
 permissions:
