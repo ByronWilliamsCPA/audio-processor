@@ -29,7 +29,7 @@ concurrency:
 jobs:
   reuse:
     name: REUSE Compliance Check
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-reuse.yml@e7781b38647e3ea2550758ea4d6666bf31026660  # main
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-reuse.yml@f8d6093e5f41d6e0c45bc08c2b23a3f3609b003a  # main; post PR-125, fixes SPDX docker generation (#124)
     with:
       generate-spdx: true
       fail-on-missing: true
