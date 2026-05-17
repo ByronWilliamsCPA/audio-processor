@@ -12,7 +12,7 @@
 ci:
   autoupdate_schedule: monthly
   autofix_prs: true
-  skip: [validate-front-matter, qlty-check, qlty-full, trufflehog, darglint, bandit, bandit-full, basedpyright]  # Skip local-only hooks
+  skip: [validate-front-matter, qlty-check, qlty-full, darglint, basedpyright]  # Skip hooks that need local tools (uv, qlty); bandit/trufflehog run on pre-commit.ci
 
 repos:
   # ============================================================================
@@ -174,7 +174,7 @@ repos:
     rev: "e72a3ca1632f0b11a07d171449fe447a7ff6795e"  # v0.48.0  # pragma: allowlist secret
     hooks:
       - id: markdownlint
-        args: ["--fix", "--disable", "MD013", "MD024", "MD033", "MD036", "MD041", "MD040", "MD060", "--"]
+        args: ["--fix", "--disable", "MD013", "MD024", "MD033", "MD036", "MD041", "MD040", "MD060"]
         stages: [pre-commit]
 
   # ============================================================================
