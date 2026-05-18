@@ -29,7 +29,9 @@ Last reviewed: 2026-05-17
 | --- | --- |
 | **ID** | PYSEC-2022-42969 |
 | **Package** | `py` == 1.11.0 (transitive, dev only) |
-| **CVE** | (none assigned; tracked as PYSEC-2022-42969) |
+| **CVE** | CVE-2022-42969 |
+| **GHSA** | GHSA-w596-4wvx-j9j6 |
+| **Aliases** | PYSEC-2022-42969, CVE-2022-42969, GHSA-w596-4wvx-j9j6 (all three suppressed in `osv-scanner.toml`) |
 | **Severity** | High |
 | **CVSS Score** | 7.5 (CVSS 3.1 AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H) |
 | **Patched version** | None. The `py` library is deprecated and no longer maintained; affected `svnwc` module will not be fixed. |

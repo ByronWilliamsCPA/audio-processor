@@ -16,6 +16,12 @@
 
 name: SonarCloud
 
+# Project: ByronWilliamsCPA_audio-processor under byronwilliamscpa org.
+# Branch-level scans run on push to main/develop; PR-level analysis is
+# also provided by the SonarSource GitHub App (the "SonarCloud Code
+# Analysis" check). If a SonarCloud org rename ever invalidates
+# SONAR_TOKEN, temporarily restrict to `workflow_dispatch:` only,
+# refresh the secret, then restore the full trigger set.
 on:
   push:
     branches:
