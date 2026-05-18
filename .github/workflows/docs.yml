@@ -33,7 +33,7 @@ concurrency:
 jobs:
   docs:
     name: Build & Deploy Docs
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-docs.yml@bc8fd8df68be7d268428fe45d52ff9eb422815f5  # main
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-docs.yml@799ebd63e16aba0236ceded915f5c1cac20823b3  # main
     with:
       python-version: '3.12'
       deploy-to-pages: >-
