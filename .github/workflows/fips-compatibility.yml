@@ -52,8 +52,14 @@ jobs:
   fips-check:
     name: FIPS Compliance Check
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2.19.1
+        with:
+          egress-policy: audit
+          # TODO: tighten to block after 2026-06-30
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
@@ -196,10 +202,16 @@ jobs:
   fips-runtime-test:
     name: FIPS Runtime Test
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     if: github.event_name == 'schedule' || github.event.inputs.strict_mode == 'true'
     needs: fips-check
 
     steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2.19.1
+        with:
+          egress-policy: audit
+          # TODO: tighten to block after 2026-06-30
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 

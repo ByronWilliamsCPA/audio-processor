@@ -39,7 +39,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 if sys.version_info >= (3, 11):  # noqa: UP036
     from datetime import UTC
 else:
-    UTC = timezone.utc  # noqa: UP017
+    UTC = timezone.utc  # noqa: UP017  # pyright: ignore[reportUnreachable]
 
 from arq import cron
 from arq.connections import RedisSettings

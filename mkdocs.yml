@@ -1,4 +1,3 @@
-
 # MkDocs Configuration for Audio Processor
 # Documentation: https://www.mkdocs.org/user-guide/configuration/
 
@@ -112,16 +111,19 @@ markdown_extensions:
   - admonition
   - attr_list
   - def_list
-  - footnotes
-  - md_in_html
+  # removed: unused, audit 2026-05-16
+  # - footnotes
+  # removed: unused, audit 2026-05-16
+  # - md_in_html
   - tables
   - toc:
       permalink: true
       toc_depth: 3
 
   # Python Markdown Extensions
-  - pymdownx.arithmatex:
-      generic: true
+  # removed: unused, audit 2026-05-16
+  # - pymdownx.arithmatex:
+  #     generic: true
   - pymdownx.betterem:
       smart_enable: all
   - pymdownx.caret
@@ -142,8 +144,9 @@ markdown_extensions:
         - name: mermaid
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
-  - pymdownx.tabbed:
-      alternate_style: true
+  # removed: unused, audit 2026-05-16
+  # - pymdownx.tabbed:
+  #     alternate_style: true
   - pymdownx.tasklist:
       custom_checkbox: true
   - pymdownx.tilde

@@ -2,7 +2,7 @@
 
 > These instructions guide Copilot code reviews to focus on issues that automated checks cannot catch.
 > Pre-commit hooks and CI/CD already validate: formatting (Black), linting (Ruff), type checking
-> (BasedPyright), security scanning (Bandit/Safety), and test coverage (pytest).
+> (BasedPyright), security scanning (Bandit, pip-audit, OSV), and test coverage (pytest).
 
 ## Review Focus Areas
 
@@ -110,7 +110,7 @@ These are handled by CI/CD and pre-commit hooks:
 - Basic linting violations (Ruff)
 - Type annotation presence (BasedPyright)
 - Test coverage percentage (pytest-cov)
-- Known security vulnerabilities (Bandit, Safety)
+- Known security vulnerabilities (Bandit, pip-audit, OSV)
 - Credential detection (pre-commit hooks)
 - Assumption tag presence (#CRITICAL, #ASSUME - LLM governance checks)
 

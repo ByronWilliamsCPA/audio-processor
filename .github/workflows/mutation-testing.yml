@@ -40,7 +40,7 @@ jobs:
     name: Mutation Testing
     # Skip on forks (no PR comment permissions)
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-mutation.yml@main
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-mutation.yml@bc8fd8df68be7d268428fe45d52ff9eb422815f5  # main
     with:
       python-version: '3.12'
       source-directory: 'src'
@@ -48,5 +48,6 @@ jobs:
       mutation-threshold: ${{ github.event.inputs.mutation_threshold && fromJSON(github.event.inputs.mutation_threshold) || 80 }}
       fail-under-threshold: ${{ github.event_name != 'schedule' }}
       post-pr-comment: true
+      no-build: false  # project uses hatchling build backend; uv must build the editable install
       timeout-minutes: 60
     secrets: inherit

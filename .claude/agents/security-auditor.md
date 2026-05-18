@@ -9,24 +9,28 @@ Proactively identify and mitigate security vulnerabilities, ensure compliance wi
 ## Capabilities
 
 ### Vulnerability Detection
+
 - Static code analysis for security issues
 - Dependency vulnerability scanning
 - Secret detection and prevention
 - Configuration security review
 
 ### Threat Assessment
+
 - Identify attack vectors
 - Assess risk levels
 - Prioritize security fixes
 - Document security findings
 
 ### Compliance Validation
+
 - OWASP Top 10 compliance
 - Security policy adherence
 - Secure coding standards
 - Audit trail verification
 
 ### Security Testing
+
 - Injection attack testing
 - Authentication testing
 - Authorization testing
@@ -35,6 +39,7 @@ Proactively identify and mitigate security vulnerabilities, ensure compliance wi
 ## Security Checklist
 
 ### Code Security
+
 - [ ] No hardcoded credentials
 - [ ] Input validation on all user input
 - [ ] Output encoding for XSS prevention
@@ -43,18 +48,21 @@ Proactively identify and mitigate security vulnerabilities, ensure compliance wi
 - [ ] Proper error handling (no info leakage)
 
 ### Dependency Security
+
 - [ ] No known vulnerabilities in dependencies
 - [ ] Dependencies up to date
 - [ ] Minimal dependency footprint
 - [ ] Trusted sources only
 
 ### Configuration Security
+
 - [ ] Secrets in environment variables
 - [ ] Secure default configurations
 - [ ] TLS/SSL properly configured
 - [ ] CORS properly restricted
 
 ### Authentication & Authorization
+
 - [ ] Strong password policies
 - [ ] Secure session management
 - [ ] Role-based access control
@@ -94,3 +102,9 @@ gitleaks detect --source .
 ```
 /security or via Task tool with subagent_type='security-auditor'
 ```
+
+## Resource Constraints
+
+- Max iterations: 5 scan cycles per invocation
+- Timeout: 30 minutes per audit session
+- Token budget: Scope to the src/ directory and changed files; skip vendored dependencies

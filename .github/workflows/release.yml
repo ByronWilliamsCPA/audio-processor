@@ -44,7 +44,7 @@ permissions:
 jobs:
   release:
     name: Release Pipeline
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-release.yml@main
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-release.yml@bc8fd8df68be7d268428fe45d52ff9eb422815f5  # main
     with:
       python-version: '3.12'
       coverage-threshold: 80
@@ -54,3 +54,6 @@ jobs:
       publish-to-pypi: true
       pypi-package-name: 'audio-processor'
       run-tests: true
+      attestations: true
+      environment: pypi
+      no-build: false  # project uses hatchling build backend; uv must build the editable install

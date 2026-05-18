@@ -3,7 +3,7 @@
 #
 # Features:
 #   - Standard quality checks (tests, linting, type checking)
-#   - Security scanning (Bandit, Safety)
+#   - Security scanning (Bandit, pip-audit)
 #   - Optional SonarCloud/Codecov integration
 name: CI
 
@@ -13,6 +13,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     branches: [main, master, develop]
+  merge_group:
   workflow_dispatch:
 
 # Cancel in-progress runs for same PR/branch
@@ -29,7 +30,7 @@ permissions:
 jobs:
   ci:
     name: CI Pipeline
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-ci.yml@main
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-ci.yml@bc8fd8df68be7d268428fe45d52ff9eb422815f5  # main
     with:
       python-version: '3.12'
       coverage-threshold: 80
@@ -38,3 +39,29 @@ jobs:
       run-integration-tests: true
       run-security-tests: true
       fail-on-llm-tags: false
+      no-build: false  # project uses hatchling build backend; uv must build the editable install
+
+  # Top-level aggregator. Produces a check named just "CI Gate" (no workflow
+  # prefix) so it matches the org ruleset's required_status_checks entry
+  # `CI Gate`. The reusable's internal `CI Gate` job is still visible as
+  # `CI Pipeline / CI Gate`, but the ruleset matches by exact check name
+  # which requires this inline job.
+  gate:
+    name: CI Gate
+    runs-on: ubuntu-latest
+    needs: [ci]
+    if: always()
+    timeout-minutes: 5
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2.19.1
+        with:
+          egress-policy: block
+          allowed-endpoints: ''
+      - name: Aggregate CI result
+        run: |
+          if [ "${{ needs.ci.result }}" != "success" ]; then
+            echo "::error::CI pipeline did not succeed: ${{ needs.ci.result }}"
+            exit 1
+          fi
+          echo "CI Gate: passed"

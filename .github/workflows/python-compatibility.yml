@@ -36,11 +36,17 @@ permissions:
 jobs:
   compatibility:
     name: Python Compatibility Matrix
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-compatibility.yml@main
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-compatibility.yml@bc8fd8df68be7d268428fe45d52ff9eb422815f5  # main
     with:
       python-versions: '["3.10", "3.11", "3.12", "3.13"]'
       include-windows: true
       include-macos: true
-      test-command: 'pytest tests/ -v --tb=short -x --ignore=tests/integration --ignore=tests/load -m "not slow and not integration"'
+      # Marker expressions like -m "not slow" are dropped here because they fail
+      # to parse on Windows Git Bash (the quoted argument loses its quotes and
+      # pytest sees "slow" as a positional path). The --ignore paths already
+      # exclude the integration and load suites; slow tests would need their own
+      # --ignore or marker handled via pyproject.toml addopts if reintroduced.
+      test-command: 'pytest tests/ -v --tb=short -x --ignore=tests/integration --ignore=tests/load'
       timeout-minutes: 30
       fail-fast: false
+      no-build: false  # project uses hatchling build backend; uv must build the editable install

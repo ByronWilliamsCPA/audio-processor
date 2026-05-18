@@ -26,10 +26,14 @@ permissions:
   id-token: write
 
 # Uses org-level reusable workflow
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   docs:
     name: Build & Deploy Docs
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-docs.yml@main
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-docs.yml@bc8fd8df68be7d268428fe45d52ff9eb422815f5  # main
     with:
       python-version: '3.12'
       deploy-to-pages: >-
@@ -37,3 +41,4 @@ jobs:
           github.event_name == 'push' &&
           github.ref == 'refs/heads/main'
         }}
+      no-build: false  # project uses hatchling build backend; uv must build the editable install

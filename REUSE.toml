@@ -108,6 +108,7 @@ path = [
     ".env.example",  # Environment variable template
     ".infisical.json",  # Infisical secrets configuration
     ".markdownlint.json",  # Markdown linting rules
+    ".secrets.baseline",  # detect-secrets baseline (auto-generated JSON, no inline SPDX possible)
     ".mutmut_config",  # Mutation testing configuration
     ".prettierrc",  # Prettier formatting rules
     ".shellcheckrc",  # Shell script linting

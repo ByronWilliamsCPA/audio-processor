@@ -1,3 +1,4 @@
+# CI-013: Intentional unregistered workflow -- publishes package to PyPI on release using OIDC trusted publishing.
 # Publish to PyPI - Calls Org-Level Reusable Workflow
 # This is a lightweight caller workflow that invokes the organization's
 # shared PyPI publishing workflow with OIDC trusted publishing.
@@ -17,11 +18,21 @@ on:
 jobs:
   publish:
     name: Publish Package
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-publish-pypi.yml@main
+    # NOTE: GitHub Actions does not allow `environment:` on a job that uses a
+    # reusable workflow (`uses:`). The previous caller passed
+    # `with: environment: pypi`, but the org reusable
+    # (ByronWilliamsCPA/.github/.github/workflows/python-publish-pypi.yml)
+    # does not declare `environment` as a workflow_call input, so the value
+    # was silently ignored. Environment scoping for OIDC trusted publishing
+    # must be applied INSIDE the reusable's publish job; tracked as an
+    # upstream enhancement against ByronWilliamsCPA/.github.
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-publish-pypi.yml@bc8fd8df68be7d268428fe45d52ff9eb422815f5  # main
     with:
       python-version: '3.12'
       package-name: 'audio-processor'
-      test-pypi: ${{ github.event.inputs.test-pypi || false }}
+      # `use-testpypi` is the reusable's declared input name. The previous
+      # caller used `test-pypi` (mis-named) which was silently ignored.
+      use-testpypi: ${{ github.event.inputs.test-pypi == 'true' }}
 
 permissions:
   contents: read

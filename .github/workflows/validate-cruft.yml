@@ -1,0 +1,80 @@
+# CI-013: Intentional unregistered workflow -- validates cookiecutter template sync via cruft to detect template drift.
+# Cruft Template Validation
+# Checks that the project is up to date with the cookiecutter template.
+#
+# This workflow detects template drift by running cruft check.
+# If the template has updates, the workflow will report them.
+name: Validate Cruft
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.cruft.json'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.cruft.json'
+      - 'pyproject.toml'
+  schedule:
+    # Weekly check on Mondays at 7 AM UTC
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate-cruft:
+    name: Validate Cruft Template Sync
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2.19.1
+        with:
+          egress-policy: audit
+          # NOTE: tighten to block after 2026-06-30 as part of the cross-workflow
+          # audit->block egress migration (per-workflow allowed-endpoints required).
+
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+
+      - name: Install cruft
+        # Pin cruft to align with the rest of the toolchain's lockfile-style
+        # version discipline. `--only-binary=:all:` prevents source-distribution
+        # setup-script execution (Sonar S8541). Bump deliberately when the
+        # cookiecutter template publishes a release that requires a newer cruft.
+        run: |
+          pip install --only-binary=:all: 'cruft==2.16.0'
+
+      - name: Check cruft status
+        id: cruft-check
+        run: |
+          if [ ! -f .cruft.json ]; then
+            echo "::notice::No .cruft.json found. Skipping cruft check."
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          echo "skip=false" >> $GITHUB_OUTPUT
+          cruft check && echo "status=up-to-date" >> $GITHUB_OUTPUT || echo "status=drift-detected" >> $GITHUB_OUTPUT
+
+      - name: Report status
+        if: steps.cruft-check.outputs.skip != 'true'
+        run: |
+          echo "## Cruft Template Validation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.cruft-check.outputs.status }}" == "up-to-date" ]; then
+            echo "Template is up to date." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Template drift detected. Run cruft update to sync with the latest template." >> $GITHUB_STEP_SUMMARY
+          fi

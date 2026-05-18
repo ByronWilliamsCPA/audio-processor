@@ -1,3 +1,4 @@
+# CI-013: Intentional unregistered workflow -- uploads coverage reports to Codecov after CI completes.
 # Codecov Coverage Upload for Audio Processor
 # Uploads test coverage reports to Codecov after CI workflow completion.
 #
@@ -23,7 +24,7 @@ jobs:
     name: Upload Coverage
     # Only run on successful CI completion
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-codecov.yml@main
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-codecov.yml@bc8fd8df68be7d268428fe45d52ff9eb422815f5  # main
     with:
       artifact-name: 'coverage-reports'
       coverage-files: '*.xml'
@@ -36,8 +37,18 @@ jobs:
   report-failure:
     name: Report CI Failure
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: ${{ github.event.workflow_run.conclusion == 'failure' }}
     steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2.19.1
+        with:
+          egress-policy: audit
+          # NOTE: tighten to block after 2026-06-30 (cross-workflow egress migration).
+          # The report-failure job only writes to $GITHUB_STEP_SUMMARY (runner-local),
+          # so under block mode it needs no external endpoints. When flipping to block,
+          # uncomment:
+          # allowed-endpoints: ''
       - name: Report status
         run: |
           echo "## Coverage Upload Skipped" >> $GITHUB_STEP_SUMMARY

@@ -123,3 +123,9 @@ Agent:
 - **ALWAYS show** proposed changes before applying
 - **PRESERVE** any sections not in baseline
 - **ASK** if unsure whether content is baseline or project-specific
+
+## Resource Constraints
+
+- Max iterations: 5 merge attempts per invocation
+- Timeout: 30 minutes per merge session
+- Token budget: Read only the two files being merged (baseline and target); do not load the full codebase
