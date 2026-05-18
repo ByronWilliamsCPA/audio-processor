@@ -125,6 +125,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed for PR decoration
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}      # SonarCloud authentication
+          SONAR_HOST_URL: https://sonarcloud.io  # v6 of the action no longer defaults to SonarCloud; set explicitly
         with:
           args: >
             -Dsonar.projectKey=ByronWilliamsCPA_audio-processor
