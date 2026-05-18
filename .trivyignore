@@ -40,3 +40,59 @@ CVE-2025-13601
 CVE-2025-64720
 CVE-2025-65018
 CVE-2025-66293
+
+# CVE-2026-40393 - libgbm1 / mesa-libgallium (Mesa GBM / Gallium)
+# Status: will_not_fix (Debian security tracker)
+# Severity: CRITICAL
+# Risk Assessment: NEGLIGIBLE for this application
+# Justification:
+#   - Vulnerability is in Mesa's hardware-accelerated graphics buffer
+#     management (GBM) and Gallium driver layer
+#   - This is a server-side audio processing service: no display server,
+#     no GPU access, no graphics rendering, headless container
+#   - libgbm1 / mesa-libgallium are pulled in only as transitive deps of
+#     libavcodec-extra (ffmpeg) for hardware video acceleration codepaths
+#     that this application never exercises
+#   - Container runs as non-root user with no /dev/dri access
+# References:
+#   - https://security-tracker.debian.org/tracker/CVE-2026-40393
+# Review Date: 2026-05-18
+# Next Review: 2026-07-17 (60-day cap per CLAUDE.md unfixed-CVE policy)
+CVE-2026-40393
+
+# CVE-2026-33846 - gnutls28 (GnuTLS)
+# Status: No upstream fix available
+# Severity: HIGH
+# Risk Assessment: LOW for this application
+# Justification:
+#   - GnuTLS is a transitive dependency of curl and ffmpeg in the base
+#     image, used only for command-line TLS in CI tooling
+#   - Application Python code uses OpenSSL (via cryptography / urllib3),
+#     not GnuTLS, for outbound TLS
+#   - No untrusted TLS server certificates are processed by GnuTLS in this
+#     application's request path
+#   - Upstream GnuTLS has not yet published a fixed release; Debian
+#     security tracker shows no fix candidate
+# References:
+#   - https://security-tracker.debian.org/tracker/CVE-2026-33846
+# Review Date: 2026-05-18
+# Next Review: 2026-07-17 (60-day cap per CLAUDE.md unfixed-CVE policy)
+CVE-2026-33846
+
+# CVE-2026-5673 - libtheoradec1 (Theora video decoder)
+# Status: fix_deferred (Debian security tracker)
+# Severity: HIGH
+# Risk Assessment: NEGLIGIBLE for this application
+# Justification:
+#   - libtheoradec1 decodes Ogg Theora video streams
+#   - This is an audio processing service; it does not decode video
+#   - libtheoradec1 is pulled in transitively by libavcodec-extra (ffmpeg)
+#     for completeness of codec support, but the application never invokes
+#     Theora decoding via ffmpeg
+#   - Debian has classified this as fix_deferred, meaning low-impact in
+#     typical Debian deployments
+# References:
+#   - https://security-tracker.debian.org/tracker/CVE-2026-5673
+# Review Date: 2026-05-18
+# Next Review: 2026-07-17 (60-day cap per CLAUDE.md unfixed-CVE policy)
+CVE-2026-5673
