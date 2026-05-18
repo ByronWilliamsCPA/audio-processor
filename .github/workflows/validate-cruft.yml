@@ -38,7 +38,8 @@ jobs:
         uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2.19.1
         with:
           egress-policy: audit
-          # TODO: tighten to block after 2026-06-30
+          # NOTE: tighten to block after 2026-06-30 as part of the cross-workflow
+          # audit->block egress migration (per-workflow allowed-endpoints required).
 
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -49,7 +50,12 @@ jobs:
           python-version: '3.12'
 
       - name: Install cruft
-        run: pip install cruft
+        # Pin cruft to align with the rest of the toolchain's lockfile-style
+        # version discipline. `--only-binary=:all:` prevents source-distribution
+        # setup-script execution (Sonar S8541). Bump deliberately when the
+        # cookiecutter template publishes a release that requires a newer cruft.
+        run: |
+          pip install --only-binary=:all: 'cruft==2.16.0'
 
       - name: Check cruft status
         id: cruft-check

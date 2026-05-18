@@ -18,12 +18,21 @@ on:
 jobs:
   publish:
     name: Publish Package
+    # NOTE: GitHub Actions does not allow `environment:` on a job that uses a
+    # reusable workflow (`uses:`). The previous caller passed
+    # `with: environment: pypi`, but the org reusable
+    # (ByronWilliamsCPA/.github/.github/workflows/python-publish-pypi.yml)
+    # does not declare `environment` as a workflow_call input, so the value
+    # was silently ignored. Environment scoping for OIDC trusted publishing
+    # must be applied INSIDE the reusable's publish job; tracked as an
+    # upstream enhancement against ByronWilliamsCPA/.github.
     uses: ByronWilliamsCPA/.github/.github/workflows/python-publish-pypi.yml@e7781b38647e3ea2550758ea4d6666bf31026660  # main
     with:
       python-version: '3.12'
       package-name: 'audio-processor'
-      test-pypi: ${{ github.event.inputs.test-pypi || false }}
-      environment: pypi
+      # `use-testpypi` is the reusable's declared input name. The previous
+      # caller used `test-pypi` (mis-named) which was silently ignored.
+      use-testpypi: ${{ github.event.inputs.test-pypi == 'true' }}
 
 permissions:
   contents: read
