@@ -34,3 +34,27 @@ jobs:
       generate-spdx: true
       fail-on-missing: true
       artifact-retention-days: 90
+
+  # Top-level aggregator. Produces a check named just "Check REUSE Compliance"
+  # (no workflow prefix) so it matches the org ruleset's required_status_checks
+  # entry `Check REUSE Compliance`. The reusable's internal job remains
+  # visible as `REUSE Compliance Check / REUSE Compliance Check`.
+  gate:
+    name: Check REUSE Compliance
+    runs-on: ubuntu-latest
+    needs: [reuse]
+    if: always()
+    timeout-minutes: 5
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450  # v2.19.1
+        with:
+          egress-policy: block
+          allowed-endpoints: ''
+      - name: Aggregate REUSE result
+        run: |
+          if [ "${{ needs.reuse.result }}" != "success" ]; then
+            echo "::error::REUSE compliance did not pass: ${{ needs.reuse.result }}"
+            exit 1
+          fi
+          echo "Check REUSE Compliance: passed"

@@ -32,7 +32,7 @@ permissions:
 # Uses org-level reusable workflow
 jobs:
   security:
-    name: Security Scan
+    name: Security Analysis
     uses: ByronWilliamsCPA/.github/.github/workflows/python-security-analysis.yml@bc8fd8df68be7d268428fe45d52ff9eb422815f5  # main
     with:
       source-directory: 'src'

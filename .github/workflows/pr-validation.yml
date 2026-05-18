@@ -122,7 +122,7 @@ jobs:
   # Validation Summary
   # ==========================================================================
   validation-summary:
-    name: Validation Summary
+    name: Dependency & Standards Validation
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [core-validation, dead-code, link-check]
