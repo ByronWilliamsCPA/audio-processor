@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from io import StringIO
@@ -260,10 +261,11 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    # Directory names anywhere in the path that opt out of front-matter checks.
-    # These are gitignored local artifacts (e.g. compliance-reports/ is a
-    # workspace folder produced by the repo-compliance skill) that the
-    # validator would otherwise walk into and flag.
+    # Directory names that opt out of front-matter checks. These are
+    # gitignored local artifacts (e.g. compliance-reports/ is a workspace
+    # folder produced by the repo-compliance skill) that the validator
+    # would otherwise walk into and flag. os.walk prunes them in-place so
+    # the walker does not descend into them at all.
     excluded_dirs = {"compliance-reports"}
 
     # Collect Markdown files
@@ -271,9 +273,9 @@ def main() -> int:
     for path_str in args.paths:
         path = Path(path_str)
         if path.is_dir():
-            md_files.extend(
-                p for p in path.rglob("*.md") if excluded_dirs.isdisjoint(p.parts)
-            )
+            for root, dirs, files in os.walk(path):
+                dirs[:] = [d for d in dirs if d not in excluded_dirs]
+                md_files.extend(Path(root) / f for f in files if f.endswith(".md"))
         elif path.suffix.lower() == ".md":
             md_files.append(path)
 
