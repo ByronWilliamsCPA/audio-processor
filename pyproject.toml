@@ -629,6 +629,20 @@ runner = "uv run pytest -x --assert=plain -o addopts=''"
 tests_dir = "tests/"
 dict_synonyms = "Struct, NamedStruct"
 
+# pip-audit Configuration
+# The org reusable workflow (python-ci.yml) reads ignore-vuln from this
+# section and passes each ID as --ignore-vuln to pip-audit.
+# Reference: https://pypi.org/project/pip-audit/
+[tool.pip-audit]
+ignore-vuln = [
+    # PYSEC-2022-42969: ReDoS in py.path.svnwc (transitive of `interrogate`).
+    # The `py` package is deprecated upstream with no fix. The vulnerable
+    # code path (`py.path.svnwc` SVN parser) is not imported anywhere in
+    # this codebase. Documented in docs/known-vulnerabilities.md with
+    # reassess-by 2026-07-16.
+    "PYSEC-2022-42969",
+]
+
 # Bandit Security Configuration
 # Run: uv run bandit -c pyproject.toml -r src/
 # Reference: https://bandit.readthedocs.io/
