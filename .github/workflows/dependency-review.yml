@@ -42,8 +42,13 @@ jobs:
         uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48  # v4.9.0
         with:
           fail-on-severity: high
-          # Allow common permissive and compatible licenses
-          # NOTE: Cannot use both allow-licenses and deny-licenses - using allow-list approach
-          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, MPL-2.0, LGPL-2.1, LGPL-3.0, Python-2.0, Unlicense, CC0-1.0, GPL-3.0-or-later
+          # Allow common permissive and compatible licenses.
+          # NOTE: Cannot use both allow-licenses and deny-licenses - using allow-list approach.
+          # Composite license entries (added 2026-05-17 during lockfile refresh):
+          #   - MIT-CMU: Pillow's MIT-style license (CMU variant)
+          #   - LicenseRef-scancode-protobuf: Google protobuf upstream license, BSD-3-Clause compatible
+          #   - ZPL-2.1: Zope Public License (BSD-style permissive), used by pytz
+          #   - HPND-Markus-Kuhn: Historical Permission Notice and Disclaimer variant, used by wcwidth
+          allow-licenses: MIT, MIT-CMU, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, MPL-2.0, LGPL-2.1, LGPL-3.0, Python-2.0, Unlicense, CC0-1.0, GPL-3.0-or-later, ZPL-2.1, HPND-Markus-Kuhn, LicenseRef-scancode-protobuf
           # Comment on PR with findings
           comment-summary-in-pr: on-failure
