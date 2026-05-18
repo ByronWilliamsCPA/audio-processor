@@ -144,7 +144,7 @@ def _get_release_version() -> str:
         import subprocess  # noqa: PLC0415
 
         sha = (
-            subprocess.check_output(
+            subprocess.check_output(  # nosec B607 - git resolved via PATH by CI/runtime contract
                 ["git", "rev-parse", "--short", "HEAD"],  # noqa: S607
                 stderr=subprocess.DEVNULL,
             )
@@ -152,17 +152,17 @@ def _get_release_version() -> str:
             .strip()
         )
         return f"audio_processor@{sha}"  # noqa: TRY300
-    except Exception:  # noqa: BLE001, S110
+    except Exception as exc:  # noqa: BLE001 - intentional broad catch for release-version fallback
         # Handles both subprocess.CalledProcessError and FileNotFoundError
-        pass
+        logger.debug("git rev-parse failed for release version: %s", exc)
 
     # Fallback to package version
     try:
         from importlib.metadata import version  # noqa: PLC0415
 
         pkg_version = version("audio-processor")
-    except Exception:  # noqa: BLE001, S110
-        pass
+    except Exception as exc:  # noqa: BLE001 - intentional broad catch for package-version fallback
+        logger.debug("importlib.metadata.version failed for release version: %s", exc)
     else:
         return f"audio_processor@{pkg_version}"
 
