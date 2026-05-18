@@ -26,7 +26,7 @@ jobs:
     # was silently ignored. Environment scoping for OIDC trusted publishing
     # must be applied INSIDE the reusable's publish job; tracked as an
     # upstream enhancement against ByronWilliamsCPA/.github.
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-publish-pypi.yml@e7781b38647e3ea2550758ea4d6666bf31026660  # main
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-publish-pypi.yml@bc8fd8df68be7d268428fe45d52ff9eb422815f5  # main
     with:
       python-version: '3.12'
       package-name: 'audio-processor'

@@ -44,7 +44,7 @@ permissions:
 jobs:
   release:
     name: Release Pipeline
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-release.yml@e7781b38647e3ea2550758ea4d6666bf31026660  # main
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-release.yml@bc8fd8df68be7d268428fe45d52ff9eb422815f5  # main
     with:
       python-version: '3.12'
       coverage-threshold: 80
