@@ -41,7 +41,7 @@ concurrency:
 jobs:
   sbom:
     name: SBOM & Security
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-sbom.yml@bc8fd8df68be7d268428fe45d52ff9eb422815f5  # main
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-sbom.yml@799ebd63e16aba0236ceded915f5c1cac20823b3  # main
     with:
       python-version: '3.12'
       fail-on-vulnerabilities: true
