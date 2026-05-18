@@ -260,12 +260,20 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    # Directory names anywhere in the path that opt out of front-matter checks.
+    # These are gitignored local artifacts (e.g. compliance-reports/ is a
+    # workspace folder produced by the repo-compliance skill) that the
+    # validator would otherwise walk into and flag.
+    excluded_dirs = {"compliance-reports"}
+
     # Collect Markdown files
     md_files: list[Path] = []
     for path_str in args.paths:
         path = Path(path_str)
         if path.is_dir():
-            md_files.extend(path.rglob("*.md"))
+            md_files.extend(
+                p for p in path.rglob("*.md") if excluded_dirs.isdisjoint(p.parts)
+            )
         elif path.suffix.lower() == ".md":
             md_files.append(path)
 
