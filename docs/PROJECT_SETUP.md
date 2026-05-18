@@ -325,7 +325,7 @@ The OpenSSF Best Practices badge requires manual project registration:
 
 1. **Sign up/Login**: Visit [https://sonarcloud.io](https://sonarcloud.io) and authenticate with GitHub
 2. **Import your repository**
-3. **Get your project key**: Should be `ByronWilliamsCPA_audio_processor`
+3. **Get your project key**: Should be `ByronWilliamsCPA_audio-processor`
 4. **Create a token**: Account > Security > Generate Token
 5. **Add as GitHub secret**: Repository Settings > Secrets > `SONAR_TOKEN`
 
