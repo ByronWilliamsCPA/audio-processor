@@ -41,6 +41,12 @@ RUN uv sync --frozen --no-dev
 # =============================================================================
 FROM python:3.12-slim AS runtime
 
+# =============================================================================
+# Build Arguments
+# =============================================================================
+ARG BUILD_ENV=production
+ENV ENVIRONMENT=${BUILD_ENV}
+
 # Metadata labels (OCI standard)
 LABEL org.opencontainers.image.title="Audio Processor"
 LABEL org.opencontainers.image.description="Audio file conversion and processing for RAG content pipelines"
@@ -98,12 +104,6 @@ USER appuser
 # For API server: uvicorn audio_processor.api:app --host 0.0.0.0 --port 8000
 # For ARQ worker: arq audio_processor.jobs.worker.WorkerSettings
 CMD ["audio_processor", "--help"]
-
-# =============================================================================
-# Build Arguments
-# =============================================================================
-ARG BUILD_ENV=production
-ENV ENVIRONMENT=${BUILD_ENV}
 
 # =============================================================================
 # Multi-architecture support
