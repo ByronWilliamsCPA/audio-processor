@@ -221,6 +221,7 @@ the application.
 | --- | --- | --- | --- |
 | CVE-2026-33845 | CRITICAL | (Debian-flagged) | DTLS zero-length DoS |
 | CVE-2026-33846 | HIGH | affected | heap buffer overflow DoS |
+| CVE-2026-42009 | HIGH | affected | DoS via DTLS packet reordering (added 2026-05-19, surfaced on PR #27 Trivy scan) |
 | CVE-2026-42010 | HIGH | (Debian-flagged) | authentication bypass via NUL character |
 | CVE-2026-3833 | HIGH | (Debian-flagged) | policy bypass due to case-sensitive comparison |
 | CVE-2026-42011 | HIGH | (Debian-flagged) | security bypass via incorrect name validation |
