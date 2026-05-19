@@ -17,9 +17,10 @@ tags:
 
 ## Status
 
-Five known unfixed vulnerabilities at this time: one Python dependency
-(`py` 1.11.0), and four base-image OS packages suppressed in `.trivyignore`
-(libgbm1/mesa-libgallium, gnutls28, libtheoradec1, libpng16-16t64 group).
+One Python-dependency CVE (`py` 1.11.0) and a documented baseline of
+base-image transitive C library CVEs (catalogued in the section
+"Base-image transitive library CVEs" below and suppressed in
+`.trivyignore`).
 
 Last reviewed: 2026-05-18
 
@@ -110,47 +111,6 @@ remove the transitive Mesa dependency and this entry.
 
 ---
 
-## CVE-2026-33846: gnutls28 (GnuTLS)
-
-| Field | Value |
-| --- | --- |
-| **ID** | CVE-2026-33846 |
-| **Package** | `gnutls28` (base image OS package, transitive via `curl`, `ffmpeg`) |
-| **CVE** | CVE-2026-33846 |
-| **Severity** | High |
-| **Patched version** | None. No upstream fix has been released. |
-| **Status** | Deferred (compensating control in place) |
-| **Discovered** | 2026-05-18 (Trivy scan on PR #29, audio-processor issue #33) |
-| **Reassess-by** | 2026-07-17 (60-day cap) |
-| **Suppressed in** | `.trivyignore` |
-
-**Exploitation scenario**: GnuTLS handles TLS handshake and certificate
-processing. To exploit this CVE, an attacker would need to control the
-server side of a TLS connection initiated by a GnuTLS-linked client in the
-container (i.e. the application would need to make outbound TLS calls
-through a GnuTLS-using tool, against an attacker-controlled endpoint).
-
-**Why deferred**: The application's Python code uses OpenSSL for all
-outbound TLS, via the `cryptography` and `urllib3` packages. GnuTLS is
-present only because it is a transitive dependency of `curl` and parts of
-`ffmpeg` in the base image. Neither `curl` (used only as a build tool and
-healthcheck) nor `ffmpeg` (used for audio extraction/conversion against
-trusted on-disk files) makes outbound TLS calls to untrusted endpoints in
-the application's request path. Upstream GnuTLS has not yet published a
-fix; Debian's security tracker shows no fix candidate.
-
-**Compensating control**: (1) Outbound TLS in application code goes through
-OpenSSL, not GnuTLS. (2) `curl` is not used in the runtime request path;
-the runtime image keeps it only for image-build conveniences and container
-healthchecks against `localhost`. (3) `ffmpeg` operates on local files
-only; no TLS endpoints involved.
-
-**Planned resolution**: Monitor upstream GnuTLS for a release containing
-the fix. Reassess at 2026-07-17. If a fix lands earlier, refresh the base
-image apt layer and remove this entry.
-
----
-
 ## CVE-2026-5673: libtheoradec1 (Theora video decoder)
 
 | Field | Value |
@@ -185,6 +145,140 @@ expose ffmpeg as a service; it is invoked only on trusted local files.
 refresh the base image apt layer and remove this entry. If
 `libavcodec-extra` becomes droppable in favor of a smaller ffmpeg variant,
 removing it would also drop this dependency.
+
+---
+
+## Base-image transitive library CVEs
+
+The remaining suppressions in `.trivyignore` cover CVEs in C libraries that
+ship in the `python:3.12-slim` base image (Debian 13 trixie) as transitive
+dependencies of build tools (`curl`, `git`), the `libavcodec-extra` ffmpeg
+codec extras, and standard glibc-adjacent system libraries. Trivy reported
+this set on the PR #29 scan (audio-processor issue #33). None of these
+libraries are exercised by the application's request path:
+
+- All outbound TLS in Python code goes through OpenSSL via the
+  `cryptography` and `urllib3` packages, **not** GnuTLS, mbedTLS, libssh-4,
+  or libssh2-1t64. The C-level TLS libraries are present only because
+  `curl` and `ffmpeg` link them.
+- `curl` is used only for image-build operations (downloading UV in the
+  builder stage) and runtime healthchecks against `localhost`. It does not
+  handle untrusted remote endpoints in the request path.
+- `libexpat1` and `libxml2` are not invoked anywhere in `src/` (verified
+  by `grep -rn "xml\|lxml\|expat" src/ --include="*.py"`). No Python code
+  uses `xml.etree`, `lxml`, or any other XML parser.
+- The ncurses family (`libncursesw6`, `libtinfo6`, `ncurses-base`) is a
+  terminal capability library; this is a headless server with no TTY
+  rendering.
+- `libsndfile1` is declared as a Python dependency (via `soundfile>=0.12.1`)
+  for future audio I/O, but no application code currently invokes it
+  (verified by `grep -rn "soundfile\|librosa" src/ --include="*.py"`).
+  CVE-2026-37555 is in the IMA ADPCM reader path; even when audio I/O is
+  wired up, the application will not process untrusted IMA-encoded WAV
+  inputs.
+
+The container also runs as a non-root user (`appuser`, UID 1000) with no
+privileged operations or device access. Each CVE family is listed below
+with severity, status, and a CVE inventory. All entries share:
+
+- **Discovered**: 2026-05-18 (Trivy scan on PR #29, issue #33)
+- **Reassess-by**: 2026-07-17 (60-day cap per CLAUDE.md unfixed-CVE policy)
+- **Status**: Deferred (compensating control in place)
+- **Suppressed in**: `.trivyignore`
+- **Compensating control**: package not invoked in the application request
+  path; non-root, no-device container.
+- **Planned resolution**: refresh base image apt layer when Debian backports
+  fixes; reassess at the 60-day mark. If `libavcodec-extra` becomes droppable
+  in favor of a smaller ffmpeg variant, several of these transitive deps
+  fall out automatically.
+
+### curl / libcurl4t64
+
+| CVE | Severity | Status | Title |
+| --- | --- | --- | --- |
+| CVE-2026-5773 | HIGH | affected | wrong SMB file transfer |
+| CVE-2026-6276 | HIGH | (Debian-flagged) | cookie information disclosure |
+
+`curl` and `libcurl4t64` ship in the runtime image for build operations and
+healthchecks. Application HTTP traffic goes through `urllib3` / `httpx` /
+`aiohttp` (Python OpenSSL stack), not libcurl. SMB protocol support is
+disabled in Debian's curl build; CVE-2026-5773 is not reachable.
+
+### libexpat1
+
+| CVE | Severity | Title |
+| --- | --- | --- |
+| CVE-2026-25210 | HIGH | information disclosure / data corruption |
+| CVE-2026-45186 | HIGH | computational complexity DoS |
+
+No XML parsing in `src/`. `libexpat1` is present only because system tools
+link it. Python's standard library `xml.etree` is not imported anywhere in
+the application.
+
+### libgnutls30t64
+
+| CVE | Severity | Title |
+| --- | --- | --- |
+| CVE-2026-33845 | CRITICAL | DTLS zero-length DoS |
+| CVE-2026-42010 | HIGH | authentication bypass via NUL character |
+| CVE-2026-3833 | HIGH | policy bypass due to case-sensitive comparison |
+| CVE-2026-42011 | HIGH | security bypass via incorrect name validation |
+
+GnuTLS is transitive via curl and ffmpeg. Application Python TLS uses
+OpenSSL through `cryptography` / `urllib3`. No untrusted TLS endpoints
+are processed via GnuTLS in the application request path.
+
+### libmbedcrypto16
+
+| CVE | Severity | Title |
+| --- | --- | --- |
+| CVE-2026-34873 | CRITICAL | client impersonation during TLS 1.3 |
+| CVE-2026-34875 | HIGH | arbitrary code execution |
+| CVE-2026-25835 | HIGH | improper API misuse |
+| CVE-2026-34872 | HIGH | shared secret leak |
+
+Mbed TLS is transitive via ffmpeg's TLS-capable codec backends. Application
+code does not invoke any ffmpeg codepaths that perform TLS handshakes;
+ffmpeg here operates on trusted on-disk audio inputs only.
+
+### ncurses family
+
+| CVE | Severity | Packages | Title |
+| --- | --- | --- | --- |
+| CVE-2025-69720 | HIGH | libncursesw6, libtinfo6, ncurses-base | buffer overflow in terminal capability parsing |
+
+Terminal library; headless service, no TTY rendering. Not reachable from
+application code.
+
+### libsndfile1
+
+| CVE | Severity | Status | Title |
+| --- | --- | --- | --- |
+| CVE-2026-37555 | HIGH | fix_deferred (Debian) | integer overflow in `ima_reader_init()` |
+
+`libsndfile1` (via Python `soundfile`) is a declared dependency for future
+audio I/O. No application code currently invokes it. CVE is specific to the
+IMA ADPCM WAV decoder; the application's planned audio pipeline does not
+ingest untrusted IMA-encoded inputs. Reassess once audio I/O is implemented.
+
+### libssh-4 / libssh2-1t64
+
+| CVE | Severity | Status | Package | Title |
+| --- | --- | --- | --- | --- |
+| CVE-2026-0966 | HIGH | affected | libssh-4 | DoS via zero-length input |
+| CVE-2026-3731 | HIGH | (Debian-flagged) | libssh-4 | DoS via out-of-bounds read |
+| CVE-2026-7598 | CRITICAL | affected | libssh2-1t64 | integer overflow via large username/password |
+
+SSH client libraries pulled in transitively by `curl` (SSH protocol support
+in libcurl) and `git`. The application does not initiate SSH connections.
+
+### libxml2
+
+| CVE | Severity | Title |
+| --- | --- | --- |
+| CVE-2026-6732 | HIGH | DoS via crafted XML input |
+
+Same reachability story as `libexpat1`: no XML parsing in `src/`.
 
 ---
 
