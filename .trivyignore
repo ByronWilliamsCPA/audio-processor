@@ -125,10 +125,12 @@ CVE-2026-45186
 
 # libgnutls30t64 - GnuTLS transport security
 #   CVE-2026-33845 (CRITICAL): DTLS zero-length DoS
+#   CVE-2026-33846 (HIGH, affected): DoS via heap buffer overflow
 #   CVE-2026-42010 (HIGH): authentication bypass via NUL character
 #   CVE-2026-3833  (HIGH): policy bypass due to case-sensitive comparison
 #   CVE-2026-42011 (HIGH): security bypass via incorrect name validation
 CVE-2026-33845
+CVE-2026-33846
 CVE-2026-42010
 CVE-2026-3833
 CVE-2026-42011

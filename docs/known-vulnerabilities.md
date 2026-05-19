@@ -217,12 +217,13 @@ the application.
 
 ### libgnutls30t64
 
-| CVE | Severity | Title |
-| --- | --- | --- |
-| CVE-2026-33845 | CRITICAL | DTLS zero-length DoS |
-| CVE-2026-42010 | HIGH | authentication bypass via NUL character |
-| CVE-2026-3833 | HIGH | policy bypass due to case-sensitive comparison |
-| CVE-2026-42011 | HIGH | security bypass via incorrect name validation |
+| CVE | Severity | Status | Title |
+| --- | --- | --- | --- |
+| CVE-2026-33845 | CRITICAL | (Debian-flagged) | DTLS zero-length DoS |
+| CVE-2026-33846 | HIGH | affected | heap buffer overflow DoS |
+| CVE-2026-42010 | HIGH | (Debian-flagged) | authentication bypass via NUL character |
+| CVE-2026-3833 | HIGH | (Debian-flagged) | policy bypass due to case-sensitive comparison |
+| CVE-2026-42011 | HIGH | (Debian-flagged) | security bypass via incorrect name validation |
 
 GnuTLS is transitive via curl and ffmpeg. Application Python TLS uses
 OpenSSL through `cryptography` / `urllib3`. No untrusted TLS endpoints
