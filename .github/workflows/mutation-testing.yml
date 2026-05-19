@@ -40,7 +40,7 @@ jobs:
     name: Mutation Testing
     # Skip on forks (no PR comment permissions)
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-mutation.yml@55a341324affd9855c9f8cee0201dba4fd089fcb  # fix/ci-mutmut-and-dhi-login (PR #142); rebase to main SHA after merge
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-mutation.yml@b0c4d7d982881c3ca2e3dd0cc3e8828b19ff682d  # fix/ci-mutmut-and-dhi-login (PR #142); rebase to main SHA after merge
     with:
       python-version: '3.12'
       source-directory: 'src'
