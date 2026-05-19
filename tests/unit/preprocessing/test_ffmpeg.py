@@ -27,7 +27,10 @@ def test_convert_to_wav_invokes_ffmpeg_with_argv_list(tmp_path: Path) -> None:
     fake.returncode = 0
     fake.stderr = ""
 
-    with patch.object(ffmpeg_module.subprocess, "run", return_value=fake) as run_mock:
+    with (
+        patch.object(ffmpeg_module, "_FFMPEG_PATH", "/usr/bin/ffmpeg"),
+        patch.object(ffmpeg_module.subprocess, "run", return_value=fake) as run_mock,
+    ):
         result = convert_to_wav(src, dst)
 
     assert result == dst
@@ -35,7 +38,7 @@ def test_convert_to_wav_invokes_ffmpeg_with_argv_list(tmp_path: Path) -> None:
     args, kwargs = run_mock.call_args
     cmd = args[0]
     assert isinstance(cmd, list), "command must be argv list to avoid shell injection"
-    assert cmd[0] == ffmpeg_module._FFMPEG_PATH
+    assert cmd[0] == "/usr/bin/ffmpeg"
     assert str(src) in cmd
     assert str(dst) in cmd
     assert kwargs.get("shell", False) is False
@@ -67,6 +70,7 @@ def test_convert_to_wav_raises_on_nonzero_exit(tmp_path: Path) -> None:
     fake.stderr = "Invalid data found when processing input"
 
     with (
+        patch.object(ffmpeg_module, "_FFMPEG_PATH", "/usr/bin/ffmpeg"),
         patch.object(ffmpeg_module.subprocess, "run", return_value=fake),
         pytest.raises(FfmpegConversionError) as exc_info,
     ):
