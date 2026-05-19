@@ -40,7 +40,7 @@ permissions:
 jobs:
   container-security:
     name: Container Security Scan
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-container-security.yml@52940affb19d346f9945d3d8cf82c0f24edb0f71  # fix/ci-mutmut-and-dhi-login (PR #142); rebase to main SHA after merge
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-container-security.yml@55a341324affd9855c9f8cee0201dba4fd089fcb  # fix/ci-mutmut-and-dhi-login (PR #142); rebase to main SHA after merge
     with:
       dockerfile-path: 'Dockerfile'
       build-context: '.'
