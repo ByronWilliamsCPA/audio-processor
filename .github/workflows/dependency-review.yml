@@ -51,6 +51,51 @@ jobs:
           #   - LicenseRef-scancode-protobuf: Google protobuf upstream license, BSD-3-Clause compatible
           #   - ZPL-2.1: Zope Public License (BSD-style permissive), used by pytz
           #   - HPND-Markus-Kuhn: Historical Permission Notice and Disclaimer variant, used by wcwidth
-          allow-licenses: MIT, MIT-CMU, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, MPL-2.0, LGPL-2.1, LGPL-3.0, Python-2.0, Unlicense, CC0-1.0, GPL-3.0-or-later, ZPL-2.1, HPND-Markus-Kuhn, LicenseRef-scancode-protobuf
+          # Audio-preprocessing entries (added 2026-05-19 with Phase 1 preprocessing pipeline):
+          #   - MPL-1.1: older MPL variant used by hypothesis (paired with MPL-2.0)
+          #   - 0BSD: zero-clause BSD, used by numba
+          #   - BSD-4-Clause: 4-clause BSD, used by numba
+          #   - BSD-2-Clause-Views: 2-clause BSD variant, used by rq
+          #   - Zlib: zlib license, permissive, used by numpy
+          #   - LicenseRef-scancode-python-cwi: Python CWI license, BSD-style, used by numba
+          #   - LicenseRef-scancode-secret-labs-2011: Secret Labs license, BSD-style, used by numba
+          #   - LicenseRef-scancode-unicode: Unicode license, permissive, used by numba
+          allow-licenses: MIT, MIT-CMU, Apache-2.0, BSD-2-Clause, BSD-2-Clause-Views, BSD-3-Clause, BSD-4-Clause, 0BSD, ISC, MPL-1.1, MPL-2.0, LGPL-2.1, LGPL-3.0, Python-2.0, Unlicense, CC0-1.0, GPL-3.0-or-later, ZPL-2.1, Zlib, HPND-Markus-Kuhn, LicenseRef-scancode-protobuf, LicenseRef-scancode-python-cwi, LicenseRef-scancode-secret-labs-2011, LicenseRef-scancode-unicode
+          # Packages whose license metadata is not indexed by GitHub's dependency
+          # API (action sees "no license"). These all have known permissive
+          # licenses that would be allowed under allow-licenses if metadata was
+          # present:
+          #   - torch, lxml, silero-vad, onnxruntime, deepgram-sdk: BSD-3-Clause / MIT
+          #   - protobuf: BSD-3-Clause (LicenseRef-scancode-protobuf upstream)
+          #   - jaraco-functools, ruamel-yaml, ruamel-yaml-clib: MIT
+          #   - mkdocs-git-revision-date-localized-plugin: MIT
+          #   - nvidia-* CUDA stack: NVIDIA Software License Agreement (proprietary
+          #     EULA, accepted as dependency of torch which is required for VAD)
+          allow-dependencies-licenses: >-
+            pkg:pypi/torch,
+            pkg:pypi/lxml,
+            pkg:pypi/silero-vad,
+            pkg:pypi/onnxruntime,
+            pkg:pypi/deepgram-sdk,
+            pkg:pypi/protobuf,
+            pkg:pypi/jaraco-functools,
+            pkg:pypi/ruamel-yaml,
+            pkg:pypi/ruamel-yaml-clib,
+            pkg:pypi/mkdocs-git-revision-date-localized-plugin,
+            pkg:pypi/nvidia-cublas-cu12,
+            pkg:pypi/nvidia-cuda-cupti-cu12,
+            pkg:pypi/nvidia-cuda-nvrtc-cu12,
+            pkg:pypi/nvidia-cuda-runtime-cu12,
+            pkg:pypi/nvidia-cudnn-cu12,
+            pkg:pypi/nvidia-cufft-cu12,
+            pkg:pypi/nvidia-cufile-cu12,
+            pkg:pypi/nvidia-curand-cu12,
+            pkg:pypi/nvidia-cusolver-cu12,
+            pkg:pypi/nvidia-cusparse-cu12,
+            pkg:pypi/nvidia-cusparselt-cu12,
+            pkg:pypi/nvidia-nccl-cu12,
+            pkg:pypi/nvidia-nvjitlink-cu12,
+            pkg:pypi/nvidia-nvshmem-cu12,
+            pkg:pypi/nvidia-nvtx-cu12
           # Comment on PR with findings
           comment-summary-in-pr: on-failure
