@@ -17,9 +17,12 @@ tags:
 
 ## Status
 
-One known unfixed vulnerability at this time.
+One Python-dependency CVE (`py` 1.11.0) and a documented baseline of
+base-image transitive C library CVEs (catalogued in the section
+"Base-image transitive library CVEs" below and suppressed in
+`.trivyignore`).
 
-Last reviewed: 2026-05-17
+Last reviewed: 2026-05-18
 
 ---
 
@@ -62,6 +65,221 @@ the `dev` extra).
 (2026-07-16). If a transitive source has dropped `py` by then, refresh the
 lockfile and remove this entry. If not, request the upstream tool to migrate
 away from `py` (raise an issue on the dependent package).
+
+---
+
+## CVE-2026-40393: libgbm1 / mesa-libgallium (Mesa GBM and Gallium driver)
+
+| Field | Value |
+| --- | --- |
+| **ID** | CVE-2026-40393 |
+| **Package** | `libgbm1`, `mesa-libgallium` (base image OS package, transitive via `libavcodec-extra`) |
+| **CVE** | CVE-2026-40393 |
+| **Severity** | Critical |
+| **Patched version** | None. Debian classifies as `will_not_fix`. |
+| **Status** | Deferred (compensating control in place) |
+| **Discovered** | 2026-05-18 (Trivy scan on PR #29, audio-processor issue #33) |
+| **Reassess-by** | 2026-07-17 (60-day cap) |
+| **Suppressed in** | `.trivyignore` |
+
+**Exploitation scenario**: The vulnerability is in Mesa's Generic Buffer
+Management (GBM) and Gallium driver layer, which provides
+hardware-accelerated graphics buffer allocation for GPU rendering. To
+exploit it, an attacker would need a local process with access to a DRI
+device node (`/dev/dri/*`) capable of submitting crafted graphics buffer
+operations.
+
+**Why deferred**: This is a headless server-side audio processing container.
+It has no display server, no GPU access, no graphics rendering, and no
+`/dev/dri` device mounts. The Mesa libraries are pulled in only as a
+transitive dependency of `libavcodec-extra` (the ffmpeg codec extras
+package) to support hardware video acceleration codepaths that this audio
+service never exercises. The container runs as a non-root user (`appuser`,
+UID 1000) without device access. Debian upstream has classified the CVE as
+`will_not_fix` because the practical exposure surface is hardware-graphics
+clients.
+
+**Compensating control**: (1) Container has no `/dev/dri` access; runs in a
+headless server context. (2) No graphics rendering paths are invoked from
+application code. (3) Non-root user with no device-node permissions. (4)
+The libavcodec-extra dependency is required for audio codec coverage but
+the GPU codepaths in ffmpeg are never reached.
+
+**Planned resolution**: Reassess at 2026-07-17. If `libavcodec-extra` ever
+becomes droppable (audio codec needs covered by a slimmer ffmpeg package),
+remove the transitive Mesa dependency and this entry.
+
+---
+
+## CVE-2026-5673: libtheoradec1 (Theora video decoder)
+
+| Field | Value |
+| --- | --- |
+| **ID** | CVE-2026-5673 |
+| **Package** | `libtheoradec1` (base image OS package, transitive via `libavcodec-extra`) |
+| **CVE** | CVE-2026-5673 |
+| **Severity** | High |
+| **Patched version** | None. Debian classifies as `fix_deferred`. |
+| **Status** | Deferred (compensating control in place) |
+| **Discovered** | 2026-05-18 (Trivy scan on PR #29, audio-processor issue #33) |
+| **Reassess-by** | 2026-07-17 (60-day cap) |
+| **Suppressed in** | `.trivyignore` |
+
+**Exploitation scenario**: `libtheoradec1` decodes Ogg Theora video
+streams. To exploit it, an attacker must control a Theora-encoded video
+stream that the application or its dependencies feed into a Theora decoder.
+
+**Why deferred**: This is an audio processing service. It does not decode
+video. `libtheoradec1` is pulled in transitively by `libavcodec-extra`
+(ffmpeg's codec extras package) for completeness of codec coverage, but
+the application never invokes Theora decoding via ffmpeg. Debian has
+classified the CVE as `fix_deferred`, indicating low impact in typical
+Debian deployments.
+
+**Compensating control**: (1) The application's ffmpeg invocations are
+audio-only (`-vn` flag where applicable, audio-only extraction paths). (2)
+No Theora-encoded input is processed by design. (3) The container does not
+expose ffmpeg as a service; it is invoked only on trusted local files.
+
+**Planned resolution**: Reassess at 2026-07-17. If Debian backports a fix,
+refresh the base image apt layer and remove this entry. If
+`libavcodec-extra` becomes droppable in favor of a smaller ffmpeg variant,
+removing it would also drop this dependency.
+
+---
+
+## Base-image transitive library CVEs
+
+The remaining suppressions in `.trivyignore` cover CVEs in C libraries that
+ship in the `python:3.12-slim` base image (Debian 13 trixie) as transitive
+dependencies of build tools (`curl`, `git`), the `libavcodec-extra` ffmpeg
+codec extras, and standard glibc-adjacent system libraries. Trivy reported
+this set on the PR #29 scan (audio-processor issue #33). None of these
+libraries are exercised by the application's request path:
+
+- All outbound TLS in Python code goes through OpenSSL via the
+  `cryptography` and `urllib3` packages, **not** GnuTLS, mbedTLS, libssh-4,
+  or libssh2-1t64. The C-level TLS libraries are present only because
+  `curl` and `ffmpeg` link them.
+- `curl` is used only for image-build operations (downloading UV in the
+  builder stage) and runtime healthchecks against `localhost`. It does not
+  handle untrusted remote endpoints in the request path.
+- `libexpat1` and `libxml2` are not invoked anywhere in `src/` (verified
+  by `grep -rn "xml\|lxml\|expat" src/ --include="*.py"`). No Python code
+  uses `xml.etree`, `lxml`, or any other XML parser.
+- The ncurses family (`libncursesw6`, `libtinfo6`, `ncurses-base`) is a
+  terminal capability library; this is a headless server with no TTY
+  rendering.
+- `libsndfile1` is declared as a Python dependency (via `soundfile>=0.12.1`)
+  for future audio I/O, but no application code currently invokes it
+  (verified by `grep -rn "soundfile\|librosa" src/ --include="*.py"`).
+  CVE-2026-37555 is in the IMA ADPCM reader path; even when audio I/O is
+  wired up, the application will not process untrusted IMA-encoded WAV
+  inputs.
+
+The container also runs as a non-root user (`appuser`, UID 1000) with no
+privileged operations or device access. Each CVE family is listed below
+with severity, status, and a CVE inventory. All entries share:
+
+- **Discovered**: 2026-05-18 (Trivy scan on PR #29, issue #33)
+- **Reassess-by**: 2026-07-17 (60-day cap per CLAUDE.md unfixed-CVE policy)
+- **Status**: Deferred (compensating control in place)
+- **Suppressed in**: `.trivyignore`
+- **Compensating control**: package not invoked in the application request
+  path; non-root, no-device container.
+- **Planned resolution**: refresh base image apt layer when Debian backports
+  fixes; reassess at the 60-day mark. If `libavcodec-extra` becomes droppable
+  in favor of a smaller ffmpeg variant, several of these transitive deps
+  fall out automatically.
+
+### curl / libcurl4t64
+
+| CVE | Severity | Status | Title |
+| --- | --- | --- | --- |
+| CVE-2026-5773 | HIGH | affected | wrong SMB file transfer |
+| CVE-2026-6276 | HIGH | (Debian-flagged) | cookie information disclosure |
+
+`curl` and `libcurl4t64` ship in the runtime image for build operations and
+healthchecks. Application HTTP traffic goes through `urllib3` / `httpx` /
+`aiohttp` (Python OpenSSL stack), not libcurl. SMB protocol support is
+disabled in Debian's curl build; CVE-2026-5773 is not reachable.
+
+### libexpat1
+
+| CVE | Severity | Title |
+| --- | --- | --- |
+| CVE-2026-25210 | HIGH | information disclosure / data corruption |
+| CVE-2026-45186 | HIGH | computational complexity DoS |
+
+No XML parsing in `src/`. `libexpat1` is present only because system tools
+link it. Python's standard library `xml.etree` is not imported anywhere in
+the application.
+
+### libgnutls30t64
+
+| CVE | Severity | Status | Title |
+| --- | --- | --- | --- |
+| CVE-2026-33845 | CRITICAL | (Debian-flagged) | DTLS zero-length DoS |
+| CVE-2026-33846 | HIGH | affected | heap buffer overflow DoS |
+| CVE-2026-42010 | HIGH | (Debian-flagged) | authentication bypass via NUL character |
+| CVE-2026-3833 | HIGH | (Debian-flagged) | policy bypass due to case-sensitive comparison |
+| CVE-2026-42011 | HIGH | (Debian-flagged) | security bypass via incorrect name validation |
+
+GnuTLS is transitive via curl and ffmpeg. Application Python TLS uses
+OpenSSL through `cryptography` / `urllib3`. No untrusted TLS endpoints
+are processed via GnuTLS in the application request path.
+
+### libmbedcrypto16
+
+| CVE | Severity | Title |
+| --- | --- | --- |
+| CVE-2026-34873 | CRITICAL | client impersonation during TLS 1.3 |
+| CVE-2026-34875 | HIGH | arbitrary code execution |
+| CVE-2026-25835 | HIGH | improper API misuse |
+| CVE-2026-34872 | HIGH | shared secret leak |
+
+Mbed TLS is transitive via ffmpeg's TLS-capable codec backends. Application
+code does not invoke any ffmpeg codepaths that perform TLS handshakes;
+ffmpeg here operates on trusted on-disk audio inputs only.
+
+### ncurses family
+
+| CVE | Severity | Packages | Title |
+| --- | --- | --- | --- |
+| CVE-2025-69720 | HIGH | libncursesw6, libtinfo6, ncurses-base | buffer overflow in terminal capability parsing |
+
+Terminal library; headless service, no TTY rendering. Not reachable from
+application code.
+
+### libsndfile1
+
+| CVE | Severity | Status | Title |
+| --- | --- | --- | --- |
+| CVE-2026-37555 | HIGH | fix_deferred (Debian) | integer overflow in `ima_reader_init()` |
+
+`libsndfile1` (via Python `soundfile`) is a declared dependency for future
+audio I/O. No application code currently invokes it. CVE is specific to the
+IMA ADPCM WAV decoder; the application's planned audio pipeline does not
+ingest untrusted IMA-encoded inputs. Reassess once audio I/O is implemented.
+
+### libssh-4 / libssh2-1t64
+
+| CVE | Severity | Status | Package | Title |
+| --- | --- | --- | --- | --- |
+| CVE-2026-0966 | HIGH | affected | libssh-4 | DoS via zero-length input |
+| CVE-2026-3731 | HIGH | (Debian-flagged) | libssh-4 | DoS via out-of-bounds read |
+| CVE-2026-7598 | CRITICAL | affected | libssh2-1t64 | integer overflow via large username/password |
+
+SSH client libraries pulled in transitively by `curl` (SSH protocol support
+in libcurl) and `git`. The application does not initiate SSH connections.
+
+### libxml2
+
+| CVE | Severity | Title |
+| --- | --- | --- |
+| CVE-2026-6732 | HIGH | DoS via crafted XML input |
+
+Same reachability story as `libexpat1`: no XML parsing in `src/`.
 
 ---
 
