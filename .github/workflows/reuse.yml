@@ -29,7 +29,7 @@ concurrency:
 jobs:
   reuse:
     name: REUSE Compliance Check
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-reuse.yml@799ebd63e16aba0236ceded915f5c1cac20823b3  # main
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-reuse.yml@8fbdb549a33a93520e7b431d8d9b8d5e9478674a  # main
     with:
       generate-spdx: true
       fail-on-missing: true
