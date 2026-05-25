@@ -40,7 +40,7 @@ permissions:
 jobs:
   container-security:
     name: Container Security Scan
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-container-security.yml@a81c5c7d06a27f27a7d6d965934100f9b80139d6  # main (PR #142 merged 2026-05-19)
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-container-security.yml@62bfd795d1273b4819a3f66aa9cef0b917acb830  # main (PR #142 merged 2026-05-19)
     with:
       dockerfile-path: 'Dockerfile'
       build-context: '.'
