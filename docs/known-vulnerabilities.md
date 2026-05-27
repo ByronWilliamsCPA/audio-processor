@@ -284,6 +284,43 @@ Same reachability story as `libexpat1`: no XML parsing in `src/`.
 
 ---
 
+## PYSEC-2026-139 / CVE-2026-4538: torch 2.9.1
+
+| Field | Value |
+| --- | --- |
+| **ID** | PYSEC-2026-139 |
+| **Package** | `torch` >= 2.9.0 (direct, optional `[ml]` extra) |
+| **CVE** | CVE-2026-4538 |
+| **Severity** | High |
+| **CVSS Score** | 7.8 (CVSS:3.1 AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H) |
+| **Patched version** | None. PyTorch PR #176791 is open but unmerged; OSV marks `last_affected` as 2.10.0 with no fixed version identified. |
+| **Status** | Deferred (compensating control in place) |
+| **Discovered** | 2026-05-27 (OSV scanner failure on PRs #39, #40, #41) |
+| **Reassess-by** | 2026-07-26 (60-day cap) |
+| **Suppressed in** | `osv-scanner.toml`, `[tool.pip-audit] ignore-vuln` in `pyproject.toml` |
+
+**Exploitation scenario**: The vulnerability requires a local attacker with a valid
+user account on the same host to supply crafted input to the torch runtime. The
+attack vector is local (AV:L), meaning remote exploitation is not possible.
+
+**Why deferred**: `torch` is declared in the optional `[ml]` extra group and is not
+installed in the production Docker container (which installs only the `audio` extra).
+The deployed audio processing service uses `librosa`, `pydub`, and `silero-vad` for
+audio work; `torch` is never imported by any code path that runs in production. No
+patched release exists at time of writing.
+
+**Compensating control**: (1) `torch` is absent from the production container image.
+(2) The attack vector is local-only (AV:L); the service runs in a containerised, non-root
+environment with no local user accounts accessible to external parties. (3) No production
+code path imports `torch` (verified by `grep -rn "import torch" src/`).
+
+**Planned resolution**: Reassess 2026-07-26. Check PyTorch PR #176791 and the OSV
+advisory for a patched release. If a fix ships before the reassessment date, upgrade
+the `torch>=` constraint in `pyproject.toml`, regenerate `uv.lock`, and remove this
+entry and its `osv-scanner.toml` suppression.
+
+---
+
 ## OSSF Scorecard Approved Deviations
 
 This section tracks Scorecard check results where an approved deviation is in
