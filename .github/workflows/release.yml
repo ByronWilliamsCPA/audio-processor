@@ -38,18 +38,19 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
-  issues: write
-  pull-requests: write
-  id-token: write
-  attestations: write
+  contents: read
 
 # Uses org-level reusable workflow
 jobs:
   release:
     name: Release Pipeline
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
     if: >-
-      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
       github.event.workflow_run.conclusion == 'success'
     uses: ByronWilliamsCPA/.github/.github/workflows/python-release.yml@799ebd63e16aba0236ceded915f5c1cac20823b3  # main
     with:
@@ -63,3 +64,4 @@ jobs:
       run-tests: false
       skip-tests-reason: 'Tests run in upstream CI pipeline before this workflow fires'
       no-build: false  # project uses hatchling build backend; uv must build the editable install
+    secrets: inherit  # pragma: allowlist secret
