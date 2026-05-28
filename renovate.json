@@ -182,7 +182,7 @@
     "schedule": [
       "before 5am on monday"
     ],
-    "commitMessageAction": "Update",
+    "commitMessageAction": "update",
     "automerge": false,
     "labels": [
       "dependencies",
@@ -195,6 +195,7 @@
   "prHourlyLimit": 0,
   "rebaseWhen": "conflicted",
   "semanticCommits": "enabled",
+  "commitMessageAction": "update",
   "commitMessagePrefix": "chore(deps):",
   "rangeStrategy": "bump",
   "vulnerabilityAlerts": {
