@@ -148,8 +148,8 @@ jobs = [
 # Includes web framework, audio processing, ASR, and job queue dependencies
 audio = [
     # Web framework for API endpoints
-    # PYSEC-2026-161: fastapi<0.133.0 pins starlette<1.0.0 which has a CVE.
-    # 0.133.0 removes that upper bound; starlette 1.x is the fix.
+    # PYSEC-2026-161: fastapi<0.133.0 constrained starlette to 0.x (all 0.x affected).
+    # fastapi>=0.133.0 allows starlette>=1.1.0, which contains the fix.
     "fastapi>=0.133.0",
     "uvicorn[standard]>=0.27.0",
     "python-multipart>=0.0.6",  # File upload support
@@ -645,8 +645,9 @@ ignore-vuln = [
     # reassess-by 2026-07-16.
     "PYSEC-2022-42969",
     # PYSEC-2026-139 / CVE-2026-4538: local-only (AV:L) vulnerability in torch 2.9.1.
-    # No patched version available upstream. torch is an optional [ml] extra and is
-    # not installed in the production container. Documented in
+    # No patched version available upstream. torch enters via [ml] (direct) and [audio]
+    # (transitive via silero-vad); neither extra is installed in the production container
+    # (Dockerfile: uv sync --frozen --no-dev, no --extra flags). Documented in
     # docs/known-vulnerabilities.md with reassess-by 2026-07-26.
     "PYSEC-2026-139",
 ]

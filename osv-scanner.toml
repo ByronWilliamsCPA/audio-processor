@@ -73,12 +73,12 @@ id = "PYSEC-2026-139"
 reason = """
 CVE-2026-4538 in torch 2.9.1. CVSS:3.1 AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H (7.8 HIGH, local-only).
 No patched version exists upstream (PyTorch PR #176791 is open but unmerged; OSV marks
-last_affected as 2.10.0 with no fixed version identified). torch is an optional [ml] extra
-that is not installed in the production container (the audio pipeline uses librosa, pydub,
-and silero-vad; torch is never imported by the deployed service). Exploitation requires
-a local attacker with a valid user account on the same machine -- not applicable to a
-containerised CI/CD or cloud deployment model. Documented in docs/known-vulnerabilities.md
-with reassess-by 2026-07-26.
+last_affected as 2.10.0 with no fixed version identified). torch enters via the [ml] extra
+(direct) and the [audio] extra (transitive via silero-vad); the production Dockerfile runs
+uv sync --frozen --no-dev with no --extra flags so neither extra is installed at runtime.
+Exploitation requires a local attacker with a valid user account on the same machine,
+not applicable to a containerised CI/CD or cloud deployment model. Documented in
+docs/known-vulnerabilities.md with reassess-by 2026-07-26.
 """
 
 [[IgnoredVulns]]
