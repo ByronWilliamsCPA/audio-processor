@@ -437,9 +437,101 @@ class BusinessLogicError(ProjectBaseError):
         )
 
 
+class AudioProcessorError(ProjectBaseError):
+    """Audio processing specific errors.
+
+    Raised when audio processing operations fail (FFmpeg errors, codec issues, etc.).
+
+    Example:
+        >>> raise AudioProcessorError(
+        ...     "FFmpeg conversion failed",
+        ...     operation="convert",
+        ...     input_format="mp4",
+        ...     output_format="wav",
+        ... )
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        operation: str | None = None,
+        input_format: str | None = None,
+        output_format: str | None = None,
+        details: ErrorDetails | None = None,
+        error_code: str | None = None,
+    ) -> None:
+        """Initialize audio processor error.
+
+        Args:
+            message: Description of the audio processing error.
+            operation: The operation that failed (probe, convert, extract).
+            input_format: Input file format.
+            output_format: Output file format (for conversions).
+            details: Additional context.
+            error_code: Machine-readable error code.
+        """
+        details = details or {}
+        if operation:
+            details["operation"] = operation
+        if input_format:
+            details["input_format"] = input_format
+        if output_format:
+            details["output_format"] = output_format
+        super().__init__(
+            message, details=details, error_code=error_code or "AUDIO_PROCESSING_ERROR"
+        )
+
+
+class TranscriptionError(ExternalServiceError):
+    """Transcription service errors.
+
+    Raised when transcription via Deepgram or other ASR services fails.
+
+    Example:
+        >>> raise TranscriptionError(
+        ...     "Deepgram API rate limit exceeded",
+        ...     service_name="Deepgram",
+        ...     status_code=429,
+        ... )
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        service_name: str = "Deepgram",
+        status_code: int | None = None,
+        job_id: str | None = None,
+        details: ErrorDetails | None = None,
+        error_code: str | None = None,
+    ) -> None:
+        """Initialize transcription error.
+
+        Args:
+            message: Description of the transcription error.
+            service_name: Name of the transcription service.
+            status_code: HTTP status code if applicable.
+            job_id: Associated job ID.
+            details: Additional context.
+            error_code: Machine-readable error code.
+        """
+        details = details or {}
+        if job_id:
+            details["job_id"] = job_id
+        super().__init__(
+            message,
+            service_name=service_name,
+            status_code=status_code,
+            details=details,
+            error_code=error_code or "TRANSCRIPTION_ERROR",
+        )
+
+
 # Export all exceptions
 __all__ = [
     "APIError",
+    "AudioProcessorError",
     "AuthenticationError",
     "AuthorizationError",
     "BusinessLogicError",
@@ -448,5 +540,6 @@ __all__ = [
     "ExternalServiceError",
     "ProjectBaseError",
     "ResourceNotFoundError",
+    "TranscriptionError",
     "ValidationError",
 ]

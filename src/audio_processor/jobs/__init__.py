@@ -11,12 +11,14 @@ Usage:
 
     job_id = await enqueue_task(
         redis,
-        "example_background_task",
-        user_id="123",
-        data={"action": "export"}
+        "process_audio_job",
+        job_id="123",
+        job_data={"input": {...}}
     )
 """
 
 from __future__ import annotations
 
-__all__ = []
+from audio_processor.jobs.audio_tasks import process_audio_job
+
+__all__ = ["process_audio_job"]

@@ -12,6 +12,6 @@ class TestJobsPackage:
         """Test jobs package can be imported."""
         assert hasattr(audio_processor.jobs, "__all__")
 
-    def test_jobs_package_all_is_empty(self) -> None:
-        """Test jobs package __all__ is empty list."""
-        assert audio_processor.jobs.__all__ == []
+    def test_jobs_package_all_contains_process_audio_job(self) -> None:
+        """Test jobs package __all__ contains expected exports."""
+        assert "process_audio_job" in audio_processor.jobs.__all__
