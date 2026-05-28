@@ -159,6 +159,19 @@
         "python-version",
         "breaking-change"
       ]
+    },
+    {
+      "description": "Track org workflow floating v1 tag for SHA pin updates",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchPackagePatterns": [
+        "ByronWilliamsCPA/.github"
+      ],
+      "versioning": "semver-coerced",
+      "followTag": "v1",
+      "pinDigests": true,
+      "automerge": false
     }
   ],
   "postUpdateOptions": [
