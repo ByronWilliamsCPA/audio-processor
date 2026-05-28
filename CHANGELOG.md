@@ -44,6 +44,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - fix(security): resolve CVE-2026-22702: bump virtualenv to 21.3.3
 - fix(security): resolve CVE-2026-21860, CVE-2026-27199: bump werkzeug to 3.1.8
 - Documented PYSEC-2022-42969 (py 1.11.0, transitive via interrogate) as a deferred known vulnerability; vulnerable code path unused, no upstream fix available
+- fix(security): resolve PYSEC-2026-161 (CVE in starlette < 1.1.0): bump fastapi to >=0.133.0, resolves starlette to 1.1.0
+- Documented CVE-2026-4538 / PYSEC-2026-139 (torch 2.9.1, CVSS 7.8 AV:L HIGH) as a deferred known vulnerability; no upstream fix; torch absent from production container (Dockerfile installs no optional extras); reassess-by 2026-07-26
 
 ## [0.1.0] - TBD
 
