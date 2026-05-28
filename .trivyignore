@@ -168,3 +168,31 @@ CVE-2026-7598
 # libxml2 - XML processing library
 #   CVE-2026-6732 (HIGH): DoS via crafted XML input
 CVE-2026-6732
+
+# perl-base - Perl interpreter core (transitive via dpkg system dependency)
+#   CVE-2026-42496 (CRITICAL): Archive::Tar < 3.08 allows symlink extraction outside target dir
+#   CVE-2026-8376  (CRITICAL): Perl heap buffer overflow in versions through 5.43.10
+#   CVE-2026-42497 (HIGH):    Archive::Tar < 3.08 allows hardlink extraction outside target dir
+#   CVE-2026-9538  (HIGH):    Archive::Tar < 3.10 allows memory exposure
+# Status: No fix available in Debian as of 2026-05-28 (perl-base 5.40.1-6, all "affected")
+# Risk Assessment: NEGLIGIBLE for this application
+# Justification:
+#   - perl-base ships in python:3.12-slim as a non-removable dpkg system dependency
+#   - No application code invokes perl, Archive::Tar, or any Perl module
+#   - Archive::Tar CVEs require calling Archive::Tar->extract() on a malicious tar archive;
+#     this application never extracts archives via Perl
+#   - CVE-2026-8376 (heap overflow) requires executing a crafted Perl script; the container
+#     does not execute any Perl scripts
+#   - Container runs as non-root (appuser, UID 1000) with no ability to run attacker-controlled
+#     Perl code
+# References:
+#   - https://security-tracker.debian.org/tracker/CVE-2026-42496
+#   - https://security-tracker.debian.org/tracker/CVE-2026-8376
+#   - https://security-tracker.debian.org/tracker/CVE-2026-42497
+#   - https://security-tracker.debian.org/tracker/CVE-2026-9538
+# Review Date: 2026-05-28
+# Next Review: 2026-07-27 (60-day cap per CLAUDE.md unfixed-CVE policy)
+CVE-2026-42496
+CVE-2026-8376
+CVE-2026-42497
+CVE-2026-9538
