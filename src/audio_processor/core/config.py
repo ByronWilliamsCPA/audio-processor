@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Literal
 
+import platformdirs
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -84,7 +85,7 @@ class Settings(BaseSettings):
     # Audio Processing Configuration
     # ==========================================================================
     audio_temp_dir: str = Field(
-        default="/tmp/audio_processor",  # noqa: S108  # nosec B108
+        default=platformdirs.user_cache_dir("audio_processor"),
         description="Temporary directory for audio file processing",
     )
     audio_max_file_size_mb: int = Field(

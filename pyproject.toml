@@ -73,6 +73,7 @@ dependencies = [
     #
     # UV handles these automatically based on the Python version being used.
     # See: https://docs.astral.sh/uv/concepts/dependencies/#dependency-specifiers
+    "platformdirs>=4.5.0",
 ]
 
 # Optional dependency groups
