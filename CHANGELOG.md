@@ -10,6 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial project setup and structure
 
+### Fixed
+
+- fix(renovate): switch Renovate manager from poetry to pep621 for uv-managed project; poetry manager was silently producing zero dependency PRs
+- fix(renovate): correct pep621 matchDepTypes to project.dependencies / dependency-groups / tool.uv.dev-dependencies
+- fix(renovate): add "regex" to enabledManagers; omitting it silently disabled customManagers and broke CI version-pin regex tracking
+- fix(renovate): add project.optional-dependencies packageRule to group extras deps; ungrouped extras would have generated one PR per package
+- fix(renovate): add "pin" to github-actions matchUpdateTypes so SHA digest-pin PRs are also auto-merged
+- fix(renovate): replace no-op postUpdateOptions with uvUpdatePreciseVersion so lockFileMaintenance correctly regenerates uv.lock
+
 ### Security
 - fix(security): resolve CVE-2026-26007, CVE-2026-34073, CVE-2026-39892: bump cryptography to 48.0.0
 - fix(security): resolve CVE-2025-68146, CVE-2026-22701: bump filelock to 3.20.3
