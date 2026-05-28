@@ -53,13 +53,28 @@
       ]
     },
     {
+      "description": "Group Python optional-dependencies extras",
+      "matchManagers": [
+        "pep621"
+      ],
+      "matchDepTypes": [
+        "project.optional-dependencies"
+      ],
+      "groupName": "Python extras dependencies",
+      "automerge": false,
+      "schedule": [
+        "every weekend"
+      ]
+    },
+    {
       "description": "Auto-merge GitHub Actions minor/patch updates",
       "matchManagers": [
         "github-actions"
       ],
       "matchUpdateTypes": [
         "minor",
-        "patch"
+        "patch",
+        "pin"
       ],
       "automerge": true,
       "automergeType": "pr",
@@ -146,9 +161,9 @@
       ]
     }
   ],
-  "python": {
-    "enabled": true
-  },
+  "postUpdateOptions": [
+    "uvUpdatePreciseVersion"
+  ],
   "lockFileMaintenance": {
     "enabled": true,
     "schedule": [
@@ -196,6 +211,7 @@
   ],
   "enabledManagers": [
     "pep621",
-    "github-actions"
+    "github-actions",
+    "regex"
   ]
 }
