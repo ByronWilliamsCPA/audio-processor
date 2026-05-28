@@ -11,8 +11,8 @@ from __future__ import annotations
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
 
+import librosa
 import numpy as np
 import soundfile as sf
 import torch
@@ -22,16 +22,13 @@ from audio_processor.core.config import settings
 from audio_processor.core.exceptions import AudioProcessorError, ValidationError
 from audio_processor.utils.logging import get_logger
 
-if TYPE_CHECKING:
-    pass
-
 logger = get_logger(__name__)
 
 # Silero VAD requires 16kHz audio
 SILERO_SAMPLE_RATE = 16000
 
 # Type alias for audio samples
-AudioSamples = NDArray[np.floating[np.float64]]
+AudioSamples = NDArray[np.float64]
 
 
 @dataclass(frozen=True)
@@ -50,7 +47,11 @@ class SpeechSegment:
 
     @property
     def duration(self) -> float:
-        """Duration of the segment in seconds."""
+        """Duration of the segment in seconds.
+
+        Returns:
+            Elapsed time between start and end timestamps.
+        """
         return self.end - self.start
 
 
@@ -92,7 +93,9 @@ class VADProcessor:
         >>>
         >>> # Remove silence
         >>> result = vad.process_audio("/path/to/audio.wav", remove_silence=True)
-        >>> print(f"Reduced from {result.original_duration}s to {result.total_speech_duration}s")
+        >>> print(
+        ...     f"Reduced from {result.original_duration}s to {result.total_speech_duration}s"
+        ... )
     """
 
     _model: torch.jit.ScriptModule | None = None
@@ -114,8 +117,12 @@ class VADProcessor:
             temp_dir: Directory for temporary files.
         """
         self.threshold = threshold or settings.vad_threshold
-        self.min_silence_duration_ms = min_silence_duration_ms or settings.vad_min_silence_duration_ms
-        self.min_speech_duration_ms = min_speech_duration_ms or settings.vad_min_speech_duration_ms
+        self.min_silence_duration_ms = (
+            min_silence_duration_ms or settings.vad_min_silence_duration_ms
+        )
+        self.min_speech_duration_ms = (
+            min_speech_duration_ms or settings.vad_min_speech_duration_ms
+        )
         self.temp_dir = Path(temp_dir or settings.audio_temp_dir)
 
         # Ensure temp directory exists
@@ -129,7 +136,7 @@ class VADProcessor:
         """
         if VADProcessor._model is None:
             logger.info("loading_silero_vad_model")
-            model, utils = torch.hub.load(
+            model, utils = torch.hub.load(  # pyright: ignore[reportGeneralTypeIssues]  # nosec B614
                 repo_or_dir="snakers4/silero-vad",
                 model="silero_vad",
                 force_reload=False,
@@ -175,8 +182,6 @@ class VADProcessor:
 
             # Resample to 16kHz if needed (Silero requirement)
             if sample_rate != SILERO_SAMPLE_RATE:
-                import librosa
-
                 audio = librosa.resample(
                     audio.astype(np.float64),
                     orig_sr=sample_rate,
@@ -194,7 +199,7 @@ class VADProcessor:
             audio_tensor = torch.from_numpy(audio)
 
             # Run VAD
-            speech_timestamps = get_speech_timestamps(
+            speech_timestamps = get_speech_timestamps(  # pyright: ignore[reportCallIssue]
                 audio_tensor,
                 model,
                 threshold=self.threshold,
@@ -213,7 +218,9 @@ class VADProcessor:
             # Calculate statistics
             total_speech = sum(s.duration for s in segments)
             total_silence = original_duration - total_speech
-            speech_ratio = total_speech / original_duration if original_duration > 0 else 0.0
+            speech_ratio = (
+                total_speech / original_duration if original_duration > 0 else 0.0
+            )
 
             logger.info(
                 "speech_detected",
@@ -294,8 +301,12 @@ class VADProcessor:
 
             for segment in result.segments:
                 # Convert to samples with padding
-                start_sample = max(0, int(segment.start * sample_rate) - padding_samples)
-                end_sample = min(len(audio), int(segment.end * sample_rate) + padding_samples)
+                start_sample = max(
+                    0, int(segment.start * sample_rate) - padding_samples
+                )
+                end_sample = min(
+                    len(audio), int(segment.end * sample_rate) + padding_samples
+                )
 
                 chunk = audio[start_sample:end_sample]
                 speech_chunks.append(chunk)
@@ -314,13 +325,12 @@ class VADProcessor:
 
             # Write output file
             if output_path is None:
-                temp_file = tempfile.NamedTemporaryFile(
+                with tempfile.NamedTemporaryFile(
                     suffix=".wav",
                     dir=self.temp_dir,
                     delete=False,
-                )
-                output_path = Path(temp_file.name)
-                temp_file.close()
+                ) as temp_file:
+                    output_path = Path(temp_file.name)
             else:
                 output_path = Path(output_path)
 
@@ -406,6 +416,7 @@ class VADProcessor:
         try:
             result = self.detect_speech(input_path)
             silence_ratio = 1.0 - result.speech_ratio
-            return silence_ratio >= min_silence_ratio
         except (ValidationError, AudioProcessorError):
             return False
+        else:
+            return silence_ratio >= min_silence_ratio

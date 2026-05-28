@@ -84,7 +84,7 @@ class Settings(BaseSettings):
     # Audio Processing Configuration
     # ==========================================================================
     audio_temp_dir: str = Field(
-        default="/tmp/audio_processor",  # noqa: S108
+        default="/tmp/audio_processor",  # noqa: S108  # nosec B108
         description="Temporary directory for audio file processing",
     )
     audio_max_file_size_mb: int = Field(
@@ -194,12 +194,20 @@ class Settings(BaseSettings):
 
     @property
     def max_file_size_bytes(self) -> int:
-        """Maximum file size in bytes."""
+        """Maximum file size in bytes.
+
+        Returns:
+            File size limit converted from megabytes to bytes.
+        """
         return self.audio_max_file_size_mb * 1024 * 1024
 
     @property
     def max_duration_seconds(self) -> float:
-        """Maximum audio duration in seconds."""
+        """Maximum audio duration in seconds.
+
+        Returns:
+            Duration limit converted from hours to seconds.
+        """
         return self.audio_max_duration_hours * 3600
 
 

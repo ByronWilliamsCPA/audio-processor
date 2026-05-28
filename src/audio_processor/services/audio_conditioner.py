@@ -25,7 +25,7 @@ from audio_processor.utils.logging import get_logger
 logger = get_logger(__name__)
 
 # Type alias for audio samples
-AudioSamples = NDArray[np.floating[np.float64]]
+AudioSamples = NDArray[np.float64]
 
 
 @dataclass(frozen=True)
@@ -91,7 +91,9 @@ class AudioConditioner:
             target_rms_db: Target RMS level in dBFS. Defaults to -20.
             temp_dir: Directory for temporary files.
         """
-        self.target_sample_rate = target_sample_rate or settings.audio_target_sample_rate
+        self.target_sample_rate = (
+            target_sample_rate or settings.audio_target_sample_rate
+        )
         self.target_channels = target_channels or settings.audio_target_channels
         self.target_rms_db = target_rms_db or settings.audio_target_rms_db
         self.temp_dir = Path(temp_dir or settings.audio_temp_dir)
@@ -148,10 +150,7 @@ class AudioConditioner:
             original_duration = len(audio) / original_sr
 
             # Calculate original RMS
-            if audio.ndim > 1:
-                audio_mono_orig = np.mean(audio, axis=1)
-            else:
-                audio_mono_orig = audio
+            audio_mono_orig = np.mean(audio, axis=1) if audio.ndim > 1 else audio
             original_rms_db = self._calculate_rms_db(audio_mono_orig)
 
             # Convert to mono if requested
@@ -186,13 +185,10 @@ class AudioConditioner:
 
             # Write output file
             if output_path is None:
-                temp_file = tempfile.NamedTemporaryFile(
-                    suffix=".wav",
-                    dir=self.temp_dir,
-                    delete=False,
-                )
-                output_path = Path(temp_file.name)
-                temp_file.close()
+                with tempfile.NamedTemporaryFile(
+                    suffix=".wav", dir=self.temp_dir, delete=False
+                ) as temp_file:
+                    output_path = Path(temp_file.name)
             else:
                 output_path = Path(output_path)
 
@@ -237,14 +233,13 @@ class AudioConditioner:
         try:
             # Try soundfile first (faster for WAV/FLAC)
             audio, sample_rate = sf.read(str(file_path), dtype="float64")
-            return audio, sample_rate
         except RuntimeError:
             # Fall back to librosa for other formats
             audio, sample_rate = librosa.load(str(file_path), sr=None, mono=False)
             # Transpose if stereo (librosa returns [channels, samples])
             if audio.ndim > 1:
                 audio = audio.T
-            return audio, sample_rate
+        return audio, int(sample_rate)  # pyright: ignore[reportReturnType]
 
     def _calculate_rms_db(self, audio: AudioSamples) -> float:
         """Calculate RMS level in dBFS.
@@ -315,6 +310,10 @@ class AudioConditioner:
 
         Returns:
             Dictionary with improvement estimates.
+
+        Raises:
+            ValidationError: If the audio file does not exist.
+            AudioProcessorError: If the audio file cannot be analyzed.
         """
         input_path = Path(input_path)
 
@@ -326,10 +325,7 @@ class AudioConditioner:
             audio, sample_rate = self._load_audio(input_path)
 
             # Get mono for analysis
-            if audio.ndim > 1:
-                audio_mono = np.mean(audio, axis=1)
-            else:
-                audio_mono = audio
+            audio_mono = np.mean(audio, axis=1) if audio.ndim > 1 else audio
 
             # Check sample rate
             needs_resample = sample_rate != self.target_sample_rate
@@ -373,7 +369,9 @@ class AudioConditioner:
                 "needs_normalization": needs_normalization,
                 "current_rms_db": round(current_rms_db, 1),
                 "target_rms_db": self.target_rms_db,
-                "estimated_wer_improvement_percent": round(estimated_wer_improvement * 100, 1),
+                "estimated_wer_improvement_percent": round(
+                    estimated_wer_improvement * 100, 1
+                ),
             }
 
         except (OSError, RuntimeError) as e:

@@ -207,7 +207,9 @@ class TestWorkerSettings:
         """Test WorkerSettings has correct configuration."""
         assert WorkerSettings.max_jobs == 10
         assert WorkerSettings.job_timeout == 600  # From settings.job_timeout_seconds
-        assert WorkerSettings.keep_result == 86400  # From settings.job_result_ttl_seconds
+        assert (
+            WorkerSettings.keep_result == 86400
+        )  # From settings.job_result_ttl_seconds
         assert WorkerSettings.max_tries == 3
         assert WorkerSettings.retry_jobs is True
         assert WorkerSettings.health_check_interval == 60

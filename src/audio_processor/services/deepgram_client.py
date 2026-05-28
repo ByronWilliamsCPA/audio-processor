@@ -13,7 +13,7 @@ from __future__ import annotations
 import time
 from decimal import Decimal
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from audio_processor.core.config import settings
 from audio_processor.core.exceptions import (
@@ -30,8 +30,16 @@ from audio_processor.core.models import (
 )
 from audio_processor.utils.logging import get_logger
 
-if TYPE_CHECKING:
-    pass
+# Optional dependency: deepgram-sdk is in the 'audio' extras group.
+# The module-level try/except keeps module import safe when the extra isn't installed;
+# ConfigurationError is raised at instantiation time (not import time) so callers can
+# catch it gracefully (see audio_tasks.py).
+try:
+    from deepgram import DeepgramClient as _DeepgramClient
+
+    _deepgram_available: bool = True
+except ImportError:
+    _deepgram_available = False
 
 logger = get_logger(__name__)
 
@@ -87,10 +95,11 @@ class DeepgramTranscriptionClient:
         self.timeout_seconds = timeout_seconds or settings.deepgram_timeout_seconds
 
         # Initialize Deepgram client (v5 SDK)
+        if not _deepgram_available:
+            msg = "deepgram package not installed. Install the 'audio' extras: uv sync --extra audio"
+            raise ConfigurationError(msg)
         try:
-            from deepgram import DeepgramClient
-
-            self._client = DeepgramClient(api_key=self.api_key)
+            self._client = _DeepgramClient(api_key=self.api_key)  # pyright: ignore[reportPossiblyUnboundVariable]
         except Exception as e:
             msg = f"Failed to initialize Deepgram client: {e}"
             raise ConfigurationError(msg) from e
@@ -125,8 +134,16 @@ class DeepgramTranscriptionClient:
             raise ValidationError(msg, field="file_path", value=str(file_path))
 
         # Use settings defaults if not specified
-        diarize = enable_diarization if enable_diarization is not None else settings.deepgram_diarize
-        summarize = enable_summarization if enable_summarization is not None else settings.deepgram_summarize
+        diarize = (
+            enable_diarization
+            if enable_diarization is not None
+            else settings.deepgram_diarize
+        )
+        summarize = (
+            enable_summarization
+            if enable_summarization is not None
+            else settings.deepgram_summarize
+        )
         lang = language or self.language
 
         logger.info(
@@ -160,7 +177,7 @@ class DeepgramTranscriptionClient:
 
             # Call Deepgram API using v5 SDK
             # The v5 SDK uses listen.rest.transcribe_file
-            response = self._client.listen.rest.v("1").transcribe_file(
+            response = self._client.listen.rest.v("1").transcribe_file(  # pyright: ignore[reportAttributeAccessIssue]
                 {"buffer": audio_data},
                 options,
             )
@@ -174,17 +191,6 @@ class DeepgramTranscriptionClient:
                 summarize=summarize,
                 processing_time=processing_time,
             )
-
-            logger.info(
-                "transcription_completed",
-                file_path=str(file_path),
-                duration_seconds=result.metadata.duration_seconds,
-                word_count=result.metadata.word_count,
-                speaker_count=len(result.speakers),
-                processing_time=round(processing_time, 2),
-            )
-
-            return result
 
         except Exception as e:
             processing_time = time.time() - start_time
@@ -209,6 +215,17 @@ class DeepgramTranscriptionClient:
 
             msg = f"Transcription failed: {e}"
             raise TranscriptionError(msg) from e
+
+        else:
+            logger.info(
+                "transcription_completed",
+                file_path=str(file_path),
+                duration_seconds=result.metadata.duration_seconds,
+                word_count=result.metadata.word_count,
+                speaker_count=len(result.speakers),
+                processing_time=round(processing_time, 2),
+            )
+            return result
 
     def _parse_response(
         self,
@@ -250,70 +267,24 @@ class DeepgramTranscriptionClient:
         transcript = getattr(alternative, "transcript", "") or ""
 
         # Extract words with timing
-        words: list[Word] = []
         alt_words = getattr(alternative, "words", None) or []
-        for w in alt_words:
-            words.append(
-                Word(
-                    word=getattr(w, "word", "") or "",
-                    start=getattr(w, "start", 0.0) or 0.0,
-                    end=getattr(w, "end", 0.0) or 0.0,
-                    confidence=getattr(w, "confidence", 0.0) or 0.0,
-                    speaker=getattr(w, "speaker", None) if diarize else None,
-                    punctuated_word=getattr(w, "punctuated_word", None),
-                )
+        words: list[Word] = [
+            Word(
+                word=getattr(w, "word", "") or "",
+                start=getattr(w, "start", 0.0) or 0.0,
+                end=getattr(w, "end", 0.0) or 0.0,
+                confidence=getattr(w, "confidence", 0.0) or 0.0,
+                speaker=getattr(w, "speaker", None) if diarize else None,
+                punctuated_word=getattr(w, "punctuated_word", None),
             )
+            for w in alt_words
+        ]
 
         # Extract utterances if diarization enabled
-        utterances: list[Utterance] = []
-        speakers_dict: dict[int, Speaker] = {}
-
         result_utterances = getattr(results, "utterances", None)
-        if diarize and result_utterances:
-            for utt in result_utterances:
-                speaker_id = getattr(utt, "speaker", 0) or 0
-                utt_words_list = getattr(utt, "words", None) or []
-                utt_words = [
-                    Word(
-                        word=getattr(w, "word", "") or "",
-                        start=getattr(w, "start", 0.0) or 0.0,
-                        end=getattr(w, "end", 0.0) or 0.0,
-                        confidence=getattr(w, "confidence", 0.0) or 0.0,
-                        speaker=getattr(w, "speaker", None),
-                        punctuated_word=getattr(w, "punctuated_word", None),
-                    )
-                    for w in utt_words_list
-                ]
-
-                utterance = Utterance(
-                    speaker=speaker_id,
-                    start=getattr(utt, "start", 0.0) or 0.0,
-                    end=getattr(utt, "end", 0.0) or 0.0,
-                    text=getattr(utt, "transcript", "") or "",
-                    confidence=getattr(utt, "confidence", 0.0) or 0.0,
-                    words=tuple(utt_words),
-                )
-                utterances.append(utterance)
-
-                # Track speaker statistics
-                if speaker_id not in speakers_dict:
-                    speakers_dict[speaker_id] = Speaker(
-                        id=speaker_id,
-                        label=f"Speaker {speaker_id + 1}",
-                        total_duration=0.0,
-                        utterance_count=0,
-                    )
-
-                # Update speaker stats (need to create new instance since frozen)
-                existing = speakers_dict[speaker_id]
-                speakers_dict[speaker_id] = Speaker(
-                    id=existing.id,
-                    label=existing.label,
-                    total_duration=existing.total_duration + utterance.duration,
-                    utterance_count=existing.utterance_count + 1,
-                )
-
-        speakers = list(speakers_dict.values())
+        utterances, speakers = self._parse_utterances_and_speakers(
+            result_utterances if diarize else None
+        )
 
         # Extract summary if available
         summary: str | None = None
@@ -334,9 +305,13 @@ class DeepgramTranscriptionClient:
         duration_minutes = duration / 60
         cost = DEEPGRAM_COST_PER_MINUTE_BASE * Decimal(str(duration_minutes))
         if diarize:
-            cost += DEEPGRAM_COST_PER_MINUTE_DIARIZATION * Decimal(str(duration_minutes))
+            cost += DEEPGRAM_COST_PER_MINUTE_DIARIZATION * Decimal(
+                str(duration_minutes)
+            )
         if summarize:
-            cost += DEEPGRAM_COST_PER_MINUTE_SUMMARIZATION * Decimal(str(duration_minutes))
+            cost += DEEPGRAM_COST_PER_MINUTE_SUMMARIZATION * Decimal(
+                str(duration_minutes)
+            )
 
         metadata = TranscriptionMetadata(
             duration_seconds=duration,
@@ -357,6 +332,65 @@ class DeepgramTranscriptionClient:
             summary=summary,
             metadata=metadata,
         )
+
+    def _parse_utterances_and_speakers(
+        self,
+        result_utterances: Any,  # pyright: ignore[reportExplicitAny]
+    ) -> tuple[list[Utterance], list[Speaker]]:
+        """Parse utterance list and accumulate per-speaker statistics.
+
+        Args:
+            result_utterances: Utterance list from Deepgram response, or None if
+                diarization was disabled.
+
+        Returns:
+            Tuple of (utterance list, speaker list with accumulated durations).
+        """
+        utterances: list[Utterance] = []
+        speakers_dict: dict[int, Speaker] = {}
+
+        if not result_utterances:
+            return utterances, []
+
+        for utt in result_utterances:
+            speaker_id = getattr(utt, "speaker", 0) or 0
+            utt_words = [
+                Word(
+                    word=getattr(w, "word", "") or "",
+                    start=getattr(w, "start", 0.0) or 0.0,
+                    end=getattr(w, "end", 0.0) or 0.0,
+                    confidence=getattr(w, "confidence", 0.0) or 0.0,
+                    speaker=getattr(w, "speaker", None),
+                    punctuated_word=getattr(w, "punctuated_word", None),
+                )
+                for w in (getattr(utt, "words", None) or [])
+            ]
+            utterance = Utterance(
+                speaker=speaker_id,
+                start=getattr(utt, "start", 0.0) or 0.0,
+                end=getattr(utt, "end", 0.0) or 0.0,
+                text=getattr(utt, "transcript", "") or "",
+                confidence=getattr(utt, "confidence", 0.0) or 0.0,
+                words=tuple(utt_words),
+            )
+            utterances.append(utterance)
+
+            if speaker_id not in speakers_dict:
+                speakers_dict[speaker_id] = Speaker(
+                    id=speaker_id,
+                    label=f"Speaker {speaker_id + 1}",
+                    total_duration=0.0,
+                    utterance_count=0,
+                )
+            existing = speakers_dict[speaker_id]
+            speakers_dict[speaker_id] = Speaker(
+                id=existing.id,
+                label=existing.label,
+                total_duration=existing.total_duration + utterance.duration,
+                utterance_count=existing.utterance_count + 1,
+            )
+
+        return utterances, list(speakers_dict.values())
 
     def _empty_result(self, processing_time: float) -> TranscriptionResult:
         """Create an empty result for edge cases.
@@ -381,7 +415,7 @@ class DeepgramTranscriptionClient:
                 model=self.model,
                 language=self.language,
                 processing_time_seconds=processing_time,
-                cost_usd=Decimal("0"),
+                cost_usd=Decimal(0),
             ),
         )
 

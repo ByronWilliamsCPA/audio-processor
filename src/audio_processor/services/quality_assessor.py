@@ -10,7 +10,6 @@ This module provides quality analysis for audio files including:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import librosa
 import numpy as np
@@ -22,13 +21,10 @@ from audio_processor.core.exceptions import AudioProcessorError, ValidationError
 from audio_processor.core.models import AudioQualityMetrics, QualityLevel
 from audio_processor.utils.logging import get_logger
 
-if TYPE_CHECKING:
-    pass
-
 logger = get_logger(__name__)
 
 # Type alias for audio samples
-AudioSamples = NDArray[np.floating[np.float64]]
+AudioSamples = NDArray[np.float64]
 
 
 class QualityAssessor:
@@ -67,7 +63,9 @@ class QualityAssessor:
         self.snr_good_db = snr_good_db or settings.quality_snr_good_db
         self.snr_fair_db = snr_fair_db or settings.quality_snr_fair_db
         self.max_silence_ratio = max_silence_ratio or settings.quality_max_silence_ratio
-        self.max_clipping_ratio = max_clipping_ratio or settings.quality_max_clipping_ratio
+        self.max_clipping_ratio = (
+            max_clipping_ratio or settings.quality_max_clipping_ratio
+        )
 
     def assess(self, file_path: str | Path) -> AudioQualityMetrics:
         """Assess audio quality of a file.
@@ -149,11 +147,12 @@ class QualityAssessor:
                 snr_db=round(snr_db, 1),
             )
 
-            return metrics
-
         except (OSError, RuntimeError) as e:
             msg = f"Failed to assess audio quality: {e}"
             raise AudioProcessorError(msg, operation="quality_assessment") from e
+
+        else:
+            return metrics
 
     def _load_audio(self, file_path: Path) -> tuple[AudioSamples, int]:
         """Load audio file using soundfile.
@@ -166,14 +165,13 @@ class QualityAssessor:
         """
         try:
             audio, sample_rate = sf.read(str(file_path), dtype="float64")
-            return audio, sample_rate
         except RuntimeError:
             # Fall back to librosa for formats soundfile doesn't support
             audio, sample_rate = librosa.load(str(file_path), sr=None, mono=False)
             # Transpose if stereo (librosa returns [channels, samples])
             if audio.ndim > 1:
                 audio = audio.T
-            return audio, sample_rate
+        return audio, int(sample_rate)  # pyright: ignore[reportReturnType]
 
     def _calculate_snr(self, audio: AudioSamples) -> float:
         """Calculate Signal-to-Noise Ratio using spectral method.
@@ -192,7 +190,9 @@ class QualityAssessor:
         hop_length = 512
 
         # Compute short-term energy
-        frames = librosa.util.frame(audio, frame_length=frame_length, hop_length=hop_length)
+        frames = librosa.util.frame(
+            audio, frame_length=frame_length, hop_length=hop_length
+        )
         frame_energy = np.sum(frames**2, axis=0)
 
         if len(frame_energy) == 0:
@@ -257,9 +257,7 @@ class QualityAssessor:
 
         # Count silent frames
         silent_frames = np.sum(rms < threshold_linear)
-        silence_ratio = float(silent_frames / len(rms))
-
-        return silence_ratio
+        return float(silent_frames / len(rms))
 
     def _calculate_clipping_ratio(
         self,
@@ -324,11 +322,7 @@ class QualityAssessor:
 
         # Weighted combination
         # SNR is most important for transcription quality
-        score = (
-            0.5 * snr_score
-            + 0.3 * silence_penalty
-            + 0.2 * clipping_penalty
-        )
+        score = 0.5 * snr_score + 0.3 * silence_penalty + 0.2 * clipping_penalty
 
         return float(np.clip(score, 0.0, 1.0))
 

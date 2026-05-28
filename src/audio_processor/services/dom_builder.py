@@ -13,7 +13,11 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from docling_core.types.doc import BaseMeta, DocItemLabel, DoclingDocument
+from docling_core.types.doc import (
+    BaseMeta,  # pyright: ignore[reportPrivateImportUsage]
+    DocItemLabel,  # pyright: ignore[reportPrivateImportUsage]
+    DoclingDocument,  # pyright: ignore[reportPrivateImportUsage]
+)
 
 from audio_processor.core.exceptions import ValidationError
 from audio_processor.utils.logging import get_logger
@@ -219,7 +223,7 @@ class DOMBuilder:
         # total_duration is in seconds, convert to ms for consistency
         duration_ms = int(speaker.total_duration * 1000)
         speaker_section.meta = BaseMeta(
-            **{
+            **{  # pyright: ignore[reportArgumentType]
                 f"{AUDIO_META_NAMESPACE}__speaker_id": speaker.id,
                 f"{AUDIO_META_NAMESPACE}__duration_ms": duration_ms,
                 f"{AUDIO_META_NAMESPACE}__utterance_count": speaker.utterance_count,
@@ -255,7 +259,7 @@ class DOMBuilder:
             level=1,
         )
         unknown_section.meta = BaseMeta(
-            **{
+            **{  # pyright: ignore[reportArgumentType]
                 f"{AUDIO_META_NAMESPACE}__speaker_id": "unknown",
                 f"{AUDIO_META_NAMESPACE}__utterance_count": len(utterances),
             }
@@ -317,15 +321,15 @@ class DOMBuilder:
                 }
                 for w in utterance.words
             ]
-            meta_dict[f"{AUDIO_META_NAMESPACE}__words"] = word_data
+            meta_dict[f"{AUDIO_META_NAMESPACE}__words"] = word_data  # pyright: ignore[reportArgumentType]
 
         # Add text item
         text_item = doc.add_text(
             label=DocItemLabel.PARAGRAPH,
             text=utterance.text,
-            parent=parent,
+            parent=parent,  # pyright: ignore[reportArgumentType]
         )
-        text_item.meta = BaseMeta(**meta_dict)
+        text_item.meta = BaseMeta(**meta_dict)  # pyright: ignore[reportAttributeAccessIssue, reportArgumentType]
 
     def _generate_playback_url(self, start_ms: int, end_ms: int) -> str:
         """Generate a Media Fragment URI for playback.

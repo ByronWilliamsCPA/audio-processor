@@ -278,9 +278,7 @@ class TestTranscriptFormatter:
         assert "-->" in lines[1]  # Timestamp line
         assert "00:00:00,000 --> 00:00:02,000" in lines[1]
 
-    def test_to_srt_timestamps(
-        self, sample_transcription: TranscriptionResult
-    ) -> None:
+    def test_to_srt_timestamps(self, sample_transcription: TranscriptionResult) -> None:
         """Test SRT timestamp format (HH:MM:SS,mmm)."""
         formatter = TranscriptFormatter()
         result = formatter.to_srt(sample_transcription)
@@ -337,7 +335,7 @@ class TestArtifactGenerator:
         artifacts = generator.generate_all(sample_transcription)
 
         # All artifacts should be non-empty strings
-        for name, content in artifacts.items():
+        for content in artifacts.values():
             assert isinstance(content, str)
             assert len(content) > 0
 

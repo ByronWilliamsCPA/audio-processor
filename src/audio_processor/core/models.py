@@ -9,7 +9,7 @@ from __future__ import annotations
 import sys
 from datetime import datetime, timezone
 from decimal import Decimal  # noqa: TC003 - Required at runtime for Pydantic
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -18,15 +18,19 @@ from pydantic import BaseModel, ConfigDict, Field
 if sys.version_info >= (3, 11):  # noqa: UP036
     from datetime import UTC
 else:
-    UTC = timezone.utc  # noqa: UP017
+    UTC = timezone.utc  # noqa: UP017  # pyright: ignore[reportUnreachable]
 
 
 def _utc_now() -> datetime:
-    """Get current UTC time (timezone-aware)."""
+    """Get current UTC time (timezone-aware).
+
+    Returns:
+        Current datetime in UTC with timezone info attached.
+    """
     return datetime.now(UTC)
 
 
-class JobStatus(str, Enum):
+class JobStatus(StrEnum):
     """Status of an audio processing job."""
 
     PENDING = "pending"
@@ -38,7 +42,7 @@ class JobStatus(str, Enum):
     FAILED = "failed"
 
 
-class AudioFormat(str, Enum):
+class AudioFormat(StrEnum):
     """Supported audio file formats."""
 
     MP3 = "mp3"
@@ -54,7 +58,7 @@ class AudioFormat(str, Enum):
     MKV = "mkv"
 
 
-class QualityLevel(str, Enum):
+class QualityLevel(StrEnum):
     """Audio quality assessment level."""
 
     EXCELLENT = "excellent"
@@ -115,7 +119,11 @@ class Utterance(BaseModel):
 
     @property
     def duration(self) -> float:
-        """Duration of the utterance in seconds."""
+        """Duration of the utterance in seconds.
+
+        Returns:
+            Elapsed time between start and end timestamps.
+        """
         return self.end - self.start
 
 

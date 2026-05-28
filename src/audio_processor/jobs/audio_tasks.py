@@ -15,6 +15,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import anyio
+
 from audio_processor.core.config import settings
 from audio_processor.core.exceptions import (
     AudioProcessorError,
@@ -34,7 +36,7 @@ if TYPE_CHECKING:
 if sys.version_info >= (3, 11):  # noqa: UP036
     from datetime import UTC
 else:
-    UTC = timezone.utc  # noqa: UP017
+    UTC = timezone.utc  # noqa: UP017  # pyright: ignore[reportUnreachable]
 
 logger = get_logger(__name__)
 
@@ -64,6 +66,7 @@ async def process_audio_job(
         Dictionary with processing results.
 
     Raises:
+        ValidationError: If the input file path is missing or unreadable.
         AudioProcessorError: If processing fails.
     """
     redis: ArqRedis = ctx["redis"]  # pyright: ignore[reportAssignmentType]
@@ -88,7 +91,7 @@ async def process_audio_job(
         input_data = job_data.get("input", {})
         file_path = Path(str(input_data.get("file_path", "")))
 
-        if not file_path.exists():
+        if not await anyio.Path(file_path).exists():
             msg = f"Audio file not found: {file_path}"
             raise ValidationError(msg, field="file_path", value=str(file_path))  # noqa: TRY301
 
@@ -110,7 +113,9 @@ async def process_audio_job(
 
         # Check if video and extract audio
         if converter.is_video(file_path):
-            logger.info("extracting_audio_from_video", job_id=job_id, file_path=str(file_path))
+            logger.info(
+                "extracting_audio_from_video", job_id=job_id, file_path=str(file_path)
+            )
             converted_path = converter.extract_audio(file_path)
         else:
             # Convert to optimal format for ASR
@@ -199,11 +204,13 @@ async def process_audio_job(
                 "summary": transcription_result.summary,
                 "speaker_count": len(transcription_result.speakers),
                 "word_count": transcription_result.metadata.word_count,
-                "duration_ms": transcription_result.duration_ms,
+                "duration_ms": int(
+                    transcription_result.metadata.duration_seconds * 1000
+                ),
                 "duration_seconds": transcription_result.metadata.duration_seconds,
                 "confidence_mean": transcription_result.metadata.confidence_mean,
                 "cost_usd": str(transcription_result.metadata.cost_usd),
-                "language": transcription_result.language,
+                "language": transcription_result.metadata.language,
                 "speakers": [s.model_dump() for s in transcription_result.speakers],
                 "utterances": [u.model_dump() for u in transcription_result.utterances],
             }
@@ -241,7 +248,9 @@ async def process_audio_job(
                 # Continue without artifacts - transcription still succeeded
         else:
             result["transcription"] = None
-            result["warning"] = "Transcription skipped - Deepgram API key not configured"
+            result["warning"] = (
+                "Transcription skipped - Deepgram API key not configured"
+            )
 
         # Update final status
         await _update_job_status(

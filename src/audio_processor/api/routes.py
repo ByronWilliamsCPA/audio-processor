@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated
 
+import anyio
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.responses import Response
 
@@ -35,7 +36,7 @@ from audio_processor.utils.logging import get_logger
 if sys.version_info >= (3, 11):  # noqa: UP036
     from datetime import UTC
 else:
-    UTC = timezone.utc  # noqa: UP017
+    UTC = timezone.utc  # noqa: UP017  # pyright: ignore[reportUnreachable]
 
 logger = get_logger(__name__)
 
@@ -111,11 +112,16 @@ async def process_audio(
 
     # Check file size (read content length from headers if available)
     content_length = request.headers.get("content-length")
-    if content_length and int(content_length) > settings.max_file_size_bytes:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File too large. Maximum size is {settings.audio_max_file_size_mb} MB",
-        )
+    if content_length:
+        try:
+            size = int(content_length)
+        except ValueError:
+            size = 0
+        if size > settings.max_file_size_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"File too large. Maximum size is {settings.audio_max_file_size_mb} MB",
+            )
 
     # Generate job ID
     job_id = str(uuid.uuid4())
@@ -132,7 +138,7 @@ async def process_audio(
     try:
         # Save file to temp directory
         temp_dir = Path(settings.audio_temp_dir)
-        temp_dir.mkdir(parents=True, exist_ok=True)
+        await anyio.Path(temp_dir).mkdir(parents=True, exist_ok=True)
 
         # Create temp file with original extension
         suffix = Path(file.filename).suffix or ".wav"
@@ -153,7 +159,7 @@ async def process_audio(
             audio_info = converter.validate_file(temp_path)
         except ValidationError as e:
             # Clean up temp file
-            temp_path.unlink(missing_ok=True)
+            await anyio.Path(temp_path).unlink(missing_ok=True)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(e),

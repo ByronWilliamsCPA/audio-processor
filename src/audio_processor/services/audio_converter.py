@@ -13,15 +13,12 @@ import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import Any
 
 from audio_processor.core.config import settings
 from audio_processor.core.exceptions import AudioProcessorError, ValidationError
 from audio_processor.core.models import AudioFormat
 from audio_processor.utils.logging import get_logger
-
-if TYPE_CHECKING:
-    pass
 
 logger = get_logger(__name__)
 
@@ -122,7 +119,9 @@ class AudioConverter:
             target_channels: Target number of channels. Defaults to 1 (mono).
         """
         self.temp_dir = Path(temp_dir or settings.audio_temp_dir)
-        self.target_sample_rate = target_sample_rate or settings.audio_target_sample_rate
+        self.target_sample_rate = (
+            target_sample_rate or settings.audio_target_sample_rate
+        )
         self.target_channels = target_channels or settings.audio_target_channels
 
         # Ensure temp directory exists
@@ -150,8 +149,10 @@ class AudioConverter:
         # Run ffprobe to get file information
         cmd = [
             "ffprobe",
-            "-v", "quiet",
-            "-print_format", "json",
+            "-v",
+            "quiet",
+            "-print_format",
+            "json",
             "-show_format",
             "-show_streams",
             str(file_path),
@@ -182,14 +183,8 @@ class AudioConverter:
             msg = f"Failed to parse FFprobe output: {e}"
             raise AudioProcessorError(msg) from e
 
-        # Find audio stream
-        audio_stream = None
-        video_stream = None
-        for stream in probe_data.get("streams", []):
-            if stream.get("codec_type") == "audio" and audio_stream is None:
-                audio_stream = stream
-            elif stream.get("codec_type") == "video" and video_stream is None:
-                video_stream = stream
+        # Find audio and video streams
+        audio_stream, video_stream = self._find_streams(probe_data)
 
         if audio_stream is None:
             msg = f"No audio stream found in file: {file_path}"
@@ -248,27 +243,11 @@ class AudioConverter:
         # Try probing the file
         try:
             info = self.probe(file_path)
-            # Map codec/format to AudioFormat
-            codec_lower = info.codec.lower()
-            format_lower = info.format_name.lower()
-
-            if "mp3" in codec_lower or "mp3" in format_lower:
-                return AudioFormat.MP3
-            if "pcm" in codec_lower or "wav" in format_lower:
-                return AudioFormat.WAV
-            if "aac" in codec_lower or "m4a" in format_lower:
-                return AudioFormat.M4A
-            if "flac" in codec_lower:
-                return AudioFormat.FLAC
-            if "vorbis" in codec_lower or "ogg" in format_lower:
-                return AudioFormat.OGG
-            if info.is_video:
-                if "mp4" in format_lower or "mov" in format_lower:
-                    return AudioFormat.MP4
-                if "avi" in format_lower:
-                    return AudioFormat.AVI
-                if "matroska" in format_lower:
-                    return AudioFormat.MKV
+            fmt = self._format_from_codec(
+                info.codec.lower(), info.format_name.lower(), info.is_video
+            )
+            if fmt is not None:
+                return fmt
         except AudioProcessorError:
             pass
 
@@ -286,9 +265,69 @@ class AudioConverter:
         """
         try:
             info = self.probe(file_path)
-            return info.is_video
         except (ValidationError, AudioProcessorError):
             return False
+        else:
+            return info.is_video
+
+    def _find_streams(
+        self,
+        probe_data: dict[str, Any],  # pyright: ignore[reportExplicitAny]
+    ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:  # pyright: ignore[reportExplicitAny]
+        """Return the first audio and video streams from ffprobe data.
+
+        Args:
+            probe_data: Parsed JSON output from ffprobe.
+
+        Returns:
+            Tuple of (first audio stream dict or None, first video stream dict or None).
+        """
+        audio_stream: dict[str, Any] | None = None  # pyright: ignore[reportExplicitAny]
+        video_stream: dict[str, Any] | None = None  # pyright: ignore[reportExplicitAny]
+        for stream in probe_data.get("streams", []):
+            if stream.get("codec_type") == "audio" and audio_stream is None:
+                audio_stream = stream
+            elif stream.get("codec_type") == "video" and video_stream is None:
+                video_stream = stream
+        return audio_stream, video_stream
+
+    def _format_from_codec(
+        self,
+        codec: str,
+        format_name: str,
+        is_video: bool,
+    ) -> AudioFormat | None:
+        """Map probed codec/format names to an AudioFormat enum value.
+
+        Args:
+            codec: Codec name from ffprobe (lowercased).
+            format_name: Container format name from ffprobe (lowercased).
+            is_video: Whether the file contains a video stream.
+
+        Returns:
+            Matching AudioFormat, or None if no mapping is found.
+        """
+        audio_table: list[tuple[str, str, AudioFormat]] = [
+            ("mp3", "mp3", AudioFormat.MP3),
+            ("pcm", "wav", AudioFormat.WAV),
+            ("aac", "m4a", AudioFormat.M4A),
+            ("flac", "", AudioFormat.FLAC),
+            ("vorbis", "ogg", AudioFormat.OGG),
+        ]
+        for codec_kw, fmt_kw, audio_fmt in audio_table:
+            if codec_kw in codec or (fmt_kw and fmt_kw in format_name):
+                return audio_fmt
+        if is_video:
+            video_table: list[tuple[str, AudioFormat]] = [
+                ("mp4", AudioFormat.MP4),
+                ("mov", AudioFormat.MP4),
+                ("avi", AudioFormat.AVI),
+                ("matroska", AudioFormat.MKV),
+            ]
+            for fmt_kw, video_fmt in video_table:
+                if fmt_kw in format_name:
+                    return video_fmt
+        return None
 
     def extract_audio(
         self,
@@ -310,14 +349,10 @@ class AudioConverter:
         input_path = Path(input_path)
 
         if output_path is None:
-            # Create temp file with .wav extension
-            temp_file = tempfile.NamedTemporaryFile(
-                suffix=".wav",
-                dir=self.temp_dir,
-                delete=False,
-            )
-            output_path = Path(temp_file.name)
-            temp_file.close()
+            with tempfile.NamedTemporaryFile(
+                suffix=".wav", dir=self.temp_dir, delete=False
+            ) as temp_file:
+                output_path = Path(temp_file.name)
         else:
             output_path = Path(output_path)
 
@@ -330,11 +365,15 @@ class AudioConverter:
         # FFmpeg command to extract audio
         cmd = [
             "ffmpeg",
-            "-i", str(input_path),
+            "-i",
+            str(input_path),
             "-vn",  # No video
-            "-acodec", "pcm_s16le",  # 16-bit PCM
-            "-ar", str(self.target_sample_rate),
-            "-ac", str(self.target_channels),
+            "-acodec",
+            "pcm_s16le",  # 16-bit PCM
+            "-ar",
+            str(self.target_sample_rate),
+            "-ac",
+            str(self.target_channels),
             "-y",  # Overwrite output
             str(output_path),
         ]
@@ -389,14 +428,10 @@ class AudioConverter:
         input_path = Path(input_path)
 
         if output_path is None:
-            # Create temp file with .wav extension
-            temp_file = tempfile.NamedTemporaryFile(
-                suffix=".wav",
-                dir=self.temp_dir,
-                delete=False,
-            )
-            output_path = Path(temp_file.name)
-            temp_file.close()
+            with tempfile.NamedTemporaryFile(
+                suffix=".wav", dir=self.temp_dir, delete=False
+            ) as temp_file:
+                output_path = Path(temp_file.name)
         else:
             output_path = Path(output_path)
 
@@ -411,11 +446,15 @@ class AudioConverter:
         # FFmpeg command to convert to ASR-optimal format
         cmd = [
             "ffmpeg",
-            "-i", str(input_path),
+            "-i",
+            str(input_path),
             "-vn",  # No video
-            "-acodec", "pcm_s16le",  # 16-bit PCM
-            "-ar", str(self.target_sample_rate),  # Target sample rate
-            "-ac", str(self.target_channels),  # Target channels
+            "-acodec",
+            "pcm_s16le",  # 16-bit PCM
+            "-ar",
+            str(self.target_sample_rate),  # Target sample rate
+            "-ac",
+            str(self.target_channels),  # Target channels
             "-y",  # Overwrite output
             str(output_path),
         ]

@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 import pytest
 
 from audio_processor.core.config import Settings
-from audio_processor.core.exceptions import AudioProcessorError, ConfigurationError, ValidationError
+from audio_processor.core.exceptions import (
+    AudioProcessorError,
+    ConfigurationError,
+    ValidationError,
+)
 from audio_processor.core.models import QualityLevel
 
 
@@ -39,8 +46,8 @@ class TestAudioConverterMIMETypes:
 
     def test_mime_type_mapping(self) -> None:
         """Test MIME type to format mapping."""
-        from audio_processor.services.audio_converter import MIME_TYPE_MAP
         from audio_processor.core.models import AudioFormat
+        from audio_processor.services.audio_converter import MIME_TYPE_MAP
 
         assert MIME_TYPE_MAP["audio/mpeg"] == AudioFormat.MP3
         assert MIME_TYPE_MAP["audio/wav"] == AudioFormat.WAV
@@ -48,8 +55,8 @@ class TestAudioConverterMIMETypes:
 
     def test_extension_mapping(self) -> None:
         """Test file extension to format mapping."""
-        from audio_processor.services.audio_converter import EXTENSION_MAP
         from audio_processor.core.models import AudioFormat
+        from audio_processor.services.audio_converter import EXTENSION_MAP
 
         assert EXTENSION_MAP[".mp3"] == AudioFormat.MP3
         assert EXTENSION_MAP[".wav"] == AudioFormat.WAV
@@ -67,18 +74,19 @@ class TestAudioConverterInit:
         assert converter.target_sample_rate == 16000
         assert converter.target_channels == 1
 
-    def test_custom_initialization(self) -> None:
+    def test_custom_initialization(self, tmp_path: Path) -> None:
         """Test custom initialization."""
         from audio_processor.services.audio_converter import AudioConverter
 
+        custom_temp = tmp_path / "custom" / "temp"
         converter = AudioConverter(
-            temp_dir="/custom/temp",
+            temp_dir=str(custom_temp),
             target_sample_rate=44100,
             target_channels=2,
         )
         assert converter.target_sample_rate == 44100
         assert converter.target_channels == 2
-        assert converter.temp_dir == Path("/custom/temp")
+        assert converter.temp_dir == custom_temp
 
 
 class TestAudioConverterProbe:
@@ -238,7 +246,9 @@ class TestDeepgramClientInit:
         from audio_processor.services.deepgram_client import DeepgramTranscriptionClient
 
         # Temporarily clear the settings
-        with patch("audio_processor.services.deepgram_client.settings") as mock_settings:
+        with patch(
+            "audio_processor.services.deepgram_client.settings"
+        ) as mock_settings:
             mock_settings.deepgram_api_key = None
 
             with pytest.raises(ConfigurationError) as exc_info:
@@ -250,8 +260,10 @@ class TestDeepgramClientInit:
         from audio_processor.services.deepgram_client import DeepgramTranscriptionClient
 
         # This should not raise
-        client = DeepgramTranscriptionClient(api_key="test-api-key")
-        assert client.api_key == "test-api-key"
+        client = DeepgramTranscriptionClient(
+            api_key="test-api-key",  # pragma: allowlist secret
+        )
+        assert client.api_key == "test-api-key"  # pragma: allowlist secret
         assert client.model == "nova-2"
 
     def test_custom_model(self) -> None:
@@ -259,7 +271,7 @@ class TestDeepgramClientInit:
         from audio_processor.services.deepgram_client import DeepgramTranscriptionClient
 
         client = DeepgramTranscriptionClient(
-            api_key="test-api-key",
+            api_key="test-api-key",  # pragma: allowlist secret
             model="nova",
             language="es",
         )
@@ -273,9 +285,12 @@ class TestDeepgramClientCostEstimate:
     def test_cost_estimate_base(self) -> None:
         """Test base cost estimation."""
         from decimal import Decimal
+
         from audio_processor.services.deepgram_client import DeepgramTranscriptionClient
 
-        client = DeepgramTranscriptionClient(api_key="test-key")
+        client = DeepgramTranscriptionClient(
+            api_key="test-key",  # pragma: allowlist secret
+        )
 
         # 1 hour = 60 minutes
         cost = client.estimate_cost(
@@ -290,9 +305,12 @@ class TestDeepgramClientCostEstimate:
     def test_cost_estimate_with_features(self) -> None:
         """Test cost estimation with all features."""
         from decimal import Decimal
+
         from audio_processor.services.deepgram_client import DeepgramTranscriptionClient
 
-        client = DeepgramTranscriptionClient(api_key="test-key")
+        client = DeepgramTranscriptionClient(
+            api_key="test-key",  # pragma: allowlist secret
+        )
 
         # 1 hour with all features
         cost = client.estimate_cost(
@@ -316,20 +334,21 @@ class TestAudioConditionerInit:
         assert conditioner.target_channels == 1
         assert conditioner.target_rms_db == -20.0
 
-    def test_custom_initialization(self) -> None:
+    def test_custom_initialization(self, tmp_path: Path) -> None:
         """Test custom initialization."""
         from audio_processor.services.audio_conditioner import AudioConditioner
 
+        custom_temp = tmp_path / "custom" / "temp"
         conditioner = AudioConditioner(
             target_sample_rate=44100,
             target_channels=2,
             target_rms_db=-18.0,
-            temp_dir="/custom/temp",
+            temp_dir=str(custom_temp),
         )
         assert conditioner.target_sample_rate == 44100
         assert conditioner.target_channels == 2
         assert conditioner.target_rms_db == -18.0
-        assert conditioner.temp_dir == Path("/custom/temp")
+        assert conditioner.temp_dir == custom_temp
 
 
 class TestAudioConditionerCondition:
@@ -360,6 +379,7 @@ class TestAudioConditionerRMS:
     def test_calculate_rms_db_silence(self) -> None:
         """Test RMS calculation for silence."""
         import numpy as np
+
         from audio_processor.services.audio_conditioner import AudioConditioner
 
         conditioner = AudioConditioner()
@@ -370,6 +390,7 @@ class TestAudioConditionerRMS:
     def test_calculate_rms_db_full_scale(self) -> None:
         """Test RMS calculation for full-scale sine wave."""
         import numpy as np
+
         from audio_processor.services.audio_conditioner import AudioConditioner
 
         conditioner = AudioConditioner()
@@ -386,6 +407,7 @@ class TestAudioConditionerNormalize:
     def test_normalize_rms(self) -> None:
         """Test RMS normalization."""
         import numpy as np
+
         from audio_processor.services.audio_conditioner import AudioConditioner
 
         conditioner = AudioConditioner()
@@ -405,6 +427,7 @@ class TestAudioConditionerNormalize:
     def test_normalize_rms_silence(self) -> None:
         """Test RMS normalization with silence."""
         import numpy as np
+
         from audio_processor.services.audio_conditioner import AudioConditioner
 
         conditioner = AudioConditioner()
@@ -428,20 +451,21 @@ class TestVADProcessorInit:
         assert vad.min_silence_duration_ms == 500
         assert vad.min_speech_duration_ms == 250
 
-    def test_custom_initialization(self) -> None:
+    def test_custom_initialization(self, tmp_path: Path) -> None:
         """Test custom initialization."""
         from audio_processor.services.vad_processor import VADProcessor
 
+        custom_temp = tmp_path / "custom" / "temp"
         vad = VADProcessor(
             threshold=0.7,
             min_silence_duration_ms=300,
             min_speech_duration_ms=100,
-            temp_dir="/custom/temp",
+            temp_dir=str(custom_temp),
         )
         assert vad.threshold == 0.7
         assert vad.min_silence_duration_ms == 300
         assert vad.min_speech_duration_ms == 100
-        assert vad.temp_dir == Path("/custom/temp")
+        assert vad.temp_dir == custom_temp
 
 
 class TestVADProcessorDetect:

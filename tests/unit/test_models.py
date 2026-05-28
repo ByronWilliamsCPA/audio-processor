@@ -2,17 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
-
-import pytest
 
 from audio_processor.core.models import (
     AudioFormat,
     AudioJob,
     AudioJobInput,
-    AudioJobProgress,
     AudioQualityMetrics,
     JobStatus,
     ProcessAudioResponse,
