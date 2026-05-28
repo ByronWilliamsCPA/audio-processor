@@ -150,7 +150,7 @@
     },
     {
       "description": "Python version updates - manual review required",
-      "matchDepTypes": [
+      "matchDepNames": [
         "python"
       ],
       "enabled": false,
