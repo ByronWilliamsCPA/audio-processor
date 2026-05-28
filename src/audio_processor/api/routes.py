@@ -9,6 +9,7 @@ This module defines the REST API endpoints for:
 
 from __future__ import annotations
 
+import os
 import sys
 import tempfile
 import uuid
@@ -17,6 +18,7 @@ from pathlib import Path
 from typing import Annotated
 
 import anyio
+import anyio.to_thread
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.responses import Response
 
@@ -40,6 +42,8 @@ else:
 
 logger = get_logger(__name__)
 
+PLAIN_TEXT_CONTENT_TYPE = "text/plain; charset=utf-8"
+
 # Create router with prefix
 router = APIRouter(prefix="/api/v1", tags=["Audio Processing"])
 
@@ -59,7 +63,6 @@ def _get_job_store() -> dict[str, dict[str, object]]:
 
 @router.post(
     "/process",
-    response_model=ProcessAudioResponse,
     status_code=status.HTTP_202_ACCEPTED,
     summary="Submit audio for processing",
     description="Upload an audio or video file for transcription processing.",
@@ -140,18 +143,18 @@ async def process_audio(
         temp_dir = Path(settings.audio_temp_dir)
         await anyio.Path(temp_dir).mkdir(parents=True, exist_ok=True)
 
-        # Create temp file with original extension
+        # Create temp file with original extension using mkstemp to avoid
+        # blocking the event loop (sync NamedTemporaryFile is not async-safe).
         suffix = Path(file.filename).suffix or ".wav"
-        with tempfile.NamedTemporaryFile(
-            suffix=suffix,
-            dir=temp_dir,
-            delete=False,
-        ) as temp_file:
-            temp_path = Path(temp_file.name)
+        fd, temp_name = await anyio.to_thread.run_sync(
+            lambda: tempfile.mkstemp(suffix=suffix, dir=temp_dir)
+        )
+        os.close(fd)
+        temp_path = Path(temp_name)
 
-            # Write file content
-            content = await file.read()
-            temp_file.write(content)
+        # Read upload and write asynchronously
+        content = await file.read()
+        await anyio.Path(temp_path).write_bytes(content)
 
         # Validate audio file
         converter = AudioConverter()
@@ -197,8 +200,8 @@ async def process_audio(
             },
         }
 
-        # TODO: Enqueue job to ARQ worker
-        # This will be implemented when we connect to Redis
+        # Job enqueueing to ARQ worker is tracked in GitHub issue #50.
+        # Until Redis is connected, jobs remain in the in-memory store.
         logger.info(
             "audio_job_queued",
             job_id=job_id,
@@ -229,7 +232,6 @@ async def process_audio(
 
 @router.get(
     "/status/{job_id}",
-    response_model=JobStatusResponse,
     summary="Check job status",
     description="Get the current status of an audio processing job.",
 )
@@ -386,9 +388,9 @@ async def get_job_results(
 # Supported artifact formats with their content types
 ARTIFACT_CONTENT_TYPES: dict[str, str] = {
     "docling_dom.json": "application/json",
-    "transcript.txt": "text/plain; charset=utf-8",
-    "transcript_simple.txt": "text/plain; charset=utf-8",
-    "transcript.srt": "text/plain; charset=utf-8",
+    "transcript.txt": PLAIN_TEXT_CONTENT_TYPE,
+    "transcript_simple.txt": PLAIN_TEXT_CONTENT_TYPE,
+    "transcript.srt": PLAIN_TEXT_CONTENT_TYPE,
     "transcript.vtt": "text/vtt; charset=utf-8",
 }
 
