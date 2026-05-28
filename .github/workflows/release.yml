@@ -4,10 +4,12 @@
 # manual tag-based releases.
 #
 # Features:
-#   - Pre-release testing
 #   - Semantic versioning (if enabled) or manual tag-based releases
-#   - PyPI publishing with OIDC trusted publishing
 #   - GitHub Release creation
+#
+# Notes:
+#   - PyPI publishing is disabled (private repo; publish-to-pypi: false)
+#   - Triggered by CI workflow completion, not direct push to main
 name: Semantic Release
 
 "on":
@@ -60,4 +62,4 @@ jobs:
       pypi-package-name: 'audio-processor'
       run-tests: false
       skip-tests-reason: 'Tests run in upstream CI pipeline before this workflow fires'
-      no-build: false
+      no-build: false  # project uses hatchling build backend; uv must build the editable install

@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - fix(renovate): add project.optional-dependencies packageRule to group extras deps; ungrouped extras would have generated one PR per package
 - fix(renovate): add "pin" to github-actions matchUpdateTypes so SHA digest-pin PRs are also auto-merged
 - fix(renovate): replace no-op postUpdateOptions with uvUpdatePreciseVersion so lockFileMaintenance correctly regenerates uv.lock
+- fix(ci): switch release workflow trigger from push to workflow_run so releases are gated behind CI success; add job-level if guard for workflow_run conclusion; disable PyPI publishing (private repo); remove unsupported attestations and environment inputs
 
 ### Security
 - fix(security): resolve CVE-2026-26007, CVE-2026-34073, CVE-2026-39892: bump cryptography to 48.0.0
