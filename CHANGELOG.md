@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Initial project setup and structure
+- feat(preprocessing): audio preprocessing pipeline phases 1-4 — FFmpeg-based format conversion and video audio extraction (`AudioConverter`), signal conditioning with resampling/normalization/DC-offset removal (`AudioConditioner`), SNR-based quality assessment (`QualityAssessor`), Silero VAD voice activity detection (`VADProcessor`), Deepgram Nova-2 transcription with diarization and summarization (`DeepgramTranscriptionClient`), multi-format transcript output (`ArtifactGenerator`), and ARQ background job orchestration (`process_audio_job`) with Redis-backed status tracking
+- feat(api): REST endpoints for audio upload, job status polling, and result retrieval; job processing delegated to ARQ worker
+
+### Fixed
+- fix(jobs): correct field paths for `duration_ms` and `language` in `process_audio_job` result assembly; both now read from `TranscriptionResult.metadata` where they actually live, preventing `AttributeError` at runtime
+- fix(api): guard `content-length` header parsing against malformed values; `int()` conversion is now wrapped in a `ValueError` handler so a non-numeric header no longer raises an unhandled exception
+- fix(tests): restore `tmp_path` fixture in `test_custom_initialization` for `AudioConverter`, `AudioConditioner`, and `VADProcessor`; hardcoded `/custom/temp` caused `PermissionError` on systems without root access
 
 ### Fixed
 
@@ -18,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - fix(renovate): add project.optional-dependencies packageRule to group extras deps; ungrouped extras would have generated one PR per package
 - fix(renovate): add "pin" to github-actions matchUpdateTypes so SHA digest-pin PRs are also auto-merged
 - fix(renovate): replace no-op postUpdateOptions with uvUpdatePreciseVersion so lockFileMaintenance correctly regenerates uv.lock
+- fix(ci): switch release workflow trigger from push to workflow_run so releases are gated behind CI success; add job-level if guard for workflow_run conclusion; disable PyPI publishing (private repo); remove unsupported attestations and environment inputs
 
 ### Security
 - fix(security): resolve CVE-2026-26007, CVE-2026-34073, CVE-2026-39892: bump cryptography to 48.0.0

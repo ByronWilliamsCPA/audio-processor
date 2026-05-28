@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
+from audio_processor.api.routes import router as audio_router
 from audio_processor.utils.logging import get_logger
 
 if TYPE_CHECKING:
@@ -20,7 +21,22 @@ logger = get_logger(__name__)
 
 # Application metadata
 APP_TITLE = "Audio Processor API"
-APP_DESCRIPTION = "Audio file conversion and processing for RAG content pipelines"
+APP_DESCRIPTION = """
+Audio file conversion and processing for RAG content pipelines.
+
+## Features
+
+- **Audio Processing**: Submit audio/video files for transcription
+- **Speaker Diarization**: Identify and label different speakers
+- **Summarization**: Generate AI-powered summaries
+- **Quality Assessment**: Analyze audio quality metrics
+
+## Workflow
+
+1. **Submit**: POST /api/v1/process with audio file
+2. **Track**: GET /api/v1/status/{job_id} to check progress
+3. **Retrieve**: GET /api/v1/results/{job_id} when complete
+"""
 APP_VERSION = "0.1.0"
 
 # Create FastAPI application
@@ -30,7 +46,20 @@ app = FastAPI(
     version=APP_VERSION,
     docs_url="/docs",
     redoc_url="/redoc",
+    openapi_tags=[
+        {
+            "name": "Audio Processing",
+            "description": "Audio file submission, status tracking, and results retrieval",
+        },
+        {
+            "name": "Health",
+            "description": "Service health monitoring",
+        },
+    ],
 )
+
+# Include API routes
+app.include_router(audio_router)
 
 
 @app.get("/health", tags=["Health"])

@@ -22,7 +22,7 @@ base-image transitive C library CVEs (catalogued in the section
 "Base-image transitive library CVEs" below and suppressed in
 `.trivyignore`).
 
-Last reviewed: 2026-05-18
+Last reviewed: 2026-05-28
 
 ---
 
@@ -281,6 +281,27 @@ in libcurl) and `git`. The application does not initiate SSH connections.
 | CVE-2026-6732 | HIGH | DoS via crafted XML input |
 
 Same reachability story as `libexpat1`: no XML parsing in `src/`.
+
+### perl-base
+
+| CVE | Severity | Status | Title |
+| --- | --- | --- | --- |
+| CVE-2026-42496 | CRITICAL | affected | Archive::Tar < 3.08 symlink extraction path traversal |
+| CVE-2026-8376 | CRITICAL | affected | Perl heap buffer overflow through version 5.43.10 |
+| CVE-2026-42497 | HIGH | affected | Archive::Tar < 3.08 hardlink extraction path traversal |
+| CVE-2026-9538 | HIGH | affected | Archive::Tar < 3.10 memory exposure |
+
+`perl-base` ships in `python:3.12-slim` as a non-removable dependency of
+`dpkg` (the Debian package manager itself). No application code invokes perl,
+shells out to perl scripts, or calls any Perl module. The Archive::Tar CVEs
+require calling `Archive::Tar->extract()` on a malicious tar archive; the
+application never extracts archives via Perl. CVE-2026-8376 requires executing
+a crafted Perl script; the container runs no Perl scripts and has no
+attacker-controlled code execution path into the Perl interpreter. Non-root
+container (`appuser`, UID 1000) with no additional capabilities.
+
+- **Reassess-by**: 2026-07-27 (60-day cap)
+- **Suppressed in**: `.trivyignore`
 
 ---
 

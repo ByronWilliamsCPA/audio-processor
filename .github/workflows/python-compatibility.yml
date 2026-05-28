@@ -38,7 +38,7 @@ jobs:
     name: Python Compatibility Matrix
     uses: ByronWilliamsCPA/.github/.github/workflows/python-compatibility.yml@74c633acfdd5f707ab154fd59bd212c6df663dd6  # main
     with:
-      python-versions: '["3.10", "3.11", "3.12", "3.13"]'
+      python-versions: '["3.11", "3.12", "3.13"]'
       include-windows: true
       include-macos: true
       # Marker expressions like -m "not slow" are dropped here because they fail
