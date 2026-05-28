@@ -246,76 +246,29 @@ class DeepgramTranscriptionClient:
         Returns:
             Parsed TranscriptionResult.
         """
-        # Handle response object - v5 SDK returns ListenV1Response
-        # Access results through the response object
+        alternative = self._extract_alternative(response)
+        if alternative is None:
+            return self._empty_result(processing_time)
+
         results = getattr(response, "results", None)
-        if not results:
-            return self._empty_result(processing_time)
-
-        channels = getattr(results, "channels", None)
-        if not channels or len(channels) == 0:
-            return self._empty_result(processing_time)
-
-        channel = channels[0]
-        alternatives = getattr(channel, "alternatives", None)
-        if not alternatives or len(alternatives) == 0:
-            return self._empty_result(processing_time)
-
-        alternative = alternatives[0]
-
-        # Extract full transcript
         transcript = getattr(alternative, "transcript", "") or ""
+        words = self._build_word_list(alternative, diarize=diarize)
 
-        # Extract words with timing
-        alt_words = getattr(alternative, "words", None) or []
-        words: list[Word] = [
-            Word(
-                word=getattr(w, "word", "") or "",
-                start=getattr(w, "start", 0.0) or 0.0,
-                end=getattr(w, "end", 0.0) or 0.0,
-                confidence=getattr(w, "confidence", 0.0) or 0.0,
-                speaker=getattr(w, "speaker", None) if diarize else None,
-                punctuated_word=getattr(w, "punctuated_word", None),
-            )
-            for w in alt_words
-        ]
-
-        # Extract utterances if diarization enabled
         result_utterances = getattr(results, "utterances", None)
         utterances, speakers = self._parse_utterances_and_speakers(
             result_utterances if diarize else None
         )
 
-        # Extract summary if available
-        summary: str | None = None
-        if summarize:
-            result_summary = getattr(results, "summary", None)
-            if result_summary:
-                summary = getattr(result_summary, "short", None)
+        summary = self._extract_summary(results, summarize=summarize)
 
-        # Calculate metadata
         result_metadata = getattr(results, "metadata", None)
         duration = getattr(result_metadata, "duration", 0.0) if result_metadata else 0.0
-        word_count = len(words)
-        confidences = [w.confidence for w in words]
-        confidence_mean = sum(confidences) / len(confidences) if confidences else 0.0
-        confidence_min = min(confidences) if confidences else 0.0
-
-        # Estimate cost
-        duration_minutes = duration / 60
-        cost = DEEPGRAM_COST_PER_MINUTE_BASE * Decimal(str(duration_minutes))
-        if diarize:
-            cost += DEEPGRAM_COST_PER_MINUTE_DIARIZATION * Decimal(
-                str(duration_minutes)
-            )
-        if summarize:
-            cost += DEEPGRAM_COST_PER_MINUTE_SUMMARIZATION * Decimal(
-                str(duration_minutes)
-            )
+        confidence_mean, confidence_min = self._calculate_confidence(words)
+        cost = self._calculate_cost(duration / 60, diarize=diarize, summarize=summarize)
 
         metadata = TranscriptionMetadata(
             duration_seconds=duration,
-            word_count=word_count,
+            word_count=len(words),
             confidence_mean=confidence_mean,
             confidence_min=confidence_min,
             model=self.model,
@@ -332,6 +285,125 @@ class DeepgramTranscriptionClient:
             summary=summary,
             metadata=metadata,
         )
+
+    def _extract_alternative(
+        self,
+        response: Any,  # pyright: ignore[reportExplicitAny]
+    ) -> Any:  # pyright: ignore[reportExplicitAny]
+        """Extract the first transcription alternative from a Deepgram response.
+
+        Args:
+            response: Deepgram API response object.
+
+        Returns:
+            The first alternative object, or None if the response is empty or
+            does not contain usable data.
+        """
+        results = getattr(response, "results", None)
+        if not results:
+            return None
+        channels = getattr(results, "channels", None)
+        if not channels:
+            return None
+        alternatives = getattr(channels[0], "alternatives", None)
+        if not alternatives:
+            return None
+        return alternatives[0]
+
+    def _build_word_list(
+        self,
+        alternative: Any,  # pyright: ignore[reportExplicitAny]
+        *,
+        diarize: bool,
+    ) -> list[Word]:
+        """Build a list of Word objects from a Deepgram transcription alternative.
+
+        Args:
+            alternative: A Deepgram alternative object containing word timing data.
+            diarize: Whether speaker diarization was enabled.
+
+        Returns:
+            List of Word objects with timing and confidence information.
+        """
+        alt_words = getattr(alternative, "words", None) or []
+        return [
+            Word(
+                word=getattr(w, "word", "") or "",
+                start=getattr(w, "start", 0.0) or 0.0,
+                end=getattr(w, "end", 0.0) or 0.0,
+                confidence=getattr(w, "confidence", 0.0) or 0.0,
+                speaker=getattr(w, "speaker", None) if diarize else None,
+                punctuated_word=getattr(w, "punctuated_word", None),
+            )
+            for w in alt_words
+        ]
+
+    @staticmethod
+    def _extract_summary(
+        results: Any,  # pyright: ignore[reportExplicitAny]
+        *,
+        summarize: bool,
+    ) -> str | None:
+        """Extract the short summary text from Deepgram results.
+
+        Args:
+            results: Deepgram results object.
+            summarize: Whether summarization was requested.
+
+        Returns:
+            Short summary string, or None if unavailable.
+        """
+        if not summarize:
+            return None
+        result_summary = getattr(results, "summary", None)
+        if not result_summary:
+            return None
+        short: str | None = getattr(result_summary, "short", None)
+        return short
+
+    @staticmethod
+    def _calculate_confidence(words: list[Word]) -> tuple[float, float]:
+        """Calculate mean and minimum confidence across a list of words.
+
+        Args:
+            words: List of Word objects with confidence scores.
+
+        Returns:
+            Tuple of (mean_confidence, min_confidence). Both are 0.0 when the
+            word list is empty.
+        """
+        confidences = [w.confidence for w in words]
+        if not confidences:
+            return 0.0, 0.0
+        return sum(confidences) / len(confidences), min(confidences)
+
+    @staticmethod
+    def _calculate_cost(
+        duration_minutes: float,
+        *,
+        diarize: bool,
+        summarize: bool,
+    ) -> Decimal:
+        """Estimate the Deepgram API cost for a transcription.
+
+        Args:
+            duration_minutes: Audio duration in minutes.
+            diarize: Whether speaker diarization was enabled.
+            summarize: Whether summarization was enabled.
+
+        Returns:
+            Estimated cost as a Decimal before quantization.
+        """
+        cost = DEEPGRAM_COST_PER_MINUTE_BASE * Decimal(str(duration_minutes))
+        if diarize:
+            cost += DEEPGRAM_COST_PER_MINUTE_DIARIZATION * Decimal(
+                str(duration_minutes)
+            )
+        if summarize:
+            cost += DEEPGRAM_COST_PER_MINUTE_SUMMARIZATION * Decimal(
+                str(duration_minutes)
+            )
+        return cost
 
     def _parse_utterances_and_speakers(
         self,
