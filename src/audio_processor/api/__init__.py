@@ -57,6 +57,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             await arq_pool.close()
             logger.info("redis_job_store_closed")
 
+
 # Application metadata
 APP_TITLE = "Audio Processor API"
 APP_DESCRIPTION = """

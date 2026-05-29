@@ -27,7 +27,9 @@ class TestRequireApiKey:
     """Tests for the API-key authentication dependency."""
 
     @pytest.mark.asyncio
-    async def test_open_when_auth_disabled(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def test_open_when_auth_disabled(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """When auth is disabled the dependency is a no-op."""
         monkeypatch.setattr(settings, "auth_required", False)
         await require_api_key(x_api_key=None)  # should not raise
