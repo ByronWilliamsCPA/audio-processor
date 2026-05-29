@@ -10,10 +10,9 @@ This module defines the REST API endpoints for:
 from __future__ import annotations
 
 import os
-import sys
 import tempfile
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -44,12 +43,6 @@ from audio_processor.core.models import (
 )
 from audio_processor.services.audio_converter import AudioConverter
 from audio_processor.utils.logging import get_logger
-
-# Python 3.10 compatibility: UTC was added in 3.11
-if sys.version_info >= (3, 11):  # noqa: UP036
-    from datetime import UTC
-else:
-    UTC = timezone.utc  # noqa: UP017  # pyright: ignore[reportUnreachable]
 
 logger = get_logger(__name__)
 

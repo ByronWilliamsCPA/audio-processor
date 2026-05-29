@@ -9,8 +9,7 @@ This module defines the ARQ tasks for processing audio files:
 
 from __future__ import annotations
 
-import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -30,12 +29,6 @@ from audio_processor.utils.logging import get_logger
 
 if TYPE_CHECKING:
     from arq.connections import ArqRedis
-
-# Python 3.10 compatibility: UTC was added in 3.11
-if sys.version_info >= (3, 11):  # noqa: UP036
-    from datetime import UTC
-else:
-    UTC = timezone.utc  # noqa: UP017  # pyright: ignore[reportUnreachable]
 
 logger = get_logger(__name__)
 

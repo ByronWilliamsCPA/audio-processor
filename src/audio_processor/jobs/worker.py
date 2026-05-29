@@ -31,19 +31,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, ClassVar
-
-# Python 3.10 compatibility: UTC was added in 3.11.
-# basedpyright is configured for Python 3.12, so the 3.10 fallback is
-# statically unreachable for the analyzer; suppress reportUnreachable on
-# the fallback body. The runtime guard is still required because the
-# project supports Python 3.10 (requires-python = ">=3.10,<3.15").
-if sys.version_info >= (3, 11):  # noqa: UP036
-    from datetime import UTC
-else:
-    UTC = timezone.utc  # noqa: UP017  # pyright: ignore[reportUnreachable]
 
 from arq import cron
 from arq.connections import RedisSettings

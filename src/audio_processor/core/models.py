@@ -6,19 +6,12 @@ pipeline for jobs, transcription results, speakers, and quality metrics.
 
 from __future__ import annotations
 
-import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal  # noqa: TC003 - Required at runtime for Pydantic
 from enum import StrEnum
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
-
-# Python 3.10 compatibility: UTC was added in 3.11
-if sys.version_info >= (3, 11):  # noqa: UP036
-    from datetime import UTC
-else:
-    UTC = timezone.utc  # noqa: UP017  # pyright: ignore[reportUnreachable]
 
 
 def _utc_now() -> datetime:
