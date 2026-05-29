@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, cast
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi import HTTPException, UploadFile
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from audio_processor.api import app
@@ -16,6 +16,8 @@ from audio_processor.core.config import settings
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from fastapi import UploadFile
 
 
 class _FakeUpload:
