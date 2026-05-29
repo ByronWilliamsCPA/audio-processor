@@ -24,6 +24,7 @@ from fastapi.responses import Response
 
 from audio_processor.core.config import settings
 from audio_processor.core.exceptions import ValidationError
+from audio_processor.core.job_store import InMemoryJobStore, JobStore
 from audio_processor.core.models import (
     AudioJobInput,
     AudioJobProgress,
@@ -47,18 +48,70 @@ PLAIN_TEXT_CONTENT_TYPE = "text/plain; charset=utf-8"
 # Create router with prefix
 router = APIRouter(prefix="/api/v1", tags=["Audio Processing"])
 
-# In-memory job store (replace with Redis in production)
-# This is a simple dict for development; production uses Redis
-_jobs: dict[str, dict[str, object]] = {}
+# Process-local fallback store. In production, a RedisJobStore is attached to
+# ``app.state.job_store`` at startup (see api/__init__.py) so the API and the
+# ARQ worker share job state. The in-memory store is used for development and
+# tests, and is the single source of truth when no store is attached.
+_default_store = InMemoryJobStore()
 
 
-def _get_job_store() -> dict[str, dict[str, object]]:
-    """Get the job store.
+def _get_job_store() -> InMemoryJobStore:  # pyright: ignore[reportUnusedFunction]
+    """Return the process-local in-memory job store.
+
+    Exposed as a test seam for direct record injection/inspection; not called
+    within this module (request handlers use :func:`get_job_store`).
 
     Returns:
-        Dictionary of jobs keyed by job_id.
+        The module-level in-memory job store.
     """
-    return _jobs
+    return _default_store
+
+
+def get_job_store(request: Request) -> JobStore:
+    """Resolve the job store for a request.
+
+    Prefers a store attached to ``app.state`` (e.g. a Redis-backed store wired
+    at startup); otherwise falls back to the process-local in-memory store.
+
+    Args:
+        request: The incoming request.
+
+    Returns:
+        The active job store.
+    """
+    store = getattr(request.app.state, "job_store", None)
+    if isinstance(store, JobStore):
+        return store
+    return _default_store
+
+
+async def _maybe_enqueue(
+    request: Request,
+    job_id: str,
+    record: dict[str, object],
+) -> None:
+    """Enqueue a job to the ARQ worker when enqueueing is enabled.
+
+    No-op when ``enqueue_enabled`` is false or no ARQ pool is attached to the
+    application (e.g. in-memory/dev deployments), leaving the job queued in the
+    store for later processing.
+
+    Args:
+        request: The incoming request (source of the ARQ pool on app state).
+        job_id: Unique job identifier.
+        record: The job record to hand to the worker (carries the ``input``).
+    """
+    if not settings.enqueue_enabled:
+        return
+    pool = getattr(request.app.state, "arq_pool", None)
+    if pool is None:
+        logger.warning("enqueue_skipped_no_pool", job_id=job_id)
+        return
+    # Imported lazily so the API does not hard-depend on the 'jobs' (arq) extra
+    # unless enqueueing is actually used.
+    from audio_processor.jobs.worker import enqueue_task  # noqa: PLC0415
+
+    await enqueue_task(pool, "process_audio_job", job_id, record)
 
 
 @router.post(
@@ -180,9 +233,9 @@ async def process_audio(
             callback_url=callback_url,
         )
 
-        # Store job in memory (will be replaced with Redis queue)
-        jobs = _get_job_store()
-        jobs[job_id] = {
+        # Persist the job record to the shared store (single source of truth
+        # for both the API and the worker).
+        record: dict[str, object] = {
             "id": job_id,
             "status": JobStatus.QUEUED.value,
             "input": job_input.model_dump(),
@@ -199,14 +252,19 @@ async def process_audio(
                 "is_video": audio_info.is_video,
             },
         }
+        store = get_job_store(request)
+        await store.create(job_id, record)
 
-        # Job enqueueing to ARQ worker is tracked in GitHub issue #50.
-        # Until Redis is connected, jobs remain in the in-memory store.
+        # Enqueue to the ARQ worker when enabled. Requires a Redis-backed store
+        # and an ARQ pool attached at startup so the worker observes the record.
+        await _maybe_enqueue(request, job_id, record)
+
         logger.info(
             "audio_job_queued",
             job_id=job_id,
             duration_seconds=audio_info.duration_seconds,
             is_video=audio_info.is_video,
+            enqueued=settings.enqueue_enabled,
         )
 
         # Build status URL
@@ -251,15 +309,14 @@ async def get_job_status(
     Raises:
         HTTPException: If job is not found.
     """
-    jobs = _get_job_store()
+    store = get_job_store(request)
+    job = await store.get(job_id)
 
-    if job_id not in jobs:
+    if job is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Job not found: {job_id}",
         )
-
-    job = jobs[job_id]
 
     # Build result URL if completed
     result_url: str | None = None
@@ -325,15 +382,14 @@ async def get_job_results(
     Raises:
         HTTPException: If job not found or not completed.
     """
-    jobs = _get_job_store()
+    store = get_job_store(request)
+    job = await store.get(job_id)
 
-    if job_id not in jobs:
+    if job is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Job not found: {job_id}",
         )
-
-    job = jobs[job_id]
 
     if job["status"] != JobStatus.COMPLETED.value:
         raise HTTPException(
@@ -401,6 +457,7 @@ ARTIFACT_CONTENT_TYPES: dict[str, str] = {
     description="Download a specific artifact from a completed job.",
 )
 async def get_artifact(
+    request: Request,
     job_id: str,
     artifact_name: str,
 ) -> Response:
@@ -414,6 +471,7 @@ async def get_artifact(
     - transcript.vtt: WebVTT subtitle format
 
     Args:
+        request: FastAPI request object.
         job_id: Unique job identifier.
         artifact_name: Name of the artifact to download.
 
@@ -423,15 +481,14 @@ async def get_artifact(
     Raises:
         HTTPException: If job not found, not completed, or artifact unavailable.
     """
-    jobs = _get_job_store()
+    store = get_job_store(request)
+    job = await store.get(job_id)
 
-    if job_id not in jobs:
+    if job is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Job not found: {job_id}",
         )
-
-    job = jobs[job_id]
 
     if job["status"] != JobStatus.COMPLETED.value:
         raise HTTPException(

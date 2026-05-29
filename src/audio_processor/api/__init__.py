@@ -6,18 +6,56 @@ and job management.
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from audio_processor.api.routes import router as audio_router
+from audio_processor.core.config import settings
 from audio_processor.utils.logging import get_logger
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from fastapi import Request
 
 logger = get_logger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Manage application-scoped resources.
+
+    When the Redis job-store backend is configured, opens an ARQ pool and
+    attaches a shared :class:`RedisJobStore` to ``app.state`` so the API and the
+    worker observe the same job state, then enqueues submitted jobs through it.
+    For the default in-memory backend this is a no-op (no Redis connection).
+
+    Args:
+        app: The FastAPI application.
+
+    Yields:
+        Control to the running application.
+    """
+    arq_pool = None
+    if settings.job_store_backend == "redis":
+        from arq import create_pool  # noqa: PLC0415
+        from arq.connections import RedisSettings  # noqa: PLC0415
+
+        from audio_processor.core.job_store import RedisJobStore  # noqa: PLC0415
+
+        arq_pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
+        app.state.arq_pool = arq_pool
+        app.state.job_store = RedisJobStore(arq_pool)
+        logger.info("redis_job_store_initialized")
+    try:
+        yield
+    finally:
+        if arq_pool is not None:
+            await arq_pool.close()
+            logger.info("redis_job_store_closed")
 
 # Application metadata
 APP_TITLE = "Audio Processor API"
@@ -44,6 +82,7 @@ app = FastAPI(
     title=APP_TITLE,
     description=APP_DESCRIPTION,
     version=APP_VERSION,
+    lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_tags=[

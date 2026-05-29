@@ -180,6 +180,20 @@ class Settings(BaseSettings):
         default=86400,
         description="Time to keep job results in Redis (seconds)",
     )
+    job_store_backend: Literal["memory", "redis"] = Field(
+        default="memory",
+        description=(
+            "Backend for job state. 'memory' is process-local (dev/single "
+            "process); 'redis' shares state between the API and the worker."
+        ),
+    )
+    enqueue_enabled: bool = Field(
+        default=False,
+        description=(
+            "Enqueue submitted jobs to the ARQ worker. Requires the 'redis' "
+            "job store backend so the worker and API share job state."
+        ),
+    )
 
     # ==========================================================================
     # API Configuration

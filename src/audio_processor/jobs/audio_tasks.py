@@ -9,7 +9,6 @@ This module defines the ARQ tasks for processing audio files:
 
 from __future__ import annotations
 
-import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -17,13 +16,13 @@ from typing import TYPE_CHECKING, Any
 
 import anyio
 
-from audio_processor.core.config import settings
 from audio_processor.core.exceptions import (
     AudioProcessorError,
     ConfigurationError,
     TranscriptionError,
     ValidationError,
 )
+from audio_processor.core.job_store import RedisJobStore
 from audio_processor.core.models import JobStatus
 from audio_processor.services.audio_converter import AudioConverter
 from audio_processor.services.quality_assessor import QualityAssessor
@@ -328,35 +327,15 @@ async def _update_job_status(
         error: Error message (when failed).
         completed_at: Completion timestamp.
     """
-    key = f"job:{job_id}"
-
-    # Get existing job data
-    existing = await redis.get(key)
-    if existing:
-        if isinstance(existing, bytes):
-            job_data = json.loads(existing.decode())
-        else:
-            job_data = json.loads(str(existing))
-    else:
-        job_data = {}
-
-    # Update fields
-    if status:
-        job_data["status"] = status.value
-    if progress:
-        job_data["progress"] = progress
-    if result:
-        job_data["result"] = result
-    if artifacts:
-        job_data["artifacts"] = artifacts
-    if error:
-        job_data["error"] = error
-    if completed_at:
-        job_data["completed_at"] = completed_at
-
-    # Store updated data
-    await redis.set(
-        key,
-        json.dumps(job_data),
-        ex=settings.job_result_ttl_seconds,
+    # Delegate to the shared RedisJobStore so the worker and the API use the
+    # same key scheme and serialization (single source of truth for job state).
+    store = RedisJobStore(redis)
+    await store.update(
+        job_id,
+        status=status.value if status else None,
+        progress=progress,
+        result=result,
+        artifacts=artifacts,
+        error=error,
+        completed_at=completed_at,
     )
