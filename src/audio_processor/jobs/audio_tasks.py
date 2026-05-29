@@ -30,10 +30,143 @@ from audio_processor.utils.logging import get_logger
 if TYPE_CHECKING:
     from arq.connections import ArqRedis
 
+    from audio_processor.core.models import TranscriptionResult
+
 logger = get_logger(__name__)
 
 # Type alias for ARQ job context
 JobContext = dict[str, object]
+
+
+def _progress(
+    stage: str,
+    percent: int,
+    message: str,
+    *,
+    started: bool = False,
+) -> dict[str, object]:
+    """Build a job progress payload with a current timestamp.
+
+    Args:
+        stage: Machine-readable pipeline stage name.
+        percent: Percent complete (0-100).
+        message: Human-readable status message.
+        started: Whether to include a ``started_at`` timestamp (first stage).
+
+    Returns:
+        Progress dictionary suitable for the job store.
+    """
+    now = datetime.now(UTC).isoformat()
+    payload: dict[str, object] = {
+        "stage": stage,
+        "percent_complete": percent,
+        "message": message,
+        "updated_at": now,
+    }
+    if started:
+        payload["started_at"] = now
+    return payload
+
+
+def _convert_audio(converter: AudioConverter, file_path: Path, job_id: str) -> Path:
+    """Convert or extract the input into an ASR-ready audio file.
+
+    Args:
+        converter: The audio converter service.
+        file_path: Path to the input media file.
+        job_id: Job identifier (for logging).
+
+    Returns:
+        Path to the converted audio file.
+    """
+    if converter.is_video(file_path):
+        logger.info(
+            "extracting_audio_from_video", job_id=job_id, file_path=str(file_path)
+        )
+        return converter.extract_audio(file_path)
+    return converter.convert_for_asr(file_path)
+
+
+def _transcribe(
+    converted_path: Path,
+    input_data: dict[str, Any],  # pyright: ignore[reportExplicitAny]
+    job_id: str,
+) -> TranscriptionResult | None:
+    """Transcribe audio via Deepgram, tolerating a missing API key.
+
+    Args:
+        converted_path: Path to the ASR-ready audio file.
+        input_data: Job input options (diarization/summarization/language).
+        job_id: Job identifier (for logging).
+
+    Returns:
+        The transcription result, or ``None`` if Deepgram is not configured.
+    """
+    # Imported lazily to avoid importing the optional 'audio' extra at module
+    # load and to surface a missing API key as a catchable ConfigurationError.
+    from audio_processor.services.deepgram_client import (  # noqa: PLC0415
+        DeepgramTranscriptionClient,
+    )
+
+    try:
+        client = DeepgramTranscriptionClient()
+        return client.transcribe(
+            converted_path,
+            enable_diarization=input_data.get("enable_diarization", True),
+            enable_summarization=input_data.get("enable_summarization", True),
+            language=input_data.get("language", "en"),
+        )
+    except ConfigurationError as e:
+        logger.warning("deepgram_not_configured", job_id=job_id, error=str(e))
+        return None
+
+
+def _build_transcription_payload(result: TranscriptionResult) -> dict[str, object]:
+    """Serialize a transcription result into the job result payload.
+
+    Args:
+        result: The transcription result.
+
+    Returns:
+        JSON-serializable transcription summary.
+    """
+    return {
+        "transcript": result.transcript,
+        "summary": result.summary,
+        "speaker_count": len(result.speakers),
+        "word_count": result.metadata.word_count,
+        "duration_ms": int(result.metadata.duration_seconds * 1000),
+        "duration_seconds": result.metadata.duration_seconds,
+        "confidence_mean": result.metadata.confidence_mean,
+        "cost_usd": str(result.metadata.cost_usd),
+        "language": result.metadata.language,
+        "speakers": [s.model_dump() for s in result.speakers],
+        "utterances": [u.model_dump() for u in result.utterances],
+    }
+
+
+def _generate_artifacts(result: TranscriptionResult, job_id: str) -> dict[str, str]:
+    """Generate transcript artifacts, tolerating generation failures.
+
+    Args:
+        result: The transcription result.
+        job_id: Job identifier (for logging).
+
+    Returns:
+        Mapping of artifact name to content; empty if generation failed.
+    """
+    from audio_processor.services.transcript_formatter import (  # noqa: PLC0415
+        ArtifactGenerator,
+    )
+
+    try:
+        artifacts = ArtifactGenerator().generate_all(result)
+    except (ValidationError, AudioProcessorError) as e:
+        # Transcription still succeeded; continue without artifacts.
+        logger.warning("artifact_generation_failed", job_id=job_id, error=str(e))
+        return {}
+    logger.info("artifacts_generated", job_id=job_id, artifact_count=len(artifacts))
+    return artifacts
 
 
 async def process_audio_job(
@@ -43,11 +176,10 @@ async def process_audio_job(
 ) -> dict[str, object]:
     """Process an audio file through the transcription pipeline.
 
-    This is the main ARQ task that:
-    1. Converts/extracts audio if needed
-    2. Assesses audio quality
-    3. Transcribes via Deepgram
-    4. Stores results
+    This is the main ARQ task that converts/extracts audio, assesses quality,
+    transcribes via Deepgram, generates artifacts, and stores results. Each
+    stage is delegated to a focused helper; this function orchestrates them and
+    reports progress.
 
     Args:
         ctx: ARQ context with Redis connection.
@@ -64,19 +196,13 @@ async def process_audio_job(
     redis: ArqRedis = ctx["redis"]  # pyright: ignore[reportAssignmentType]
 
     logger.info("audio_job_started", job_id=job_id)
-
-    # Update status to preprocessing
     await _update_job_status(
         redis,
         job_id,
         status=JobStatus.PREPROCESSING,
-        progress={
-            "stage": "preprocessing",
-            "percent_complete": 0,
-            "message": "Starting audio preprocessing...",
-            "started_at": datetime.now(UTC).isoformat(),
-            "updated_at": datetime.now(UTC).isoformat(),
-        },
+        progress=_progress(
+            "preprocessing", 0, "Starting audio preprocessing...", started=True
+        ),
     )
 
     try:
@@ -87,44 +213,23 @@ async def process_audio_job(
             msg = f"Audio file not found: {file_path}"
             raise ValidationError(msg, field="file_path", value=str(file_path))  # noqa: TRY301
 
-        # Initialize services
         converter = AudioConverter()
         assessor = QualityAssessor()
 
-        # Step 1: Convert/extract audio if needed
+        # Step 1: Convert/extract audio.
         await _update_job_status(
             redis,
             job_id,
-            progress={
-                "stage": "converting",
-                "percent_complete": 10,
-                "message": "Converting audio format...",
-                "updated_at": datetime.now(UTC).isoformat(),
-            },
+            progress=_progress("converting", 10, "Converting audio format..."),
         )
+        converted_path = _convert_audio(converter, file_path, job_id)
 
-        # Check if video and extract audio
-        if converter.is_video(file_path):
-            logger.info(
-                "extracting_audio_from_video", job_id=job_id, file_path=str(file_path)
-            )
-            converted_path = converter.extract_audio(file_path)
-        else:
-            # Convert to optimal format for ASR
-            converted_path = converter.convert_for_asr(file_path)
-
-        # Step 2: Assess audio quality
+        # Step 2: Assess audio quality.
         await _update_job_status(
             redis,
             job_id,
-            progress={
-                "stage": "quality_assessment",
-                "percent_complete": 30,
-                "message": "Assessing audio quality...",
-                "updated_at": datetime.now(UTC).isoformat(),
-            },
+            progress=_progress("quality_assessment", 30, "Assessing audio quality..."),
         )
-
         quality_metrics = assessor.assess(converted_path)
         logger.info(
             "audio_quality_assessed",
@@ -133,145 +238,69 @@ async def process_audio_job(
             snr_db=quality_metrics.snr_db,
         )
 
-        # Step 3: Transcribe with Deepgram
+        # Step 3: Transcribe.
         await _update_job_status(
             redis,
             job_id,
             status=JobStatus.TRANSCRIBING,
-            progress={
-                "stage": "transcribing",
-                "percent_complete": 50,
-                "message": "Transcribing audio with Deepgram...",
-                "updated_at": datetime.now(UTC).isoformat(),
-            },
+            progress=_progress(
+                "transcribing", 50, "Transcribing audio with Deepgram..."
+            ),
         )
+        transcription_result = _transcribe(converted_path, input_data, job_id)
 
-        # Import here to avoid circular imports and allow for missing API key
-        try:
-            from audio_processor.services.deepgram_client import (  # noqa: PLC0415
-                DeepgramTranscriptionClient,
-            )
-
-            transcription_client = DeepgramTranscriptionClient()
-            transcription_result = transcription_client.transcribe(
-                converted_path,
-                enable_diarization=input_data.get("enable_diarization", True),
-                enable_summarization=input_data.get("enable_summarization", True),
-                language=input_data.get("language", "en"),
-            )
-        except ConfigurationError as e:
-            # Deepgram not configured - log and continue with placeholder
-            logger.warning("deepgram_not_configured", job_id=job_id, error=str(e))
-            transcription_result = None
-
-        # Step 4: Post-processing
+        # Step 4: Post-process and clean up the converted temp file.
         await _update_job_status(
             redis,
             job_id,
             status=JobStatus.POSTPROCESSING,
-            progress={
-                "stage": "postprocessing",
-                "percent_complete": 85,
-                "message": "Generating output artifacts...",
-                "updated_at": datetime.now(UTC).isoformat(),
-            },
+            progress=_progress("postprocessing", 85, "Generating output artifacts..."),
         )
-
-        # Clean up temporary files
         if converted_path != file_path:
             converted_path.unlink(missing_ok=True)
 
-        # Build result
         result: dict[str, object] = {
             "job_id": job_id,
             "status": "completed",
             "quality": quality_metrics.model_dump(),
         }
 
-        # Generate artifacts if transcription was successful
         artifacts: dict[str, str] = {}
-        if transcription_result:
-            result["transcription"] = {
-                "transcript": transcription_result.transcript,
-                "summary": transcription_result.summary,
-                "speaker_count": len(transcription_result.speakers),
-                "word_count": transcription_result.metadata.word_count,
-                "duration_ms": int(
-                    transcription_result.metadata.duration_seconds * 1000
-                ),
-                "duration_seconds": transcription_result.metadata.duration_seconds,
-                "confidence_mean": transcription_result.metadata.confidence_mean,
-                "cost_usd": str(transcription_result.metadata.cost_usd),
-                "language": transcription_result.metadata.language,
-                "speakers": [s.model_dump() for s in transcription_result.speakers],
-                "utterances": [u.model_dump() for u in transcription_result.utterances],
-            }
-
-            # Generate all artifact formats
+        if transcription_result is not None:
+            result["transcription"] = _build_transcription_payload(transcription_result)
             await _update_job_status(
                 redis,
                 job_id,
-                progress={
-                    "stage": "generating_artifacts",
-                    "percent_complete": 95,
-                    "message": "Generating transcript formats...",
-                    "updated_at": datetime.now(UTC).isoformat(),
-                },
+                progress=_progress(
+                    "generating_artifacts", 95, "Generating transcript formats..."
+                ),
             )
-
-            try:
-                from audio_processor.services.transcript_formatter import (  # noqa: PLC0415
-                    ArtifactGenerator,
-                )
-
-                generator = ArtifactGenerator()
-                artifacts = generator.generate_all(transcription_result)
-                logger.info(
-                    "artifacts_generated",
-                    job_id=job_id,
-                    artifact_count=len(artifacts),
-                )
-            except (ValidationError, AudioProcessorError) as e:
-                logger.warning(
-                    "artifact_generation_failed",
-                    job_id=job_id,
-                    error=str(e),
-                )
-                # Continue without artifacts - transcription still succeeded
+            artifacts = _generate_artifacts(transcription_result, job_id)
         else:
             result["transcription"] = None
             result["warning"] = (
                 "Transcription skipped - Deepgram API key not configured"
             )
 
-        # Update final status
         await _update_job_status(
             redis,
             job_id,
             status=JobStatus.COMPLETED,
-            progress={
-                "stage": "completed",
-                "percent_complete": 100,
-                "message": "Processing complete",
-                "updated_at": datetime.now(UTC).isoformat(),
-            },
+            progress=_progress("completed", 100, "Processing complete"),
             result=result,
             artifacts=artifacts,
             completed_at=datetime.now(UTC).isoformat(),
         )
-
         logger.info(
             "audio_job_completed",
             job_id=job_id,
             duration_seconds=quality_metrics.duration_seconds,
             has_transcription=transcription_result is not None,
         )
-
         return result  # noqa: TRY300
 
     except (ValidationError, AudioProcessorError, TranscriptionError) as e:
         logger.exception("audio_job_failed", job_id=job_id, error=str(e))
-
         await _update_job_status(
             redis,
             job_id,
@@ -279,12 +308,10 @@ async def process_audio_job(
             error=str(e),
             completed_at=datetime.now(UTC).isoformat(),
         )
-
         raise
 
     except Exception as e:
         logger.exception("audio_job_unexpected_error", job_id=job_id, error=str(e))
-
         await _update_job_status(
             redis,
             job_id,
@@ -292,7 +319,6 @@ async def process_audio_job(
             error=f"Unexpected error: {e}",
             completed_at=datetime.now(UTC).isoformat(),
         )
-
         msg = f"Processing failed: {e}"
         raise AudioProcessorError(msg) from e
 

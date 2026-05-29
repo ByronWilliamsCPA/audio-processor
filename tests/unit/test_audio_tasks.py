@@ -16,7 +16,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from audio_processor.core.exceptions import ValidationError
+from audio_processor.core.exceptions import AudioProcessorError, ValidationError
 from audio_processor.core.job_store import job_key
 from audio_processor.core.models import (
     AudioQualityMetrics,
@@ -209,3 +209,52 @@ class TestProcessAudioJob:
         assert stored["status"] == "completed"
         assert stored["result"]["transcription"] is None
         assert "warning" in stored["result"]
+
+    @pytest.mark.asyncio
+    async def test_unexpected_error_wraps_and_marks_failed(
+        self,
+        input_file: Path,
+    ) -> None:
+        """A non-domain error is wrapped as AudioProcessorError and marks FAILED."""
+        redis = FakeRedis()
+        ctx = {"redis": redis}
+        job_data = {"input": {"file_path": str(input_file)}}
+
+        with (
+            patch(
+                "audio_processor.jobs.audio_tasks.AudioConverter",
+                side_effect=RuntimeError("boom"),
+            ),
+            pytest.raises(AudioProcessorError),
+        ):
+            await process_audio_job(ctx, "job4", job_data)  # type: ignore[arg-type]
+
+        stored = json.loads(redis.store[job_key("job4")])
+        assert stored["status"] == "failed"
+        assert stored["error"]
+
+    @pytest.mark.asyncio
+    async def test_artifact_failure_still_completes(
+        self,
+        input_file: Path,
+        patched_services: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Artifact generation failure should not fail an otherwise-complete job."""
+        assert patched_services is not None
+        failing = MagicMock()
+        failing.generate_all.side_effect = AudioProcessorError("boom")
+        monkeypatch.setattr(
+            "audio_processor.services.transcript_formatter.ArtifactGenerator",
+            MagicMock(return_value=failing),
+        )
+        redis = FakeRedis()
+        ctx = {"redis": redis}
+        job_data = {"input": {"file_path": str(input_file)}}
+
+        result = await process_audio_job(ctx, "job5", job_data)  # type: ignore[arg-type]
+
+        assert result["status"] == "completed"
+        stored = json.loads(redis.store[job_key("job5")])
+        assert stored["status"] == "completed"
+        assert stored["artifacts"] == {}
