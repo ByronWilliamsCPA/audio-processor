@@ -31,6 +31,11 @@ API_KEY_HEADER = "X-API-Key"
 # Per-identifier fixed window: identifier -> (request_count, window_start_monotonic).
 _RATE_WINDOWS: dict[str, tuple[int, float]] = {}
 
+# Soft cap on tracked identifiers. When exceeded, fully-expired windows are
+# evicted opportunistically so a flood of unique clients (e.g. distinct source
+# IPs) cannot grow the map without bound.
+_MAX_TRACKED_CLIENTS = 10_000
+
 
 def reset_rate_limits() -> None:
     """Clear all rate-limit state (intended for tests)."""
@@ -111,6 +116,12 @@ async def rate_limit(
     now = time.monotonic()
     window = settings.rate_limit_window_seconds
     limit = settings.rate_limit_requests
+
+    # Opportunistically evict fully-expired windows to bound memory.
+    if len(_RATE_WINDOWS) > _MAX_TRACKED_CLIENTS:
+        expired = [key for key, (_, s) in _RATE_WINDOWS.items() if now - s >= window]
+        for key in expired:
+            del _RATE_WINDOWS[key]
 
     count, start = _RATE_WINDOWS.get(identifier, (0, now))
     if now - start >= window:

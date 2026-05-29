@@ -108,6 +108,9 @@ class TestRedisJobStore:
         store = RedisJobStore(redis)  # type: ignore[arg-type]
         redis.store[job_key("b")] = json.dumps({"status": "a"})
         assert await store.get("b") == {"status": "a"}
+        # Cover the bytes-decode branch as well.
+        redis.store[job_key("c")] = json.dumps({"status": "z"}).encode()
+        assert await store.get("c") == {"status": "z"}
 
     @pytest.mark.asyncio
     async def test_update_merges_existing_record(self) -> None:

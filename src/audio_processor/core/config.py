@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Literal
 
 import platformdirs
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -262,6 +262,23 @@ class Settings(BaseSettings):
             Frozenset of non-empty, stripped API keys parsed from ``api_keys``.
         """
         return frozenset(key.strip() for key in self.api_keys.split(",") if key.strip())
+
+    @model_validator(mode="after")
+    def _check_enqueue_requires_redis(self) -> Settings:
+        """Ensure enqueueing is only enabled with a shared Redis store.
+
+        Returns:
+            The validated settings instance.
+
+        Raises:
+            ValueError: If ``enqueue_enabled`` is set without the Redis backend
+                (jobs would otherwise be enqueued where the worker cannot see
+                them, and never processed).
+        """
+        if self.enqueue_enabled and self.job_store_backend != "redis":
+            msg = "enqueue_enabled requires job_store_backend='redis'"
+            raise ValueError(msg)
+        return self
 
 
 # A single, global instance of the settings
