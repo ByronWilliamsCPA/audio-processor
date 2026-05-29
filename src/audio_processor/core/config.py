@@ -207,6 +207,35 @@ class Settings(BaseSettings):
         description="API server port",
     )
 
+    # ==========================================================================
+    # API Security
+    # ==========================================================================
+    auth_required: bool = Field(
+        default=False,
+        description="Require a valid X-API-Key header on /api/v1 endpoints",
+    )
+    api_keys: str = Field(
+        default="",
+        description=(
+            "Comma-separated API keys accepted when auth_required is true. "
+            "Provide via the API_KEYS environment variable / secret."
+        ),
+    )
+    rate_limit_enabled: bool = Field(
+        default=False,
+        description="Enable per-client rate limiting on expensive endpoints",
+    )
+    rate_limit_requests: int = Field(
+        default=60,
+        ge=1,
+        description="Maximum requests allowed per rate-limit window",
+    )
+    rate_limit_window_seconds: int = Field(
+        default=60,
+        ge=1,
+        description="Length of the rate-limit window in seconds",
+    )
+
     @property
     def max_file_size_bytes(self) -> int:
         """Maximum file size in bytes.
@@ -224,6 +253,15 @@ class Settings(BaseSettings):
             Duration limit converted from hours to seconds.
         """
         return self.audio_max_duration_hours * 3600
+
+    @property
+    def api_key_set(self) -> frozenset[str]:
+        """Configured API keys as a set.
+
+        Returns:
+            Frozenset of non-empty, stripped API keys parsed from ``api_keys``.
+        """
+        return frozenset(key.strip() for key in self.api_keys.split(",") if key.strip())
 
 
 # A single, global instance of the settings

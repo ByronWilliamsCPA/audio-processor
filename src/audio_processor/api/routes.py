@@ -19,9 +19,19 @@ from typing import Annotated
 
 import anyio
 import anyio.to_thread
-from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
 from fastapi.responses import Response
 
+from audio_processor.api.security import rate_limit, require_api_key
 from audio_processor.core.config import settings
 from audio_processor.core.exceptions import ValidationError
 from audio_processor.core.job_store import InMemoryJobStore, JobStore
@@ -45,8 +55,13 @@ logger = get_logger(__name__)
 
 PLAIN_TEXT_CONTENT_TYPE = "text/plain; charset=utf-8"
 
-# Create router with prefix
-router = APIRouter(prefix="/api/v1", tags=["Audio Processing"])
+# Create router with prefix. API-key authentication is enforced on every
+# /api/v1 route (a no-op unless auth_required is enabled).
+router = APIRouter(
+    prefix="/api/v1",
+    tags=["Audio Processing"],
+    dependencies=[Depends(require_api_key)],
+)
 
 # Process-local fallback store. In production, a RedisJobStore is attached to
 # ``app.state.job_store`` at startup (see api/__init__.py) so the API and the
@@ -114,11 +129,54 @@ async def _maybe_enqueue(
     await enqueue_task(pool, "process_audio_job", job_id, record)
 
 
+# Upload streaming chunk size (1 MiB).
+UPLOAD_CHUNK_SIZE = 1024 * 1024
+
+
+async def _stream_upload_to_temp(
+    file: UploadFile,
+    temp_path: Path,
+    max_bytes: int,
+) -> int:
+    """Stream an upload to disk in bounded chunks, enforcing a hard size cap.
+
+    Avoids buffering the entire body in memory and does not trust the
+    client-supplied ``Content-Length``: the cap is enforced on bytes actually
+    read.
+
+    Args:
+        file: The incoming upload.
+        temp_path: Destination path (already created).
+        max_bytes: Maximum permitted size in bytes.
+
+    Returns:
+        Number of bytes written.
+
+    Raises:
+        HTTPException: 413 if the stream exceeds ``max_bytes``.
+    """
+    bytes_written = 0
+    async with await anyio.open_file(temp_path, "wb") as out:
+        while chunk := await file.read(UPLOAD_CHUNK_SIZE):
+            bytes_written += len(chunk)
+            if bytes_written > max_bytes:
+                raise HTTPException(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    detail=(
+                        "File too large. Maximum size is "
+                        f"{settings.audio_max_file_size_mb} MB"
+                    ),
+                )
+            await out.write(chunk)
+    return bytes_written
+
+
 @router.post(
     "/process",
     status_code=status.HTTP_202_ACCEPTED,
     summary="Submit audio for processing",
     description="Upload an audio or video file for transcription processing.",
+    dependencies=[Depends(rate_limit)],
 )
 async def process_audio(
     request: Request,
@@ -191,6 +249,8 @@ async def process_audio(
         enable_summarization=enable_summarization,
     )
 
+    temp_path: Path | None = None
+    success = False
     try:
         # Save file to temp directory
         temp_dir = Path(settings.audio_temp_dir)
@@ -205,17 +265,17 @@ async def process_audio(
         os.close(fd)
         temp_path = Path(temp_name)
 
-        # Read upload and write asynchronously
-        content = await file.read()
-        await anyio.Path(temp_path).write_bytes(content)
+        # Stream the upload to disk with a hard size cap (do not buffer the
+        # entire body in memory or trust the client Content-Length header).
+        file_size_bytes = await _stream_upload_to_temp(
+            file, temp_path, settings.max_file_size_bytes
+        )
 
         # Validate audio file
         converter = AudioConverter()
         try:
             audio_info = converter.validate_file(temp_path)
         except ValidationError as e:
-            # Clean up temp file
-            await anyio.Path(temp_path).unlink(missing_ok=True)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(e),
@@ -225,7 +285,7 @@ async def process_audio(
         job_input = AudioJobInput(
             file_path=str(temp_path),
             original_filename=file.filename,
-            file_size_bytes=len(content),
+            file_size_bytes=file_size_bytes,
             content_type=file.content_type or "application/octet-stream",
             enable_diarization=enable_diarization,
             enable_summarization=enable_summarization,
@@ -271,12 +331,14 @@ async def process_audio(
         base_url = str(request.base_url).rstrip("/")
         status_url = f"{base_url}/api/v1/status/{job_id}"
 
-        return ProcessAudioResponse(
+        response = ProcessAudioResponse(
             job_id=uuid.UUID(job_id),
             status=JobStatus.QUEUED,
             status_url=status_url,
             message=f"Audio file queued for processing. Duration: {audio_info.duration_seconds:.1f}s",
         )
+        success = True
+        return response  # noqa: TRY300
 
     except HTTPException:
         raise
@@ -286,6 +348,11 @@ async def process_audio(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to process audio upload",
         ) from e
+    finally:
+        # On any failure path the upload is orphaned: remove it. On success the
+        # worker takes ownership of the temp file and deletes it when done.
+        if temp_path is not None and not success:
+            await anyio.Path(temp_path).unlink(missing_ok=True)
 
 
 @router.get(
