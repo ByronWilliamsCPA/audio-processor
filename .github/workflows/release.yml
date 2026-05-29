@@ -4,14 +4,18 @@
 # manual tag-based releases.
 #
 # Features:
-#   - Pre-release testing
 #   - Semantic versioning (if enabled) or manual tag-based releases
-#   - PyPI publishing with OIDC trusted publishing
 #   - GitHub Release creation
+#
+# Notes:
+#   - PyPI publishing is disabled (private repo; publish-to-pypi: false)
+#   - Triggered by CI workflow completion, not direct push to main
 name: Semantic Release
 
 "on":
-  push:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches:
       - main
       - master
@@ -30,20 +34,24 @@ name: Semantic Release
 
 # Prevent concurrent releases
 concurrency:
-  group: "release-${{ github.ref }}"
+  group: "release-${{ github.event.workflow_run.head_branch || github.ref_name }}"
   cancel-in-progress: false
 
 permissions:
-  contents: write
-  issues: write
-  pull-requests: write
-  id-token: write
-  attestations: write
+  contents: read
 
 # Uses org-level reusable workflow
 jobs:
   release:
     name: Release Pipeline
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+    if: >-
+      (github.event_name == 'workflow_dispatch' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
+      github.event.workflow_run.conclusion == 'success'
     uses: ByronWilliamsCPA/.github/.github/workflows/python-release.yml@799ebd63e16aba0236ceded915f5c1cac20823b3  # main
     with:
       python-version: '3.12'
@@ -51,9 +59,9 @@ jobs:
       source-directory: 'src'
       semantic-release: true
       force-release: "${{ github.event.inputs.force_release || '' }}"
-      publish-to-pypi: true
+      publish-to-pypi: false
       pypi-package-name: 'audio-processor'
-      run-tests: true
-      attestations: true
-      environment: pypi
+      run-tests: false
+      skip-tests-reason: 'Tests run in upstream CI pipeline before this workflow fires'
       no-build: false  # project uses hatchling build backend; uv must build the editable install
+    secrets: inherit  # pragma: allowlist secret
