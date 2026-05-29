@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -16,8 +16,6 @@ from audio_processor.core.config import settings
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    from fastapi import UploadFile
 
 
 class _FakeUpload:
@@ -39,7 +37,7 @@ def client() -> TestClient:
 
 
 @pytest.fixture(autouse=True)
-def _clear_store() -> None:
+def clear_store() -> None:
     """Clear the in-memory job store between tests."""
     _get_job_store().clear()
 
@@ -51,17 +49,17 @@ class TestStreamingUploadCap:
     async def test_raises_413_when_stream_exceeds_cap(self, tmp_path: Path) -> None:
         """Streaming beyond the byte cap aborts with 413."""
         dest = tmp_path / "out.bin"
-        upload = cast("UploadFile", _FakeUpload(b"x" * 100))
+        upload = _FakeUpload(b"x" * 100)
         with pytest.raises(HTTPException) as exc:
-            await _stream_upload_to_temp(upload, dest, max_bytes=10)
+            await _stream_upload_to_temp(upload, dest, max_bytes=10)  # pyright: ignore[reportArgumentType]
         assert exc.value.status_code == 413
 
     @pytest.mark.asyncio
     async def test_writes_bytes_within_cap(self, tmp_path: Path) -> None:
         """A stream within the cap is written and the byte count returned."""
         dest = tmp_path / "out.bin"
-        upload = cast("UploadFile", _FakeUpload(b"abc", b"de"))
-        written = await _stream_upload_to_temp(upload, dest, max_bytes=100)
+        upload = _FakeUpload(b"abc", b"de")
+        written = await _stream_upload_to_temp(upload, dest, max_bytes=100)  # pyright: ignore[reportArgumentType]
         assert written == 5
         assert dest.read_bytes() == b"abcde"
 
