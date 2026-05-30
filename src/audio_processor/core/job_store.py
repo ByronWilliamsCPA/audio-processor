@@ -17,11 +17,13 @@ from __future__ import annotations
 
 import abc
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from audio_processor.core.config import settings
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable
+
     from redis.asyncio import Redis
 
 # A job record is a JSON-serializable mapping. Values are intentionally broad
@@ -143,9 +145,22 @@ class InMemoryJobStore(JobStore):
 
 
 class RedisJobStore(JobStore):
-    """Job store backed by JSON values in Redis.
+    """Job store backed by a Redis hash per job.
 
     Used in production so the API and the separate-process worker share state.
+
+    Each job is a Redis hash keyed by ``job:{id}`` whose fields are the record
+    keys with individually JSON-encoded values. Partial updates use ``HSET`` on
+    only the changed fields, which Redis applies atomically: two writers (e.g.
+    the API and the worker) that touch *different* fields no longer clobber each
+    other, unlike a whole-record read-modify-write over a single JSON string.
+    Concurrent writes to the *same* field remain last-writer-wins, the expected
+    contract.
+
+    # #CRITICAL: concurrency: API and worker write the same job from separate
+    # processes; field-level HSET is what prevents lost updates.
+    # #VERIFY: covered by
+    # test_job_store.test_concurrent_field_updates_do_not_clobber.
     """
 
     def __init__(self, redis: Redis, ttl_seconds: int | None = None) -> None:
@@ -160,33 +175,83 @@ class RedisJobStore(JobStore):
         self._ttl = ttl_seconds or settings.job_result_ttl_seconds
 
     @staticmethod
-    def _decode(raw: object) -> JobRecord | None:
-        """Decode a raw Redis value into a record.
+    def _as_text(value: object) -> str:
+        """Coerce a Redis hash field/value to ``str`` (clients may not decode).
 
         Args:
-            raw: Bytes or string fetched from Redis, or ``None``.
+            value: A ``str`` or ``bytes`` returned by ``HGETALL``.
 
         Returns:
-            The parsed record, or ``None`` if ``raw`` is ``None``.
+            The value as text.
         """
-        if raw is None:
+        return value.decode() if isinstance(value, bytes) else str(value)
+
+    @classmethod
+    def _decode_hash(cls, raw: dict[object, object]) -> JobRecord | None:
+        """Decode an ``HGETALL`` result into a record.
+
+        Args:
+            raw: Mapping of field to JSON-encoded value (possibly ``bytes``).
+                An empty mapping means the key is absent.
+
+        Returns:
+            The parsed record, or ``None`` if ``raw`` is empty.
+        """
+        if not raw:
             return None
-        if isinstance(raw, bytes):
-            raw = raw.decode()
-        return json.loads(str(raw))
+        return {
+            cls._as_text(field): json.loads(cls._as_text(value))
+            for field, value in raw.items()
+        }
+
+    @staticmethod
+    def _encode_fields(fields: dict[str, object]) -> dict[str, str]:
+        """JSON-encode each field value for storage as a hash field.
+
+        Args:
+            fields: Record fields to encode.
+
+        Returns:
+            Mapping of field name to its JSON-encoded value.
+        """
+        return {field: json.dumps(value) for field, value in fields.items()}
 
     async def create(self, job_id: str, record: JobRecord) -> None:
         """See :meth:`JobStore.create`."""
-        await self._redis.set(job_key(job_id), json.dumps(record), ex=self._ttl)
+        key = job_key(job_id)
+        mapping = self._encode_fields(record)
+        # Replace any prior record (clears stale fields) and (re)apply the TTL,
+        # atomically via MULTI/EXEC.
+        pipe = self._redis.pipeline(transaction=True)
+        pipe.delete(key)
+        if mapping:
+            pipe.hset(key, mapping=mapping)
+        pipe.expire(key, self._ttl)
+        await pipe.execute()
 
     async def get(self, job_id: str) -> JobRecord | None:
         """See :meth:`JobStore.get`."""
-        raw = await self._redis.get(job_key(job_id))
-        return self._decode(raw)
+        # redis-py types hash commands as ``Awaitable[...] | ...``; on the async
+        # client the value is always awaitable.
+        raw = await cast(
+            "Awaitable[dict[object, object]]",
+            self._redis.hgetall(job_key(job_id)),
+        )
+        return self._decode_hash(raw)
 
     async def update(self, job_id: str, **fields: object) -> JobRecord:
-        """See :meth:`JobStore.update`."""
-        record = await self.get(job_id) or {}
-        _merge_fields(record, fields)
-        await self._redis.set(job_key(job_id), json.dumps(record), ex=self._ttl)
-        return record
+        """See :meth:`JobStore.update`.
+
+        Writes only the provided non-``None`` fields with ``HSET`` so concurrent
+        writers touching different fields do not overwrite each other.
+        """
+        key = job_key(job_id)
+        mapping = self._encode_fields(
+            {name: value for name, value in fields.items() if value is not None}
+        )
+        if mapping:
+            pipe = self._redis.pipeline(transaction=True)
+            pipe.hset(key, mapping=mapping)
+            pipe.expire(key, self._ttl)
+            await pipe.execute()
+        return await self.get(job_id) or {}

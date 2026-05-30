@@ -9,7 +9,6 @@ reads from -- the disconnect this refactor fixes.
 
 from __future__ import annotations
 
-import json
 from decimal import Decimal
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
@@ -17,7 +16,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from audio_processor.core.exceptions import AudioProcessorError, ValidationError
-from audio_processor.core.job_store import job_key
+from audio_processor.core.job_store import RedisJobStore
 from audio_processor.core.models import (
     AudioQualityMetrics,
     QualityLevel,
@@ -27,26 +26,12 @@ from audio_processor.core.models import (
     Utterance,
 )
 from audio_processor.jobs.audio_tasks import process_audio_job
+from tests.unit._fake_redis import FakeRedis
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
     from pathlib import Path
-
-
-class FakeRedis:
-    """Minimal async Redis stand-in supporting get/set with TTL."""
-
-    def __init__(self) -> None:
-        self.store: dict[str, str] = {}
-
-    async def get(self, key: str) -> str | None:
-        """Return the stored value for ``key`` or ``None``."""
-        return self.store.get(key)
-
-    async def set(self, key: str, value: str, ex: int | None = None) -> None:
-        """Store ``value`` under ``key`` (TTL ignored in the fake)."""
-        _ = ex
-        self.store[key] = value
+    from typing import Any
 
 
 def _quality_metrics() -> AudioQualityMetrics:
@@ -164,7 +149,10 @@ class TestProcessAudioJob:
         result = await process_audio_job(ctx, "job1", job_data)  # type: ignore[arg-type]
 
         assert result["status"] == "completed"
-        stored = json.loads(redis.store[job_key("job1")])
+        stored: dict[str, Any] | None = await RedisJobStore(redis).get(  # type: ignore[arg-type]
+            "job1"
+        )
+        assert stored is not None
         assert stored["status"] == "completed"
         assert stored["result"]["transcription"]["transcript"] == "hello world"
         assert stored["artifacts"] == {"transcript.txt": "hello world"}
@@ -184,7 +172,10 @@ class TestProcessAudioJob:
         with pytest.raises(ValidationError):
             await process_audio_job(ctx, "job2", job_data)  # type: ignore[arg-type]
 
-        stored = json.loads(redis.store[job_key("job2")])
+        stored: dict[str, Any] | None = await RedisJobStore(redis).get(  # type: ignore[arg-type]
+            "job2"
+        )
+        assert stored is not None
         assert stored["status"] == "failed"
         assert stored["error"]
 
@@ -205,7 +196,10 @@ class TestProcessAudioJob:
         result = await process_audio_job(ctx, "job3", job_data)  # type: ignore[arg-type]
 
         assert result["status"] == "completed"
-        stored = json.loads(redis.store[job_key("job3")])
+        stored: dict[str, Any] | None = await RedisJobStore(redis).get(  # type: ignore[arg-type]
+            "job3"
+        )
+        assert stored is not None
         assert stored["status"] == "completed"
         assert stored["result"]["transcription"] is None
         assert "warning" in stored["result"]
@@ -229,7 +223,10 @@ class TestProcessAudioJob:
         ):
             await process_audio_job(ctx, "job4", job_data)  # type: ignore[arg-type]
 
-        stored = json.loads(redis.store[job_key("job4")])
+        stored: dict[str, Any] | None = await RedisJobStore(redis).get(  # type: ignore[arg-type]
+            "job4"
+        )
+        assert stored is not None
         assert stored["status"] == "failed"
         assert stored["error"]
 
@@ -255,6 +252,9 @@ class TestProcessAudioJob:
         result = await process_audio_job(ctx, "job5", job_data)  # type: ignore[arg-type]
 
         assert result["status"] == "completed"
-        stored = json.loads(redis.store[job_key("job5")])
+        stored: dict[str, Any] | None = await RedisJobStore(redis).get(  # type: ignore[arg-type]
+            "job5"
+        )
+        assert stored is not None
         assert stored["status"] == "completed"
         assert stored["artifacts"] == {}

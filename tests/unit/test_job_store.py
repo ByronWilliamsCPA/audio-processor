@@ -2,32 +2,15 @@
 
 from __future__ import annotations
 
-import json
+import asyncio
 
 import pytest
 
 from audio_processor.core.job_store import (
     InMemoryJobStore,
     RedisJobStore,
-    job_key,
 )
-
-
-class FakeRedis:
-    """Minimal async Redis stand-in supporting get/set with TTL."""
-
-    def __init__(self) -> None:
-        self.store: dict[str, str] = {}
-        self.last_ex: int | None = None
-
-    async def get(self, key: str) -> str | None:
-        """Return the stored value for ``key`` or ``None``."""
-        return self.store.get(key)
-
-    async def set(self, key: str, value: str, ex: int | None = None) -> None:
-        """Store ``value`` under ``key`` and record the TTL."""
-        self.store[key] = value
-        self.last_ex = ex
+from tests.unit._fake_redis import FakeRedis
 
 
 class TestInMemoryJobStore:
@@ -93,24 +76,34 @@ class TestRedisJobStore:
     """Tests for the Redis-backed job store using a fake connection."""
 
     @pytest.mark.asyncio
-    async def test_create_serializes_json_with_ttl(self) -> None:
-        """Create should write JSON under the namespaced key with a TTL."""
+    async def test_create_roundtrips_record_with_ttl(self) -> None:
+        """Create should persist every field and apply the TTL."""
         redis = FakeRedis()
         store = RedisJobStore(redis, ttl_seconds=123)  # type: ignore[arg-type]
-        await store.create("j1", {"status": "queued"})
-        assert json.loads(redis.store[job_key("j1")]) == {"status": "queued"}
+        await store.create("j1", {"status": "queued", "input": {"x": 1}})
+        assert await store.get("j1") == {"status": "queued", "input": {"x": 1}}
         assert redis.last_ex == 123
 
     @pytest.mark.asyncio
-    async def test_get_decodes_bytes_and_str(self) -> None:
-        """Get should decode both bytes and str Redis payloads."""
+    async def test_get_missing_returns_none(self) -> None:
+        """An absent hash decodes to None, not an empty record."""
         redis = FakeRedis()
         store = RedisJobStore(redis)  # type: ignore[arg-type]
-        redis.store[job_key("b")] = json.dumps({"status": "a"})
+        assert await store.get("nope") is None
+
+    @pytest.mark.asyncio
+    async def test_get_decodes_bytes_and_str_fields(self) -> None:
+        """Get should decode hash fields whether the client decodes or not."""
+        redis = FakeRedis()
+        store = RedisJobStore(redis)  # type: ignore[arg-type]
+        await store.create("b", {"status": "a"})
         assert await store.get("b") == {"status": "a"}
-        # Cover the bytes-decode branch as well.
-        redis.store[job_key("c")] = json.dumps({"status": "z"}).encode()
-        assert await store.get("c") == {"status": "z"}
+        # A client created without decode_responses returns bytes field
+        # names/values; the store must still decode them.
+        redis_bytes = FakeRedis(decode_responses=False)
+        store_bytes = RedisJobStore(redis_bytes)  # type: ignore[arg-type]
+        await store_bytes.create("c", {"status": "z"})
+        assert await store_bytes.get("c") == {"status": "z"}
 
     @pytest.mark.asyncio
     async def test_update_merges_existing_record(self) -> None:
@@ -129,3 +122,19 @@ class TestRedisJobStore:
         store = RedisJobStore(redis)  # type: ignore[arg-type]
         await store.update("missing", status="failed")
         assert await store.get("missing") == {"status": "failed"}
+
+    @pytest.mark.asyncio
+    async def test_concurrent_field_updates_do_not_clobber(self) -> None:
+        """Disjoint concurrent field updates must both survive (issue #54).
+
+        A whole-record read-modify-write would lose one of these; per-field
+        ``HSET`` keeps both.
+        """
+        redis = FakeRedis()
+        store = RedisJobStore(redis)  # type: ignore[arg-type]
+        await store.create("j1", {"status": "queued"})
+        await asyncio.gather(
+            store.update("j1", status="running"),
+            store.update("j1", progress={"pct": 10}),
+        )
+        assert await store.get("j1") == {"status": "running", "progress": {"pct": 10}}
