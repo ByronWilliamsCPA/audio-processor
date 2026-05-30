@@ -15,7 +15,6 @@ limiter) in addition to this safety net.
 
 from __future__ import annotations
 
-import hashlib
 import hmac
 import time
 from typing import TYPE_CHECKING, Annotated
@@ -95,9 +94,10 @@ def _client_identifier(request: Request, x_api_key: str | None) -> str:
         A stable identifier for the caller.
     """
     if x_api_key:
-        # Hash the key so raw secrets are never used as in-memory map keys.
-        digest = hashlib.sha256(x_api_key.encode()).hexdigest()
-        return f"key:{digest}"
+        # Bucket per key without holding the raw secret as a map key. The
+        # builtin (non-cryptographic) hash is sufficient for an in-process
+        # rate-limit bucket id and avoids retaining the key material.
+        return f"key:{hash(x_api_key)}"
     client = request.client
     return f"ip:{client.host}" if client else "anonymous"
 
