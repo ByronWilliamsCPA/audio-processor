@@ -336,7 +336,8 @@ async def process_audio(
         # and an ARQ pool attached at startup so the worker observes the record.
         try:
             await _maybe_enqueue(request, job_id, record)
-        except Exception:  # noqa: BLE001 - mark the orphaned record FAILED, then surface
+        except Exception:
+            # Mark the orphaned record FAILED, then surface the error.
             await store.update(
                 job_id,
                 status=JobStatus.FAILED.value,
