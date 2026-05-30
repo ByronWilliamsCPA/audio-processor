@@ -6,16 +6,12 @@ It's simpler and more lightweight than Celery, with excellent async/await suppor
 Features:
 - Async/await native
 - Job retries with exponential backoff
-- Scheduled/cron jobs
 - Job result storage
 - Worker pooling
 
-Alternative: For heavier workloads or complex workflows, see Celery patterns at the
-bottom of this file.
-
 Setup:
     1. Install ARQ:
-       uv add arq redis
+       uv sync --extra jobs
 
     2. Start Redis:
        docker-compose up -d redis
@@ -29,23 +25,9 @@ Setup:
 
 from __future__ import annotations
 
-import asyncio
 import logging
-import sys
-from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, ClassVar
 
-# Python 3.10 compatibility: UTC was added in 3.11.
-# basedpyright is configured for Python 3.12, so the 3.10 fallback is
-# statically unreachable for the analyzer; suppress reportUnreachable on
-# the fallback body. The runtime guard is still required because the
-# project supports Python 3.10 (requires-python = ">=3.10,<3.15").
-if sys.version_info >= (3, 11):  # noqa: UP036
-    from datetime import UTC
-else:
-    UTC = timezone.utc  # noqa: UP017  # pyright: ignore[reportUnreachable]
-
-from arq import cron
 from arq.connections import RedisSettings
 
 from audio_processor.core.config import settings
@@ -54,143 +36,10 @@ from audio_processor.jobs.audio_tasks import process_audio_job
 if TYPE_CHECKING:
     from arq.connections import ArqRedis
 
-    # Type aliases for ARQ job system
-    # ARQ context contains redis connection, job_id, etc.
+    # ARQ context contains the redis connection, job_id, etc.
     JobContext = dict[str, object]
-    # Job result is a dict with task output
-    JobResult = dict[str, str | int | float | bool | None]
 
 logger = logging.getLogger(__name__)
-
-
-# =============================================================================
-# Task Functions
-# =============================================================================
-
-
-async def example_background_task(
-    ctx: JobContext, user_id: str, _data: dict[str, object]
-) -> JobResult:
-    """Example background task.
-
-    Args:
-        ctx: ARQ context (contains redis connection, job_id, etc.)
-        user_id: User identifier
-        _data: Task data (unused in this example).
-
-    Returns:
-        Result dictionary with task status and user_id.
-    """
-    logger.info("background_task_started", user_id=user_id, job_id=ctx.get("job_id"))  # type: ignore[call-arg]
-
-    # Simulate some work
-    await asyncio.sleep(2)
-
-    # Access Redis for storing results
-    redis: ArqRedis = ctx["redis"]  # pyright: ignore[reportAssignmentType]
-    await redis.set(f"task_result:{user_id}", "completed", expire=3600)  # type: ignore[call-arg]
-
-    logger.info("background_task_completed", user_id=user_id)  # type: ignore[call-arg]
-
-    return {
-        "status": "success",
-        "user_id": user_id,
-        "processed_at": datetime.now(UTC).isoformat(),
-    }
-
-
-async def send_email_task(
-    ctx: JobContext,  # noqa: ARG001
-    recipient: str,
-    subject: str,
-    body: str,  # noqa: ARG001
-) -> JobResult:
-    """Send email asynchronously.
-
-    Args:
-        ctx: ARQ context
-        recipient: Email recipient
-        subject: Email subject
-        body: Email body
-
-    Returns:
-        Send status
-    """
-    logger.info("sending_email", recipient=recipient, subject=subject)  # type: ignore[call-arg]
-
-    # NOTE: Email integration required - configure provider in production
-    # Supported options: SendGrid, AWS SES, Mailgun, Postmark
-    # Example with SendGrid:
-    #   from sendgrid import SendGridAPIClient  # noqa: ERA001
-    #   from sendgrid.helpers.mail import Mail  # noqa: ERA001
-    #   sg = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))  # noqa: ERA001
-    #   sg.send(Mail(from_email=..., to_emails=..., subject=..., html_content=...))  # noqa: ERA001
-
-    await asyncio.sleep(1)  # Simulate email sending
-
-    return {
-        "status": "sent",
-        "recipient": recipient,
-        "sent_at": datetime.now(UTC).isoformat(),
-    }
-
-
-async def process_file_upload(
-    ctx: JobContext,  # noqa: ARG001
-    file_id: str,
-    file_path: str,
-) -> JobResult:
-    """Process uploaded file in background.
-
-    Args:
-        ctx: ARQ context
-        file_id: File identifier
-        file_path: Path to uploaded file
-
-    Returns:
-        Processing result with file_id and status.
-
-    Raises:
-        Exception: If file processing fails.
-    """
-    logger.info("processing_file", file_id=file_id, path=file_path)  # type: ignore[call-arg]
-
-    try:
-        # Example: Read and process file
-
-        await asyncio.sleep(3)  # Simulate processing
-
-        return {
-            "status": "completed",
-            "file_id": file_id,
-            "processed_at": datetime.now(UTC).isoformat(),
-            "records_processed": 1000,
-        }
-
-    except Exception:
-        logger.exception("file_processing_failed", file_id=file_id)  # type: ignore[call-arg]
-        raise
-
-
-async def cleanup_old_data(ctx: JobContext) -> int:  # noqa: ARG001
-    """Scheduled task to clean up old data.
-
-    This runs daily via cron schedule defined in WorkerSettings.
-
-    Args:
-        ctx: ARQ context (required by ARQ but unused in this function)
-
-    Returns:
-        Number of records cleaned
-    """
-    logger.info("cleanup_task_started")
-
-    # Example: Delete old records
-
-    deleted_count = 0  # Placeholder
-    logger.info("cleanup_task_completed", deleted=deleted_count)  # type: ignore[call-arg]
-
-    return deleted_count
 
 
 # =============================================================================
@@ -240,17 +89,7 @@ class WorkerSettings:
     # Task functions to register
     # ARQ worker expects a list of callable functions - type varies
     functions: ClassVar[list[object]] = [  # pyright: ignore[reportUnknownVariableType]
-        # Audio processing tasks
         process_audio_job,
-        # Example/utility tasks
-        example_background_task,
-        send_email_task,
-        process_file_upload,
-    ]
-
-    # Scheduled tasks (cron)
-    cron_jobs: ClassVar = [
-        cron(cleanup_old_data, hour=2, minute=0),  # Run daily at 2 AM
     ]
 
     # Redis connection - use settings
@@ -312,129 +151,3 @@ async def enqueue_task(
         raise RuntimeError(msg)
     logger.info("task_enqueued", task=task_name, job_id=job.job_id)  # type: ignore[call-arg]
     return job.job_id
-
-
-# =============================================================================
-# FastAPI Integration Example
-# =============================================================================
-
-"""
-# In your FastAPI app:
-
-from arq import create_pool
-from arq.connections import RedisSettings
-from fastapi import FastAPI, Depends
-
-app = FastAPI()
-
-# Create Redis pool on startup
-@app.on_event("startup")
-async def startup_event():
-    app.state.arq_pool = await create_pool(RedisSettings())
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    await app.state.arq_pool.close()
-
-# Dependency to get ARQ pool
-async def get_arq_pool() -> ArqRedis:
-    return app.state.arq_pool
-
-# Enqueue task from endpoint
-@app.post("/api/process")
-async def process_data(
-    data: dict,
-    arq: ArqRedis = Depends(get_arq_pool)
-):
-    job = await arq.enqueue_job(
-        "example_background_task",
-        user_id="user_123",
-        data=data,
-    )
-
-    return {
-        "job_id": job.job_id,
-        "status": "queued"
-    }
-
-# Check job status
-@app.get("/api/jobs/{job_id}")
-async def get_job_status(
-    job_id: str,
-    arq: ArqRedis = Depends(get_arq_pool)
-):
-    job = Job(job_id, redis=arq)
-    status = await job.status()
-    result = await job.result()
-
-    return {
-        "job_id": job_id,
-        "status": status,
-        "result": result
-    }
-"""
-
-
-# =============================================================================
-# Celery Alternative (for more complex use cases)
-# =============================================================================
-
-"""
-# For heavier workloads, complex workflows, or when you need:
-# - Task chaining and groups
-# - Periodic task scheduling with crontab
-# - Multiple queue priorities
-# - Extensive monitoring tools
-# - Broader ecosystem support
-
-# Use Celery instead of ARQ:
-
-from celery import Celery
-from celery.schedules import crontab
-
-# Initialize Celery
-celery_app = Celery(
-    "audio_processor",
-    broker="redis://localhost:6379/0",
-    backend="redis://localhost:6379/1",
-)
-
-# Configuration
-celery_app.conf.update(
-    task_serializer="json",
-    accept_content=["json"],
-    result_serializer="json",
-    timezone="UTC",
-    enable_utc=True,
-    task_track_started=True,
-    task_time_limit=300,  # 5 minutes
-    task_soft_time_limit=240,  # 4 minutes
-    worker_prefetch_multiplier=4,
-    worker_max_tasks_per_child=1000,
-)
-
-# Define tasks
-@celery_app.task(bind=True, max_retries=3)
-def example_celery_task(self, user_id: str, data: dict):
-    try:
-        # Process task
-        result = process_data(user_id, data)
-        return result
-    except Exception as exc:
-        # Retry with exponential backoff
-        raise self.retry(exc=exc, countdown=2 ** self.request.retries)
-
-# Periodic tasks
-celery_app.conf.beat_schedule = {
-    'cleanup-every-day': {
-        'task': 'cleanup_old_data',
-        'schedule': crontab(hour=2, minute=0),
-    },
-}
-
-# Run worker:
-# celery -A audio_processor.jobs.celery_worker worker --loglevel=info
-
-# Run beat scheduler:
-# celery -A audio_processor.jobs.celery_worker beat --loglevel=info
-"""
