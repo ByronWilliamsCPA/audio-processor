@@ -6,9 +6,11 @@ import asyncio
 
 import pytest
 
+from audio_processor.core.exceptions import DatabaseError
 from audio_processor.core.job_store import (
     InMemoryJobStore,
     RedisJobStore,
+    job_key,
 )
 from tests.unit._fake_redis import FakeRedis
 
@@ -70,6 +72,22 @@ class TestInMemoryJobStore:
         record = await store.get("j1")
         assert record is not None
         assert record["status"] == "completed"
+
+    @pytest.mark.asyncio
+    async def test_get_returns_a_copy(self) -> None:
+        """Mutating a fetched record must not alter stored state.
+
+        Matches RedisJobStore, which always returns a freshly decoded record,
+        so tests on the in-memory backend cannot mask aliasing bugs.
+        """
+        store = InMemoryJobStore()
+        await store.create("j1", {"status": "queued"})
+        fetched = await store.get("j1")
+        assert fetched is not None
+        fetched["status"] = "tampered"
+        again = await store.get("j1")
+        assert again is not None
+        assert again["status"] == "queued"
 
 
 class TestRedisJobStore:
@@ -138,3 +156,17 @@ class TestRedisJobStore:
             store.update("j1", progress={"pct": 10}),
         )
         assert await store.get("j1") == {"status": "running", "progress": {"pct": 10}}
+
+    @pytest.mark.asyncio
+    async def test_get_raises_on_corrupt_record(self) -> None:
+        """A non-JSON field value surfaces as a typed DatabaseError, not a crash.
+
+        Writing a raw (non-JSON-encoded) value mimics a corrupt or legacy
+        record; the store must convert the JSONDecodeError into a logged
+        DatabaseError rather than letting it propagate uncaught.
+        """
+        redis = FakeRedis()
+        store = RedisJobStore(redis)  # type: ignore[arg-type]
+        await redis.hset(job_key("bad"), mapping={"status": "not-json{"})
+        with pytest.raises(DatabaseError, match="Corrupted job record"):
+            await store.get("bad")

@@ -20,11 +20,15 @@ import json
 from typing import TYPE_CHECKING, cast
 
 from audio_processor.core.config import settings
+from audio_processor.core.exceptions import DatabaseError
+from audio_processor.utils.logging import get_logger
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable
 
     from redis.asyncio import Redis
+
+logger = get_logger(__name__)
 
 # A job record is a JSON-serializable mapping. Values are intentionally broad
 # (object) because records carry mixed content (status strings, nested input
@@ -118,12 +122,16 @@ class InMemoryJobStore(JobStore):
 
     async def get(self, job_id: str) -> JobRecord | None:
         """See :meth:`JobStore.get`."""
-        return self._jobs.get(job_id)
+        # Return a copy so callers cannot mutate stored state out of band; this
+        # matches RedisJobStore, which always returns a freshly decoded record.
+        record = self._jobs.get(job_id)
+        return dict(record) if record is not None else None
 
     async def update(self, job_id: str, **fields: object) -> JobRecord:
         """See :meth:`JobStore.update`."""
         record = self._jobs.setdefault(job_id, {})
-        return _merge_fields(record, fields)
+        _merge_fields(record, fields)
+        return dict(record)
 
     # -- Synchronous mapping helpers (test ergonomics / direct injection) -----
 
@@ -170,7 +178,11 @@ class RedisJobStore(JobStore):
 
     def __init__(self, redis: Redis, ttl_seconds: int | None = None) -> None:
         self._redis = redis
-        self._ttl = ttl_seconds or settings.job_result_ttl_seconds
+        # Use ``is not None`` so an explicit 0/negative is not silently coerced
+        # to the default (a caller passing such a value likely has a bug).
+        self._ttl = (
+            ttl_seconds if ttl_seconds is not None else settings.job_result_ttl_seconds
+        )
 
     @staticmethod
     def _as_text(value: object) -> str:
@@ -194,13 +206,23 @@ class RedisJobStore(JobStore):
 
         Returns:
             JobRecord | None: The parsed record, or ``None`` if ``raw`` is empty.
+
+        Raises:
+            DatabaseError: If a stored field value is not valid JSON (a corrupt
+                or legacy record); surfaced as a typed, logged error rather than
+                letting a raw ``JSONDecodeError`` crash the caller.
         """
         if not raw:
             return None
-        return {
-            cls._as_text(field): json.loads(cls._as_text(value))
-            for field, value in raw.items()
-        }
+        try:
+            return {
+                cls._as_text(field): json.loads(cls._as_text(value))
+                for field, value in raw.items()
+            }
+        except (json.JSONDecodeError, ValueError) as exc:
+            logger.exception("job_record_decode_failed")
+            msg = "Corrupted job record in store"
+            raise DatabaseError(msg, operation="decode") from exc
 
     @staticmethod
     def _encode_fields(fields: dict[str, object]) -> dict[str, str]:
