@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, cast
 
 import pytest
+from pydantic import SecretStr
 
 from audio_processor.api.security import (
     rate_limit,
@@ -40,7 +41,7 @@ class TestRequireApiKey:
         from fastapi import HTTPException
 
         monkeypatch.setattr(settings, "auth_required", True)
-        monkeypatch.setattr(settings, "api_keys", "secret-1,secret-2")
+        monkeypatch.setattr(settings, "api_keys", SecretStr("secret-1,secret-2"))
         with pytest.raises(HTTPException) as exc:
             await require_api_key(x_api_key=None)
         assert exc.value.status_code == 401
@@ -51,7 +52,7 @@ class TestRequireApiKey:
         from fastapi import HTTPException
 
         monkeypatch.setattr(settings, "auth_required", True)
-        monkeypatch.setattr(settings, "api_keys", "secret-1")
+        monkeypatch.setattr(settings, "api_keys", SecretStr("secret-1"))
         with pytest.raises(HTTPException) as exc:
             await require_api_key(x_api_key="nope")
         assert exc.value.status_code == 401
@@ -60,7 +61,7 @@ class TestRequireApiKey:
     async def test_accepts_valid_key(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """A valid key passes authentication."""
         monkeypatch.setattr(settings, "auth_required", True)
-        monkeypatch.setattr(settings, "api_keys", "secret-1,secret-2")
+        monkeypatch.setattr(settings, "api_keys", SecretStr("secret-1,secret-2"))
         await require_api_key(x_api_key="secret-2")  # should not raise
 
     @pytest.mark.asyncio
@@ -71,7 +72,7 @@ class TestRequireApiKey:
         from fastapi import HTTPException
 
         monkeypatch.setattr(settings, "auth_required", True)
-        monkeypatch.setattr(settings, "api_keys", "")
+        monkeypatch.setattr(settings, "api_keys", SecretStr(""))
         with pytest.raises(HTTPException) as exc:
             await require_api_key(x_api_key="anything")
         assert exc.value.status_code == 500

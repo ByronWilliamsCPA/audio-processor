@@ -93,6 +93,25 @@ def get_job_store(request: Request) -> JobStore:
     return _default_store
 
 
+def _parse_iso(value: object) -> datetime | None:
+    """Best-effort parse of a stored timestamp.
+
+    Args:
+        value: A datetime, an ISO-8601 string, or anything else.
+
+    Returns:
+        The parsed datetime, or ``None`` if absent/unparseable.
+    """
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value)
+        except ValueError:
+            return None
+    return None
+
+
 async def _maybe_enqueue(
     request: Request,
     job_id: str,
@@ -113,8 +132,13 @@ async def _maybe_enqueue(
         return
     pool = getattr(request.app.state, "arq_pool", None)
     if pool is None:
-        logger.warning("enqueue_skipped_no_pool", job_id=job_id)
-        return
+        # Enqueueing is enabled but no pool is configured: the job would be
+        # stranded QUEUED forever. Fail loudly rather than silently accept it.
+        logger.error("enqueue_pool_missing", job_id=job_id)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Job enqueueing is enabled but no worker pool is configured",
+        )
     # Imported lazily so the API does not hard-depend on the 'jobs' (arq) extra
     # unless enqueueing is actually used.
     from audio_processor.jobs.worker import enqueue_task  # noqa: PLC0415
@@ -310,7 +334,15 @@ async def process_audio(
 
         # Enqueue to the ARQ worker when enabled. Requires a Redis-backed store
         # and an ARQ pool attached at startup so the worker observes the record.
-        await _maybe_enqueue(request, job_id, record)
+        try:
+            await _maybe_enqueue(request, job_id, record)
+        except Exception:  # noqa: BLE001 - mark the orphaned record FAILED, then surface
+            await store.update(
+                job_id,
+                status=JobStatus.FAILED.value,
+                error="Failed to enqueue job for processing",
+            )
+            raise
 
         logger.info(
             "audio_job_queued",
@@ -397,18 +429,10 @@ async def get_job_status(
                 updated_at=datetime.now(UTC),
             )
 
-    # Parse dates
-    created_at = job.get("created_at")
-    if isinstance(created_at, str):
-        created_at = datetime.fromisoformat(created_at)
-    elif not isinstance(created_at, datetime):
-        created_at = datetime.now(UTC)
-
-    completed_at = job.get("completed_at")
-    if isinstance(completed_at, str):
-        completed_at = datetime.fromisoformat(completed_at)
-    elif completed_at is not None and not isinstance(completed_at, datetime):
-        completed_at = None
+    # Parse dates defensively: a corrupt/legacy timestamp must not 500 a status
+    # check (created_at falls back to now; completed_at falls back to None).
+    created_at = _parse_iso(job.get("created_at")) or datetime.now(UTC)
+    completed_at = _parse_iso(job.get("completed_at"))
 
     return JobStatusResponse(
         job_id=uuid.UUID(job_id),

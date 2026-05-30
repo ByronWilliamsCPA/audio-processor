@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import uuid
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 from audio_processor.api import app
 from audio_processor.api.routes import _get_job_store, _stream_upload_to_temp
@@ -103,7 +105,7 @@ class TestAuthEnforcement:
     ) -> None:
         """With auth enabled, a request lacking the key is rejected with 401."""
         monkeypatch.setattr(settings, "auth_required", True)
-        monkeypatch.setattr(settings, "api_keys", "secret")
+        monkeypatch.setattr(settings, "api_keys", SecretStr("secret"))
         response = client.get(f"/api/v1/status/{uuid.uuid4()}")
         assert response.status_code == 401
 
@@ -112,9 +114,63 @@ class TestAuthEnforcement:
     ) -> None:
         """A valid key passes auth (unknown job then yields 404, not 401)."""
         monkeypatch.setattr(settings, "auth_required", True)
-        monkeypatch.setattr(settings, "api_keys", "secret")
+        monkeypatch.setattr(settings, "api_keys", SecretStr("secret"))
         response = client.get(
             f"/api/v1/status/{uuid.uuid4()}",
             headers={"X-API-Key": "secret"},
         )
         assert response.status_code == 404
+
+
+def _fake_request(pool: object | None = None) -> object:
+    """Build a stand-in request whose app.state carries an ARQ pool."""
+    state = SimpleNamespace(arq_pool=pool) if pool is not None else SimpleNamespace()
+    return SimpleNamespace(app=SimpleNamespace(state=state))
+
+
+class TestMaybeEnqueue:
+    """Tests for the API->worker enqueue seam."""
+
+    @pytest.mark.asyncio
+    async def test_noop_when_disabled(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """No enqueue is attempted when enqueueing is disabled."""
+        from audio_processor.api.routes import _maybe_enqueue
+
+        monkeypatch.setattr(settings, "enqueue_enabled", False)
+        await _maybe_enqueue(_fake_request(), "j1", {})  # pyright: ignore[reportArgumentType]
+
+    @pytest.mark.asyncio
+    async def test_raises_when_enabled_without_pool(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Enabled enqueue with no pool is a 500 (would strand the job)."""
+        from audio_processor.api.routes import _maybe_enqueue
+
+        monkeypatch.setattr(settings, "enqueue_enabled", True)
+        with pytest.raises(HTTPException) as exc:
+            await _maybe_enqueue(_fake_request(pool=None), "j1", {})  # pyright: ignore[reportArgumentType]
+        assert exc.value.status_code == 500
+
+    @pytest.mark.asyncio
+    async def test_enqueues_when_enabled_with_pool(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """With a pool, the worker task is enqueued with the record."""
+        from audio_processor.api.routes import _maybe_enqueue
+
+        monkeypatch.setattr(settings, "enqueue_enabled", True)
+        pool = object()
+        captured: dict[str, object] = {}
+
+        async def fake_enqueue(p: object, name: str, *args: object) -> str:
+            captured["pool"] = p
+            captured["name"] = name
+            captured["args"] = args
+            return "job-id"
+
+        monkeypatch.setattr("audio_processor.jobs.worker.enqueue_task", fake_enqueue)
+        await _maybe_enqueue(_fake_request(pool=pool), "j1", {"input": {}})  # pyright: ignore[reportArgumentType]
+
+        assert captured["pool"] is pool
+        assert captured["name"] == "process_audio_job"
+        assert captured["args"] == ("j1", {"input": {}})

@@ -145,15 +145,24 @@ def _build_transcription_payload(result: TranscriptionResult) -> dict[str, objec
     }
 
 
-def _generate_artifacts(result: TranscriptionResult, job_id: str) -> dict[str, str]:
-    """Generate transcript artifacts, tolerating generation failures.
+def _generate_artifacts(
+    result: TranscriptionResult,
+    job_id: str,
+) -> tuple[dict[str, str], str | None]:
+    """Generate transcript artifacts, tolerating any generation failure.
+
+    Artifact generation must never fail an otherwise-successful transcription,
+    so all errors are caught (DOM building / ``json.dumps`` can raise
+    ``TypeError``/``ValueError``/``KeyError``, not just domain errors). The
+    error message is returned so the caller can surface it on the job record.
 
     Args:
         result: The transcription result.
         job_id: Job identifier (for logging).
 
     Returns:
-        Mapping of artifact name to content; empty if generation failed.
+        Tuple of (artifacts, error_message). ``error_message`` is ``None`` on
+        success; artifacts is empty when generation failed.
     """
     from audio_processor.services.transcript_formatter import (  # noqa: PLC0415
         ArtifactGenerator,
@@ -161,12 +170,11 @@ def _generate_artifacts(result: TranscriptionResult, job_id: str) -> dict[str, s
 
     try:
         artifacts = ArtifactGenerator().generate_all(result)
-    except (ValidationError, AudioProcessorError) as e:
-        # Transcription still succeeded; continue without artifacts.
+    except Exception as e:  # noqa: BLE001 - must not fail a completed transcription
         logger.warning("artifact_generation_failed", job_id=job_id, error=str(e))
-        return {}
+        return {}, str(e)
     logger.info("artifacts_generated", job_id=job_id, artifact_count=len(artifacts))
-    return artifacts
+    return artifacts, None
 
 
 async def process_audio_job(
@@ -275,7 +283,11 @@ async def process_audio_job(
                     "generating_artifacts", 95, "Generating transcript formats..."
                 ),
             )
-            artifacts = _generate_artifacts(transcription_result, job_id)
+            artifacts, artifacts_error = _generate_artifacts(
+                transcription_result, job_id
+            )
+            if artifacts_error:
+                result["artifacts_error"] = artifacts_error
         else:
             result["transcription"] = None
             result["warning"] = (

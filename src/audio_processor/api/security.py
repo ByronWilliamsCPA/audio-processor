@@ -15,6 +15,7 @@ limiter) in addition to this safety net.
 
 from __future__ import annotations
 
+import hashlib
 import hmac
 import time
 from typing import TYPE_CHECKING, Annotated
@@ -67,9 +68,15 @@ async def require_api_key(
             detail="Authentication is required but no API keys are configured",
         )
 
-    if x_api_key is None or not any(
-        hmac.compare_digest(x_api_key, key) for key in keys
-    ):
+    # Compare against every key (no short-circuit) to avoid leaking, via
+    # response timing, how many candidate keys were checked before a match.
+    matched = False
+    if x_api_key is not None:
+        for key in keys:
+            if hmac.compare_digest(x_api_key, key):
+                matched = True
+
+    if not matched:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing API key",
@@ -88,7 +95,9 @@ def _client_identifier(request: Request, x_api_key: str | None) -> str:
         A stable identifier for the caller.
     """
     if x_api_key:
-        return f"key:{x_api_key}"
+        # Hash the key so raw secrets are never used as in-memory map keys.
+        digest = hashlib.sha256(x_api_key.encode()).hexdigest()
+        return f"key:{digest}"
     client = request.client
     return f"ip:{client.host}" if client else "anonymous"
 
@@ -117,11 +126,18 @@ async def rate_limit(
     window = settings.rate_limit_window_seconds
     limit = settings.rate_limit_requests
 
-    # Opportunistically evict fully-expired windows to bound memory.
+    # Bound memory: first drop fully-expired windows, then, if still over the
+    # cap (a flood of unique *active* clients), evict the oldest windows so the
+    # map size is hard-capped rather than merely trimmed of expired entries.
     if len(_RATE_WINDOWS) > _MAX_TRACKED_CLIENTS:
         expired = [key for key, (_, s) in _RATE_WINDOWS.items() if now - s >= window]
         for key in expired:
             del _RATE_WINDOWS[key]
+        if len(_RATE_WINDOWS) > _MAX_TRACKED_CLIENTS:
+            overflow = len(_RATE_WINDOWS) - _MAX_TRACKED_CLIENTS
+            oldest = sorted(_RATE_WINDOWS, key=lambda k: _RATE_WINDOWS[k][1])[:overflow]
+            for key in oldest:
+                del _RATE_WINDOWS[key]
 
     count, start = _RATE_WINDOWS.get(identifier, (0, now))
     if now - start >= window:

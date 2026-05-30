@@ -214,8 +214,8 @@ class Settings(BaseSettings):
         default=False,
         description="Require a valid X-API-Key header on /api/v1 endpoints",
     )
-    api_keys: str = Field(
-        default="",
+    api_keys: SecretStr = Field(
+        default=SecretStr(""),
         description=(
             "Comma-separated API keys accepted when auth_required is true. "
             "Provide via the API_KEYS environment variable / secret."
@@ -261,7 +261,24 @@ class Settings(BaseSettings):
         Returns:
             Frozenset of non-empty, stripped API keys parsed from ``api_keys``.
         """
-        return frozenset(key.strip() for key in self.api_keys.split(",") if key.strip())
+        raw = self.api_keys.get_secret_value()
+        return frozenset(key.strip() for key in raw.split(",") if key.strip())
+
+    @model_validator(mode="after")
+    def _check_auth_has_keys(self) -> Settings:
+        """Ensure authentication is configured with at least one key.
+
+        Returns:
+            The validated settings instance.
+
+        Raises:
+            ValueError: If ``auth_required`` is set with no API keys, which
+                would reject every request at runtime.
+        """
+        if self.auth_required and not self.api_key_set:
+            msg = "auth_required=True requires at least one key in api_keys"
+            raise ValueError(msg)
+        return self
 
     @model_validator(mode="after")
     def _check_enqueue_requires_redis(self) -> Settings:
