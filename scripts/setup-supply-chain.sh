@@ -81,6 +81,8 @@ fi
 echo ""
 echo "Step 3: Installing Artifact Registry keyring..."
 echo "------------------------------------------------"
+# SCORECARD:Pinned-Dependencies: Pin with version and hash (CAND-007-SC).
+# Run: pip download 'keyrings.google-artifactregistry-auth==1.1.2' && pip hash *.whl
 pip install --quiet keyrings.google-artifactregistry-auth
 echo -e "  ${GREEN}✓${NC} Keyring installed"
 

@@ -57,11 +57,11 @@ tags:
 
 Project E requires a speech-to-text (ASR) engine to transcribe audio content. The primary options considered were:
 
-1. **Deepgram Nova-2** — Cloud API with state-of-the-art accuracy
-2. **OpenAI Whisper (local)** — Open-source model, self-hosted
-3. **OpenAI Whisper API** — Cloud-hosted Whisper
-4. **AWS Transcribe** — Amazon's ASR service
-5. **Google Speech-to-Text** — Google Cloud's ASR service
+1. **Deepgram Nova-2**: Cloud API with state-of-the-art accuracy
+2. **OpenAI Whisper (local)**: Open-source model, self-hosted
+3. **OpenAI Whisper API**: Cloud-hosted Whisper
+4. **AWS Transcribe**: Amazon's ASR service
+5. **Google Speech-to-Text**: Google Cloud's ASR service
 
 ### Decision
 
@@ -118,10 +118,10 @@ Project E requires a speech-to-text (ASR) engine to transcribe audio content. Th
 
 Speaker diarization (identifying who spoke when) is essential for proper attribution in RAG responses. Options considered:
 
-1. **Deepgram native diarization** — Built into Nova-2 API
-2. **Pyannote Audio** — Open-source diarization library
-3. **AWS Transcribe diarization** — Separate from transcription
-4. **NeMo Speaker Diarization** — NVIDIA's toolkit
+1. **Deepgram native diarization**: Built into Nova-2 API
+2. **Pyannote Audio**: Open-source diarization library
+3. **AWS Transcribe diarization**: Separate from transcription
+4. **NeMo Speaker Diarization**: NVIDIA's toolkit
 
 ### Decision
 
@@ -172,10 +172,10 @@ Speaker diarization (identifying who spoke when) is essential for proper attribu
 
 Project E needs to output structured data that integrates with the existing RAG pipeline (Projects B, C, D). Options considered:
 
-1. **Docling DOM** — Same format used by Project A and Project B
-2. **Custom AudioTranscript schema** — Purpose-built for audio
-3. **W3C Web Annotation format** — Standard annotation format
-4. **Raw JSON with custom structure** — Bespoke format
+1. **Docling DOM**: Same format used by Project A and Project B
+2. **Custom AudioTranscript schema**: Purpose-built for audio
+3. **W3C Web Annotation format**: Standard annotation format
+4. **Raw JSON with custom structure**: Bespoke format
 
 ### Decision
 
@@ -560,10 +560,10 @@ Document:
 
 Summaries improve RAG retrieval and user experience. Options for generating summaries:
 
-1. **Deepgram Summarization v2** — Built into transcription API
-2. **LLM summarization (Claude/GPT)** — Post-processing with LLM
-3. **Extractive summarization** — Select key sentences algorithmically
-4. **No summarization** — Let downstream handle it
+1. **Deepgram Summarization v2**: Built into transcription API
+2. **LLM summarization (Claude/GPT)**: Post-processing with LLM
+3. **Extractive summarization**: Select key sentences algorithmically
+4. **No summarization**: Let downstream handle it
 
 ### Decision
 
@@ -623,10 +623,10 @@ Summaries improve RAG retrieval and user experience. Options for generating summ
 
 ## Revision History
 
-| Version | Date | Author | Changes |
-|---------|------|--------|---------|
-| 1.0 | December 2024 | — | Initial ADR document |
+| Version | Date          | Author         | Changes              |
+|---------|---------------|----------------|----------------------|
+| 1.0     | December 2024 | Byron Williams | Initial ADR document |
 
 ---
 
-*— End of Document —*
+End of Document

@@ -65,6 +65,9 @@ services:
   # Redis Service (Job Queue + Caching)
   # =============================================================================
   redis:
+    # CAND-007: Pin by SHA for reproducible builds.
+    # Run: docker inspect redis:7-alpine --format '{{index .RepoDigests 0}}'
+    # then replace with: image: redis@sha256:<digest>  # redis:7-alpine
     image: redis:7-alpine
     container_name: audio_processor-redis
     command: redis-server --appendonly yes

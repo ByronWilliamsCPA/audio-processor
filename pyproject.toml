@@ -11,7 +11,7 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
 license = {text = "MIT"}
-keywords = []
+keywords = ["audio", "processing", "rag", "speech-to-text", "transcription", "pipeline"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -76,6 +76,13 @@ dependencies = [
     "platformdirs>=4.5.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/ByronWilliamsCPA/audio-processor"
+Repository = "https://github.com/ByronWilliamsCPA/audio-processor"
+Documentation = "https://byronwilliamscpa.github.io/audio-processor"
+"Bug Tracker" = "https://github.com/ByronWilliamsCPA/audio-processor/issues"
+Changelog = "https://github.com/ByronWilliamsCPA/audio-processor/blob/main/CHANGELOG.md"
+
 # Optional dependency groups
 [project.optional-dependencies]
 # Development dependencies
@@ -98,13 +105,13 @@ dev = [
     # Pre-commit
     "pre-commit>=3.3.0",
     # Documentation
-    "mkdocs>=1.6.0",
+    "mkdocs>=1.6.0,<2",
     "mkdocs-material>=9.5.0,<10",
-    "mkdocstrings[python]>=0.26.0",
+    "mkdocstrings[python]>=0.26.0,<1",
     "griffe-pydantic>=1.1.0",
-    "mkdocs-gen-files>=0.5.0",
-    "mkdocs-section-index>=0.3.0",
-    "mkdocs-autorefs>=1.2.0",
+    "mkdocs-gen-files>=0.5.0,<1",
+    "mkdocs-section-index>=0.3.0,<1",
+    "mkdocs-autorefs>=1.2.0,<2",
     "mkdocs-git-revision-date-localized-plugin>=1.3.0",
     "python-frontmatter>=1.1.0",
     "ruamel-yaml>=0.18.0",
@@ -207,7 +214,7 @@ packages = ["src/audio_processor"]
 # Ruff Configuration - Consolidated Linting & Formatting
 [tool.ruff]
 line-length = 88
-target-version = "py312"
+target-version = "py311"
 exclude = [
     ".git",
     ".mypy_cache",

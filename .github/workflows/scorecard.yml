@@ -1,7 +1,7 @@
 # OpenSSF Scorecard for Audio Processor
 # Security posture assessment and supply chain security validation.
 #
-# Dashboard: https://securityscorecards.dev/viewer/?uri=github.com/ByronWilliamsCPA/audio_processor
+# Dashboard: https://securityscorecards.dev/viewer/?uri=github.com/ByronWilliamsCPA/audio-processor
 # Documentation: https://github.com/ossf/scorecard
 name: OpenSSF Scorecard
 

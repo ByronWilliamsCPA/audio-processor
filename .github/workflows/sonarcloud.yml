@@ -118,16 +118,14 @@ jobs:
             --cov-report=term \
             --cov-branch \
             -v
-        continue-on-error: true  # Don't fail on test failures; let SonarCloud report them
 
       - name: Verify coverage report
+        if: always()
         run: |
           if [ ! -f coverage.xml ]; then
-            echo "::warning::Coverage report not found. Tests may have failed."
-            # Create empty coverage file to prevent SonarCloud error
-            echo '<?xml version="1.0" ?><coverage version="1.0"></coverage>' > coverage.xml
+            echo "::warning::Coverage report not found; tests may have failed."
           else
-            echo "✓ Coverage report generated successfully"
+            echo "Coverage report generated successfully"
             ls -lh coverage.xml
           fi
 

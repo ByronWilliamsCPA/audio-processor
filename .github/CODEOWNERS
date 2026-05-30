@@ -2,6 +2,10 @@
 # This file defines code ownership for automated review assignment
 # and branch protection enforcement.
 #
+# FOUND-016: Org-team co-ownership deferred; no @ByronWilliamsCPA/maintainers team exists.
+# To enable dual-ownership on critical paths, create the team at:
+#   https://github.com/orgs/ByronWilliamsCPA/teams
+#
 # Format: path/pattern @github-username or @organization/team
 # Documentation: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 

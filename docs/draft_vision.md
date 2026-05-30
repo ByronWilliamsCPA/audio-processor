@@ -67,11 +67,11 @@ Project E provides a Deepgram-centric audio processing service that:
 
 | Aspect | Project E Approach |
 |--------|-------------------|
-| ASR Engine | Deepgram Nova-2 API (not local Whisper) — faster, more accurate, simpler |
-| Diarization | Native Deepgram (not separate Pyannote) — single API call handles all |
-| Output Format | Docling DOM — same structure as document pipeline, enabling unified downstream processing |
-| GPU Requirements | None — Deepgram is API-based; frees local GPU for other workloads |
-| Summarization | Built-in Deepgram v2 — no separate LLM call needed |
+| ASR Engine | Deepgram Nova-2 API (not local Whisper): faster, more accurate, simpler |
+| Diarization | Native Deepgram (not separate Pyannote): single API call handles all |
+| Output Format | Docling DOM: same structure as document pipeline, enabling unified downstream processing |
+| GPU Requirements | None: Deepgram is API-based; frees local GPU for other workloads |
+| Summarization | Built-in Deepgram v2: no separate LLM call needed |
 
 ---
 
@@ -354,10 +354,10 @@ The key architectural decision is using Docling's Document Object Model as the u
 
 | Dependency | Purpose | Failure Impact |
 |------------|---------|----------------|
-| Deepgram API | Transcription, diarization, summarization | Critical — no processing possible without it |
-| Modal (optional) | Embedding generation | Medium — can queue for later if unavailable |
-| Redis | Job queue, status tracking | High — jobs cannot be queued or tracked |
-| FFmpeg | Audio extraction from video | Medium — video files fail, audio files work |
+| Deepgram API | Transcription, diarization, summarization | Critical: no processing possible without it |
+| Modal (optional) | Embedding generation | Medium: can queue for later if unavailable |
+| Redis | Job queue, status tracking | High: jobs cannot be queued or tracked |
+| FFmpeg | Audio extraction from video | Medium: video files fail, audio files work |
 
 ---
 
@@ -461,16 +461,16 @@ The primary output of Project E, containing all transcription results and metada
 
 #### Technical Constraints
 
-- Deepgram API dependency — requires internet connectivity and valid API key
-- File size limits — practical limit of ~4 hours per file (longer files split automatically)
-- Language support — Nova-2 supports major languages but accuracy varies
-- No real-time streaming — batch processing only in this version
+- Deepgram API dependency: requires internet connectivity and valid API key
+- File size limits: practical limit of ~4 hours per file (longer files split automatically)
+- Language support: Nova-2 supports major languages but accuracy varies
+- No real-time streaming: batch processing only in this version
 
 #### Business Constraints
 
-- Deepgram costs scale with usage — budget monitoring required
-- API rate limits — Deepgram has concurrent request limits based on plan
-- Data privacy — audio content leaves infrastructure for Deepgram processing
+- Deepgram costs scale with usage: budget monitoring required
+- API rate limits: Deepgram has concurrent request limits based on plan
+- Data privacy: audio content leaves infrastructure for Deepgram processing
 
 ### 8.2 Assumptions
 
@@ -485,11 +485,11 @@ The primary output of Project E, containing all transcription results and metada
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Deepgram API outage | High — all processing stops | Retry logic, queue persistence, alert on failure |
-| Cost overrun | Medium — unexpected bills | Usage monitoring, daily/monthly caps, alerts |
-| Poor audio quality | Medium — bad transcription | Quality pre-check, user warnings, skip/flag option |
-| Diarization errors | Low — wrong speaker labels | Confidence thresholds, flag uncertain segments |
-| Long file timeouts | Low — processing fails | Automatic splitting, progress tracking |
+| Deepgram API outage | High: all processing stops | Retry logic, queue persistence, alert on failure |
+| Cost overrun | Medium: unexpected bills | Usage monitoring, daily/monthly caps, alerts |
+| Poor audio quality | Medium: bad transcription | Quality pre-check, user warnings, skip/flag option |
+| Diarization errors | Low: wrong speaker labels | Confidence thresholds, flag uncertain segments |
+| Long file timeouts | Low: processing fails | Automatic splitting, progress tracking |
 
 ---
 
@@ -538,4 +538,4 @@ This Vision & Scope document establishes the foundational direction for Project 
 
 ---
 
-*— End of Document —*
+End of Document

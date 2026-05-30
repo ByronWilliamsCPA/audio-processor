@@ -51,6 +51,9 @@ test_patterns = [
 # Qlty's built-in code smell detection for identifying complex,
 # hard-to-maintain code patterns.
 
+[plugins]
+enabled = ["ruff", "basedpyright", "bandit"]
+
 [smells]
 # Mode: comment (add PR comments) vs block (fail CI)
 mode = "comment"
