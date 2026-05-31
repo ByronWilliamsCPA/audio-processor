@@ -2,14 +2,18 @@
 
 > Scope: `tests/` only. Root `CLAUDE.md` rules apply everywhere else.
 
-## Coverage thresholds (enforced in CI)
+## Coverage thresholds
 
-| Metric | Gate |
-|---|---|
-| Line coverage | 80% minimum |
-| Branch coverage | 70% minimum |
-| Critical paths (auth, payment, data integrity) | 90% |
-| Patch coverage (new code) | 90% |
+Mechanically enforced:
+
+| Metric | Gate | Source |
+|---|---|---|
+| Line coverage (overall) | 80% minimum | `pyproject.toml` `--cov-fail-under=80`; CI `coverage-threshold: 80` |
+| Patch coverage (default) | 80% target | `codecov.yml` `patch.target` |
+| Project coverage (`unit` flag) | 85% target | `codecov.yml` `flag_management` unit project |
+| Patch coverage (`unit` flag) | 90% target | `codecov.yml` `flag_management` unit patch |
+
+Aspirational (not mechanically gated): 70% branch coverage; 90% on critical paths (auth, data integrity).
 
 ## Directory structure
 

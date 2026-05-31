@@ -63,7 +63,7 @@ tags:
 | Criterion | Status | Evidence |
 |-----------|--------|----------|
 | `quality_build` | MET | `uv sync --all-extras` + `pytest` invoked by `.github/workflows/ci.yml` on every push and PR. |
-| `quality_build_reproducible` | PARTIAL | `uv.lock` pins all transitive dependencies; Docker image is pinned by SHA digest. Full reproducible builds require attesting build provenance (SLSA workflow `slsa-provenance.yml` is present). |
+| `quality_build_reproducible` | PARTIAL | `uv.lock` pins all transitive dependencies; Docker image SHA-pinning instructions are documented (the images themselves are not yet pinned, see the Manual Steps checklist). Full reproducible builds require attesting build provenance (SLSA workflow `slsa-provenance.yml` is present). |
 | `quality_tests` | MET | `pytest` test suite with 80% minimum coverage gate enforced in CI. |
 | `quality_tests_documented` | MET | `README.md` Quick Start and `CONTRIBUTING.md` both document `uv run pytest` invocation. |
 | `quality_tests_invocation` | MET | `uv run pytest -v` runs the full suite; `uv run pytest --cov=src --cov-fail-under=80` enforces coverage. |
