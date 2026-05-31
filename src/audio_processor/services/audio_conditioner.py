@@ -33,16 +33,16 @@ class ConditioningResult:
     """Result of audio conditioning.
 
     Attributes:
-        output_path: Path to the conditioned audio file.
-        original_sample_rate: Original sample rate in Hz.
-        target_sample_rate: Target sample rate in Hz.
-        original_channels: Original number of channels.
-        original_duration: Original duration in seconds.
-        output_duration: Output duration in seconds.
-        original_rms_db: Original RMS level in dBFS.
-        output_rms_db: Output RMS level in dBFS.
-        gain_applied_db: Gain applied during normalization.
-        dc_offset_removed: Whether DC offset was removed.
+        output_path (Path): Path to the conditioned audio file.
+        original_sample_rate (int): Original sample rate in Hz.
+        target_sample_rate (int): Target sample rate in Hz.
+        original_channels (int): Original number of channels.
+        original_duration (float): Original duration in seconds.
+        output_duration (float): Output duration in seconds.
+        original_rms_db (float): Original RMS level in dBFS.
+        output_rms_db (float): Output RMS level in dBFS.
+        gain_applied_db (float): Gain applied during normalization.
+        dc_offset_removed (bool): Whether DC offset was removed.
     """
 
     output_path: Path
@@ -69,6 +69,12 @@ class AudioConditioner:
     These preprocessing steps can improve Word Error Rate (WER) by 10-20%
     for challenging audio.
 
+    Args:
+        target_sample_rate (int | None): Target sample rate in Hz. Defaults to 16000.
+        target_channels (int | None): Target number of channels. Defaults to 1 (mono).
+        target_rms_db (float | None): Target RMS level in dBFS. Defaults to -20.
+        temp_dir (str | None): Directory for temporary files.
+
     Example:
         >>> conditioner = AudioConditioner()
         >>> result = conditioner.condition("/path/to/audio.wav")
@@ -83,14 +89,6 @@ class AudioConditioner:
         target_rms_db: float | None = None,
         temp_dir: str | None = None,
     ) -> None:
-        """Initialize the AudioConditioner.
-
-        Args:
-            target_sample_rate: Target sample rate in Hz. Defaults to 16000.
-            target_channels: Target number of channels. Defaults to 1 (mono).
-            target_rms_db: Target RMS level in dBFS. Defaults to -20.
-            temp_dir: Directory for temporary files.
-        """
         self.target_sample_rate = (
             target_sample_rate or settings.audio_target_sample_rate
         )
@@ -114,15 +112,15 @@ class AudioConditioner:
         """Condition an audio file for optimal ASR processing.
 
         Args:
-            input_path: Path to the input audio file.
-            output_path: Optional output path. If None, creates temp file.
-            resample: Whether to resample to target rate.
-            to_mono: Whether to convert to mono.
-            normalize: Whether to normalize RMS level.
-            remove_dc: Whether to remove DC offset.
+            input_path (str | Path): Path to the input audio file.
+            output_path (str | Path | None): Optional output path. If None, creates temp file.
+            resample (bool): Whether to resample to target rate.
+            to_mono (bool): Whether to convert to mono.
+            normalize (bool): Whether to normalize RMS level.
+            remove_dc (bool): Whether to remove DC offset.
 
         Returns:
-            ConditioningResult with details about the conditioning.
+            ConditioningResult: ConditioningResult with details about the conditioning.
 
         Raises:
             ValidationError: If input file doesn't exist.
@@ -225,10 +223,10 @@ class AudioConditioner:
         """Load audio file.
 
         Args:
-            file_path: Path to the audio file.
+            file_path (Path): Path to the audio file.
 
         Returns:
-            Tuple of (audio samples, sample rate).
+            tuple[AudioSamples, int]: Tuple of (audio samples, sample rate).
         """
         try:
             # Try soundfile first (faster for WAV/FLAC)
@@ -245,10 +243,10 @@ class AudioConditioner:
         """Calculate RMS level in dBFS.
 
         Args:
-            audio: Audio samples.
+            audio (AudioSamples): Audio samples.
 
         Returns:
-            RMS level in decibels (dBFS).
+            float: RMS level in decibels (dBFS).
         """
         rms = np.sqrt(np.mean(audio**2))
         if rms > 0:
@@ -263,11 +261,11 @@ class AudioConditioner:
         """Normalize audio to target RMS level.
 
         Args:
-            audio: Input audio samples.
-            target_db: Target RMS level in dBFS.
+            audio (AudioSamples): Input audio samples.
+            target_db (float): Target RMS level in dBFS.
 
         Returns:
-            Tuple of (normalized audio, gain applied in dB).
+            tuple[AudioSamples, float]: Tuple of (normalized audio, gain applied in dB).
         """
         current_rms = np.sqrt(np.mean(audio**2))
 
@@ -306,10 +304,10 @@ class AudioConditioner:
         Analyzes audio to predict how much conditioning might help.
 
         Args:
-            input_path: Path to the audio file.
+            input_path (str | Path): Path to the audio file.
 
         Returns:
-            Dictionary with improvement estimates.
+            dict[str, float | bool | str]: Dictionary with improvement estimates.
 
         Raises:
             ValidationError: If the audio file does not exist.

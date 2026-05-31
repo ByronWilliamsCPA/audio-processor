@@ -56,6 +56,15 @@ class DeepgramTranscriptionClient:
     Provides methods for transcribing audio files using Deepgram's Nova-2
     model with optional speaker diarization and summarization.
 
+    Args:
+        api_key (str | None): Deepgram API key. Defaults to settings.
+        model (str | None): Model to use (nova-2, nova, enhanced, base).
+        language (str | None): Default language code.
+        timeout_seconds (int | None): API timeout in seconds.
+
+    Raises:
+        ConfigurationError: If API key is not provided or configured.
+
     Example:
         >>> client = DeepgramTranscriptionClient()
         >>> result = client.transcribe("/path/to/audio.wav")
@@ -71,17 +80,6 @@ class DeepgramTranscriptionClient:
         language: str | None = None,
         timeout_seconds: int | None = None,
     ) -> None:
-        """Initialize the Deepgram client.
-
-        Args:
-            api_key: Deepgram API key. Defaults to settings.
-            model: Model to use (nova-2, nova, enhanced, base).
-            language: Default language code.
-            timeout_seconds: API timeout in seconds.
-
-        Raises:
-            ConfigurationError: If API key is not provided or configured.
-        """
         self.api_key = api_key
         if self.api_key is None and settings.deepgram_api_key:
             self.api_key = settings.deepgram_api_key.get_secret_value()
@@ -115,13 +113,13 @@ class DeepgramTranscriptionClient:
         """Transcribe an audio file using Deepgram.
 
         Args:
-            file_path: Path to the audio file.
-            enable_diarization: Enable speaker diarization. Defaults to settings.
-            enable_summarization: Enable AI summarization. Defaults to settings.
-            language: Language code for transcription.
+            file_path (str | Path): Path to the audio file.
+            enable_diarization (bool | None): Enable speaker diarization. Defaults to settings.
+            enable_summarization (bool | None): Enable AI summarization. Defaults to settings.
+            language (str | None): Language code for transcription.
 
         Returns:
-            TranscriptionResult with transcript, speakers, and metadata.
+            TranscriptionResult: TranscriptionResult with transcript, speakers, and metadata.
 
         Raises:
             ValidationError: If file doesn't exist or can't be read.
@@ -238,13 +236,13 @@ class DeepgramTranscriptionClient:
         """Parse Deepgram response into TranscriptionResult.
 
         Args:
-            response: Deepgram API response.
-            diarize: Whether diarization was enabled.
-            summarize: Whether summarization was enabled.
-            processing_time: Time taken for API call.
+            response (Any): Deepgram API response.
+            diarize (bool): Whether diarization was enabled.
+            summarize (bool): Whether summarization was enabled.
+            processing_time (float): Time taken for API call.
 
         Returns:
-            Parsed TranscriptionResult.
+            TranscriptionResult: Parsed TranscriptionResult.
         """
         alternative = self._extract_alternative(response)
         if alternative is None:
@@ -293,10 +291,10 @@ class DeepgramTranscriptionClient:
         """Extract the first transcription alternative from a Deepgram response.
 
         Args:
-            response: Deepgram API response object.
+            response (Any): Deepgram API response object.
 
         Returns:
-            The first alternative object, or None if the response is empty or
+            Any: The first alternative object, or None if the response is empty or
             does not contain usable data.
         """
         results = getattr(response, "results", None)
@@ -319,11 +317,11 @@ class DeepgramTranscriptionClient:
         """Build a list of Word objects from a Deepgram transcription alternative.
 
         Args:
-            alternative: A Deepgram alternative object containing word timing data.
-            diarize: Whether speaker diarization was enabled.
+            alternative (Any): A Deepgram alternative object containing word timing data.
+            diarize (bool): Whether speaker diarization was enabled.
 
         Returns:
-            List of Word objects with timing and confidence information.
+            list[Word]: List of Word objects with timing and confidence information.
         """
         alt_words = getattr(alternative, "words", None) or []
         return [
@@ -347,11 +345,11 @@ class DeepgramTranscriptionClient:
         """Extract the short summary text from Deepgram results.
 
         Args:
-            results: Deepgram results object.
-            summarize: Whether summarization was requested.
+            results (Any): Deepgram results object.
+            summarize (bool): Whether summarization was requested.
 
         Returns:
-            Short summary string, or None if unavailable.
+            str | None: Short summary string, or None if unavailable.
         """
         if not summarize:
             return None
@@ -366,10 +364,10 @@ class DeepgramTranscriptionClient:
         """Calculate mean and minimum confidence across a list of words.
 
         Args:
-            words: List of Word objects with confidence scores.
+            words (list[Word]): List of Word objects with confidence scores.
 
         Returns:
-            Tuple of (mean_confidence, min_confidence). Both are 0.0 when the
+            tuple[float, float]: Tuple of (mean_confidence, min_confidence). Both are 0.0 when the
             word list is empty.
         """
         confidences = [w.confidence for w in words]
@@ -387,12 +385,12 @@ class DeepgramTranscriptionClient:
         """Estimate the Deepgram API cost for a transcription.
 
         Args:
-            duration_minutes: Audio duration in minutes.
-            diarize: Whether speaker diarization was enabled.
-            summarize: Whether summarization was enabled.
+            duration_minutes (float): Audio duration in minutes.
+            diarize (bool): Whether speaker diarization was enabled.
+            summarize (bool): Whether summarization was enabled.
 
         Returns:
-            Estimated cost as a Decimal before quantization.
+            Decimal: Estimated cost as a Decimal before quantization.
         """
         cost = DEEPGRAM_COST_PER_MINUTE_BASE * Decimal(str(duration_minutes))
         if diarize:
@@ -412,11 +410,11 @@ class DeepgramTranscriptionClient:
         """Parse utterance list and accumulate per-speaker statistics.
 
         Args:
-            result_utterances: Utterance list from Deepgram response, or None if
+            result_utterances (Any): Utterance list from Deepgram response, or None if
                 diarization was disabled.
 
         Returns:
-            Tuple of (utterance list, speaker list with accumulated durations).
+            tuple[list[Utterance], list[Speaker]]: Tuple of (utterance list, speaker list with accumulated durations).
         """
         utterances: list[Utterance] = []
         speakers_dict: dict[int, Speaker] = {}
@@ -468,10 +466,10 @@ class DeepgramTranscriptionClient:
         """Create an empty result for edge cases.
 
         Args:
-            processing_time: Time taken for API call.
+            processing_time (float): Time taken for API call.
 
         Returns:
-            Empty TranscriptionResult.
+            TranscriptionResult: Empty TranscriptionResult.
         """
         return TranscriptionResult(
             transcript="",
@@ -501,12 +499,12 @@ class DeepgramTranscriptionClient:
         """Estimate the cost of transcribing audio.
 
         Args:
-            duration_seconds: Audio duration in seconds.
-            enable_diarization: Include diarization cost.
-            enable_summarization: Include summarization cost.
+            duration_seconds (float): Audio duration in seconds.
+            enable_diarization (bool): Include diarization cost.
+            enable_summarization (bool): Include summarization cost.
 
         Returns:
-            Estimated cost in USD.
+            Decimal: Estimated cost in USD.
         """
         duration_minutes = Decimal(str(duration_seconds / 60))
         cost = DEEPGRAM_COST_PER_MINUTE_BASE * duration_minutes

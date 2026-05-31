@@ -67,7 +67,7 @@ async def get_redis() -> Redis:
     """Get Redis connection from pool.
 
     Returns:
-        Redis connection
+        Redis: Redis connection
 
     Example:
         >>> redis = await get_redis()
@@ -123,12 +123,12 @@ def cached(
     """Cache async function results in Redis.
 
     Args:
-        ttl: Time to live in seconds (default: 1 hour)
-        key_prefix: Prefix for cache keys (default: function name)
-        key_builder: Custom key building function
+        ttl (int): Time to live in seconds (default: 1 hour)
+        key_prefix (str): Prefix for cache keys (default: function name)
+        key_builder (Callable[..., str] | None): Custom key building function
 
     Returns:
-        Decorated function
+        Callable[[Callable[..., Awaitable[T]]], Callable[..., Awaitable[T]]]: Decorated function
 
     Example:
         >>> @cached(ttl=300, key_prefix="user")
@@ -198,10 +198,10 @@ def cache_invalidate(
     Useful for cache invalidation on data updates.
 
     Args:
-        key_pattern: Redis key pattern (supports * wildcard)
+        key_pattern (str): Redis key pattern (supports * wildcard)
 
     Returns:
-        Decorator function that wraps async functions to invalidate cache.
+        Callable[[Callable[..., Awaitable[T]]], Callable[..., Awaitable[T]]]: Decorator function that wraps async functions to invalidate cache.
 
     Example:
         >>> @cache_invalidate("user:*")
@@ -243,11 +243,11 @@ async def get_cached(key: str, default: CacheValue = None) -> CacheValue:
     """Get value from cache.
 
     Args:
-        key: Cache key
-        default: Default value if key not found
+        key (str): Cache key
+        default (CacheValue): Default value if key not found
 
     Returns:
-        Cached value or default
+        CacheValue: Cached value or default
     """
     try:
         redis = await get_redis()
@@ -268,12 +268,12 @@ async def set_cached(key: str, value: CacheValue, ttl: int = 3600) -> bool:
     """Set value in cache.
 
     Args:
-        key: Cache key
-        value: Value to cache
-        ttl: Time to live in seconds
+        key (str): Cache key
+        value (CacheValue): Value to cache
+        ttl (int): Time to live in seconds
 
     Returns:
-        True if successful, False otherwise
+        bool: True if successful, False otherwise
     """
     try:
         redis = await get_redis()
@@ -288,10 +288,10 @@ async def delete_cached(key: str) -> bool:
     """Delete value from cache.
 
     Args:
-        key: Cache key
+        key (str): Cache key
 
     Returns:
-        True if key was deleted, False otherwise
+        bool: True if key was deleted, False otherwise
     """
     try:
         redis = await get_redis()
@@ -307,10 +307,10 @@ async def invalidate_pattern(pattern: str) -> int:
     """Invalidate all cache keys matching a pattern.
 
     Args:
-        pattern: Redis key pattern (supports * wildcard)
+        pattern (str): Redis key pattern (supports * wildcard)
 
     Returns:
-        Number of keys deleted
+        int: Number of keys deleted
 
     Example:
         >>> # Delete all user caches
@@ -354,13 +354,13 @@ async def warm_cache(
     Useful for frequently accessed data that's expensive to compute.
 
     Args:
-        key: Cache key
-        value_fn: Async function to get the value
-        ttl: Time to live in seconds
-        force: Force refresh even if key exists
+        key (str): Cache key
+        value_fn (Callable[[], Awaitable[CacheValue]]): Async function to get the value
+        ttl (int): Time to live in seconds
+        force (bool): Force refresh even if key exists
 
     Returns:
-        True if cache was warmed, False if already exists (and not forced)
+        bool: True if cache was warmed, False if already exists (and not forced)
 
     Example:
         >>> async def get_popular_items():
@@ -445,7 +445,7 @@ async def get_cache_stats() -> dict[str, int | float | str]:
     """Get cache statistics.
 
     Returns:
-        Dictionary with cache statistics
+        dict[str, int | float | str]: Dictionary with cache statistics
     """
     try:
         redis = await get_redis()

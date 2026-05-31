@@ -72,13 +72,13 @@ class AudioInfo:
     """Information about an audio file.
 
     Attributes:
-        duration_seconds: Duration of the audio in seconds.
-        sample_rate: Sample rate in Hz.
-        channels: Number of audio channels.
-        codec: Audio codec name.
-        bit_rate: Bit rate in bits per second.
-        format_name: Container format name.
-        is_video: Whether the file is a video container.
+        duration_seconds (float): Duration of the audio in seconds.
+        sample_rate (int): Sample rate in Hz.
+        channels (int): Number of audio channels.
+        codec (str): Audio codec name.
+        bit_rate (int | None): Bit rate in bits per second.
+        format_name (str): Container format name.
+        is_video (bool): Whether the file is a video container.
     """
 
     duration_seconds: float
@@ -98,6 +98,11 @@ class AudioConverter:
     - Extracting audio from video files
     - Converting audio to optimal format for ASR
 
+    Args:
+        temp_dir (str | None): Directory for temporary files. Defaults to settings value.
+        target_sample_rate (int | None): Target sample rate for conversion. Defaults to 16000.
+        target_channels (int | None): Target number of channels. Defaults to 1 (mono).
+
     Example:
         >>> converter = AudioConverter()
         >>> info = converter.probe("/path/to/audio.mp3")
@@ -111,13 +116,6 @@ class AudioConverter:
         target_sample_rate: int | None = None,
         target_channels: int | None = None,
     ) -> None:
-        """Initialize the AudioConverter.
-
-        Args:
-            temp_dir: Directory for temporary files. Defaults to settings value.
-            target_sample_rate: Target sample rate for conversion. Defaults to 16000.
-            target_channels: Target number of channels. Defaults to 1 (mono).
-        """
         self.temp_dir = Path(temp_dir or settings.audio_temp_dir)
         self.target_sample_rate = (
             target_sample_rate or settings.audio_target_sample_rate
@@ -131,10 +129,10 @@ class AudioConverter:
         """Probe an audio/video file to get its properties.
 
         Args:
-            file_path: Path to the audio or video file.
+            file_path (str | Path): Path to the audio or video file.
 
         Returns:
-            AudioInfo containing file properties.
+            AudioInfo: AudioInfo containing file properties.
 
         Raises:
             ValidationError: If the file cannot be probed or has no audio.
@@ -220,11 +218,11 @@ class AudioConverter:
         """Detect the audio format of a file.
 
         Args:
-            file_path: Path to the file.
-            content_type: Optional MIME type from upload.
+            file_path (str | Path): Path to the file.
+            content_type (str | None): Optional MIME type from upload.
 
         Returns:
-            Detected AudioFormat.
+            AudioFormat: Detected AudioFormat.
 
         Raises:
             ValidationError: If format cannot be detected or is unsupported.
@@ -258,10 +256,10 @@ class AudioConverter:
         """Check if a file is a video container.
 
         Args:
-            file_path: Path to the file.
+            file_path (str | Path): Path to the file.
 
         Returns:
-            True if the file is a video container.
+            bool: True if the file is a video container.
         """
         try:
             info = self.probe(file_path)
@@ -277,10 +275,10 @@ class AudioConverter:
         """Return the first audio and video streams from ffprobe data.
 
         Args:
-            probe_data: Parsed JSON output from ffprobe.
+            probe_data (dict[str, Any]): Parsed JSON output from ffprobe.
 
         Returns:
-            Tuple of (first audio stream dict or None, first video stream dict or None).
+            tuple[dict[str, Any] | None, dict[str, Any] | None]: Tuple of (first audio stream dict or None, first video stream dict or None).
         """
         audio_stream: dict[str, Any] | None = None  # pyright: ignore[reportExplicitAny]
         video_stream: dict[str, Any] | None = None  # pyright: ignore[reportExplicitAny]
@@ -300,12 +298,12 @@ class AudioConverter:
         """Map probed codec/format names to an AudioFormat enum value.
 
         Args:
-            codec: Codec name from ffprobe (lowercased).
-            format_name: Container format name from ffprobe (lowercased).
-            is_video: Whether the file contains a video stream.
+            codec (str): Codec name from ffprobe (lowercased).
+            format_name (str): Container format name from ffprobe (lowercased).
+            is_video (bool): Whether the file contains a video stream.
 
         Returns:
-            Matching AudioFormat, or None if no mapping is found.
+            AudioFormat | None: Matching AudioFormat, or None if no mapping is found.
         """
         audio_table: list[tuple[str, str, AudioFormat]] = [
             ("mp3", "mp3", AudioFormat.MP3),
@@ -337,11 +335,11 @@ class AudioConverter:
         """Extract audio from a video file.
 
         Args:
-            input_path: Path to the video file.
-            output_path: Optional output path. If not provided, a temp file is created.
+            input_path (str | Path): Path to the video file.
+            output_path (str | Path | None): Optional output path. If not provided, a temp file is created.
 
         Returns:
-            Path to the extracted audio file.
+            Path: Path to the extracted audio file.
 
         Raises:
             AudioProcessorError: If extraction fails.
@@ -416,11 +414,11 @@ class AudioConverter:
         ASR services.
 
         Args:
-            input_path: Path to the input audio/video file.
-            output_path: Optional output path. If not provided, a temp file is created.
+            input_path (str | Path): Path to the input audio/video file.
+            output_path (str | Path | None): Optional output path. If not provided, a temp file is created.
 
         Returns:
-            Path to the converted audio file.
+            Path: Path to the converted audio file.
 
         Raises:
             AudioProcessorError: If conversion fails.
@@ -495,12 +493,12 @@ class AudioConverter:
         """Validate an audio file against size and duration limits.
 
         Args:
-            file_path: Path to the audio file.
-            max_size_bytes: Maximum file size in bytes. Defaults to settings value.
-            max_duration_seconds: Maximum duration in seconds. Defaults to settings.
+            file_path (str | Path): Path to the audio file.
+            max_size_bytes (int | None): Maximum file size in bytes. Defaults to settings value.
+            max_duration_seconds (float | None): Maximum duration in seconds. Defaults to settings.
 
         Returns:
-            AudioInfo if validation passes.
+            AudioInfo: AudioInfo if validation passes.
 
         Raises:
             ValidationError: If validation fails.

@@ -36,9 +36,9 @@ class SpeechSegment:
     """A detected speech segment.
 
     Attributes:
-        start: Start time in seconds.
-        end: End time in seconds.
-        confidence: Detection confidence (0.0-1.0).
+        start (float): Start time in seconds.
+        end (float): End time in seconds.
+        confidence (float): Detection confidence (0.0-1.0).
     """
 
     start: float
@@ -50,7 +50,7 @@ class SpeechSegment:
         """Duration of the segment in seconds.
 
         Returns:
-            Elapsed time between start and end timestamps.
+            float: Elapsed time between start and end timestamps.
         """
         return self.end - self.start
 
@@ -60,13 +60,13 @@ class VADResult:
     """Result of Voice Activity Detection.
 
     Attributes:
-        segments: List of detected speech segments.
-        total_speech_duration: Total duration of speech in seconds.
-        total_silence_duration: Total duration of silence in seconds.
-        speech_ratio: Ratio of speech to total duration.
-        original_duration: Original audio duration in seconds.
-        processed_path: Path to processed audio (if silence removed).
-        timeline_map: Mapping from processed time to original time.
+        segments (tuple[SpeechSegment, ...]): List of detected speech segments.
+        total_speech_duration (float): Total duration of speech in seconds.
+        total_silence_duration (float): Total duration of silence in seconds.
+        speech_ratio (float): Ratio of speech to total duration.
+        original_duration (float): Original audio duration in seconds.
+        processed_path (Path | None): Path to processed audio (if silence removed).
+        timeline_map (tuple[tuple[float, float], ...] | None): Mapping from processed time to original time.
     """
 
     segments: tuple[SpeechSegment, ...]
@@ -84,6 +84,12 @@ class VADProcessor:
     Uses the Silero VAD model (a neural network-based detector) to identify
     speech segments in audio. Can optionally remove silence sections to
     reduce transcription costs and improve accuracy.
+
+    Args:
+        threshold (float | None): VAD threshold (0.0-1.0). Higher = stricter.
+        min_silence_duration_ms (int | None): Minimum silence duration to detect.
+        min_speech_duration_ms (int | None): Minimum speech duration to keep.
+        temp_dir (str | None): Directory for temporary files.
 
     Example:
         >>> vad = VADProcessor()
@@ -108,14 +114,6 @@ class VADProcessor:
         min_speech_duration_ms: int | None = None,
         temp_dir: str | None = None,
     ) -> None:
-        """Initialize the VAD processor.
-
-        Args:
-            threshold: VAD threshold (0.0-1.0). Higher = stricter.
-            min_silence_duration_ms: Minimum silence duration to detect.
-            min_speech_duration_ms: Minimum speech duration to keep.
-            temp_dir: Directory for temporary files.
-        """
         self.threshold = threshold or settings.vad_threshold
         self.min_silence_duration_ms = (
             min_silence_duration_ms or settings.vad_min_silence_duration_ms
@@ -132,7 +130,7 @@ class VADProcessor:
         """Load Silero VAD model (cached as class attribute).
 
         Returns:
-            Tuple of (model, utils).
+            tuple[torch.jit.ScriptModule, tuple[object, ...]]: Tuple of (model, utils).
         """
         if VADProcessor._model is None:
             logger.info("loading_silero_vad_model")
@@ -155,10 +153,10 @@ class VADProcessor:
         """Detect speech segments in an audio file.
 
         Args:
-            input_path: Path to the audio file (must be 16kHz mono WAV).
+            input_path (str | Path): Path to the audio file (must be 16kHz mono WAV).
 
         Returns:
-            VADResult with detected speech segments.
+            VADResult: VADResult with detected speech segments.
 
         Raises:
             ValidationError: If file doesn't exist.
@@ -253,13 +251,13 @@ class VADProcessor:
         """Process audio with VAD, optionally removing silence.
 
         Args:
-            input_path: Path to the input audio file.
-            output_path: Optional output path. If None, creates temp file.
-            remove_silence: Whether to remove silence sections.
-            padding_ms: Padding to add around speech segments.
+            input_path (str | Path): Path to the input audio file.
+            output_path (str | Path | None): Optional output path. If None, creates temp file.
+            remove_silence (bool): Whether to remove silence sections.
+            padding_ms (int): Padding to add around speech segments.
 
         Returns:
-            VADResult with processed audio path and timeline map.
+            VADResult: VADResult with processed audio path and timeline map.
 
         Raises:
             ValidationError: If file doesn't exist.
@@ -373,11 +371,11 @@ class VADProcessor:
         Used to reconstruct original timestamps after silence removal.
 
         Args:
-            processed_time: Timestamp in the processed (silence-removed) audio.
-            timeline_map: Timeline mapping from VADResult.
+            processed_time (float): Timestamp in the processed (silence-removed) audio.
+            timeline_map (tuple[tuple[float, float], ...]): Timeline mapping from VADResult.
 
         Returns:
-            Corresponding timestamp in the original audio.
+            float: Corresponding timestamp in the original audio.
         """
         if not timeline_map:
             return processed_time
@@ -407,11 +405,11 @@ class VADProcessor:
         """Determine if VAD processing would be beneficial.
 
         Args:
-            input_path: Path to the audio file.
-            min_silence_ratio: Minimum silence ratio to consider processing.
+            input_path (str | Path): Path to the audio file.
+            min_silence_ratio (float): Minimum silence ratio to consider processing.
 
         Returns:
-            True if VAD processing is recommended.
+            bool: True if VAD processing is recommended.
         """
         try:
             result = self.detect_speech(input_path)

@@ -18,13 +18,8 @@ class Settings(BaseSettings):
 
     Settings are loaded from environment variables. Audio processing settings
     include Deepgram API configuration, Redis for job queue, and audio
-    preprocessing parameters.
-
-    Attributes:
-        log_level: The logging level for the application.
-        json_logs: Flag to enable or disable JSON formatted logs.
-        include_timestamp: Flag to include timestamps in logs.
-        environment: Deployment environment (development, staging, production).
+    preprocessing parameters. Each field is documented via its ``Field``
+    description; see the field definitions below for details.
     """
 
     model_config = SettingsConfigDict(
@@ -241,7 +236,7 @@ class Settings(BaseSettings):
         """Maximum file size in bytes.
 
         Returns:
-            File size limit converted from megabytes to bytes.
+            int: File size limit converted from megabytes to bytes.
         """
         return self.audio_max_file_size_mb * 1024 * 1024
 
@@ -250,7 +245,7 @@ class Settings(BaseSettings):
         """Maximum audio duration in seconds.
 
         Returns:
-            Duration limit converted from hours to seconds.
+            float: Duration limit converted from hours to seconds.
         """
         return self.audio_max_duration_hours * 3600
 
@@ -259,7 +254,7 @@ class Settings(BaseSettings):
         """Configured API keys as a set.
 
         Returns:
-            Frozenset of non-empty, stripped API keys parsed from ``api_keys``.
+            frozenset[str]: Frozenset of non-empty, stripped API keys parsed from ``api_keys``.
         """
         raw = self.api_keys.get_secret_value()
         return frozenset(key.strip() for key in raw.split(",") if key.strip())
@@ -269,7 +264,7 @@ class Settings(BaseSettings):
         """Ensure authentication is configured with at least one key.
 
         Returns:
-            The validated settings instance.
+            Settings: The validated settings instance.
 
         Raises:
             ValueError: If ``auth_required`` is set with no API keys, which
@@ -285,7 +280,7 @@ class Settings(BaseSettings):
         """Ensure enqueueing is only enabled with a shared Redis store.
 
         Returns:
-            The validated settings instance.
+            Settings: The validated settings instance.
 
         Raises:
             ValueError: If ``enqueue_enabled`` is set without the Redis backend

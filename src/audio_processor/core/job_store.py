@@ -38,10 +38,10 @@ def job_key(job_id: str) -> str:
     """Build the storage key for a job.
 
     Args:
-        job_id: Unique job identifier.
+        job_id (str): Unique job identifier.
 
     Returns:
-        The namespaced key used to store the job record.
+        str: The namespaced key used to store the job record.
     """
     return f"{JOB_KEY_PREFIX}{job_id}"
 
@@ -53,11 +53,11 @@ def _merge_fields(record: JobRecord, fields: dict[str, object]) -> JobRecord:
     fields are written (``None`` means "leave unchanged").
 
     Args:
-        record: The record to update.
-        fields: Candidate fields; ``None`` values are skipped.
+        record (JobRecord): The record to update.
+        fields (dict[str, object]): Candidate fields; ``None`` values are skipped.
 
     Returns:
-        The same record instance, updated.
+        JobRecord: The same record instance, updated.
     """
     record.update({key: value for key, value in fields.items() if value is not None})
     return record
@@ -71,8 +71,8 @@ class JobStore(abc.ABC):
         """Persist a new job record.
 
         Args:
-            job_id: Unique job identifier.
-            record: The full initial job record.
+            job_id (str): Unique job identifier.
+            record (JobRecord): The full initial job record.
         """
 
     @abc.abstractmethod
@@ -80,10 +80,10 @@ class JobStore(abc.ABC):
         """Fetch a job record.
 
         Args:
-            job_id: Unique job identifier.
+            job_id (str): Unique job identifier.
 
         Returns:
-            The job record, or ``None`` if no such job exists.
+            JobRecord | None: The job record, or ``None`` if no such job exists.
         """
 
     @abc.abstractmethod
@@ -93,11 +93,11 @@ class JobStore(abc.ABC):
         Only non-``None`` fields are written.
 
         Args:
-            job_id: Unique job identifier.
-            **fields: Fields to merge into the record.
+            job_id (str): Unique job identifier.
+            **fields (object): Fields to merge into the record.
 
         Returns:
-            The updated job record.
+            JobRecord: The updated job record.
         """
 
 
@@ -106,10 +106,10 @@ class InMemoryJobStore(JobStore):
 
     Suitable for development, single-process deployments, and tests. Also
     supports a synchronous mapping interface for direct record injection.
+    Initializes with an empty job store.
     """
 
     def __init__(self) -> None:
-        """Initialize an empty store."""
         self._jobs: dict[str, JobRecord] = {}
 
     async def create(self, job_id: str, record: JobRecord) -> None:
@@ -161,16 +161,14 @@ class RedisJobStore(JobStore):
     # processes; field-level HSET is what prevents lost updates.
     # #VERIFY: covered by
     # test_job_store.test_concurrent_field_updates_do_not_clobber.
+
+    Args:
+        redis (Redis): An async Redis connection (e.g. the ARQ pool).
+        ttl_seconds (int | None): Expiry for job records. Defaults to the configured
+            ``job_result_ttl_seconds``.
     """
 
     def __init__(self, redis: Redis, ttl_seconds: int | None = None) -> None:
-        """Initialize the Redis-backed store.
-
-        Args:
-            redis: An async Redis connection (e.g. the ARQ pool).
-            ttl_seconds: Expiry for job records. Defaults to the configured
-                ``job_result_ttl_seconds``.
-        """
         self._redis = redis
         self._ttl = ttl_seconds or settings.job_result_ttl_seconds
 
@@ -179,10 +177,10 @@ class RedisJobStore(JobStore):
         """Coerce a Redis hash field/value to ``str`` (clients may not decode).
 
         Args:
-            value: A ``str`` or ``bytes`` returned by ``HGETALL``.
+            value (object): A ``str`` or ``bytes`` returned by ``HGETALL``.
 
         Returns:
-            The value as text.
+            str: The value as text.
         """
         return value.decode() if isinstance(value, bytes) else str(value)
 
@@ -191,11 +189,11 @@ class RedisJobStore(JobStore):
         """Decode an ``HGETALL`` result into a record.
 
         Args:
-            raw: Mapping of field to JSON-encoded value (possibly ``bytes``).
+            raw (dict[object, object]): Mapping of field to JSON-encoded value (possibly ``bytes``).
                 An empty mapping means the key is absent.
 
         Returns:
-            The parsed record, or ``None`` if ``raw`` is empty.
+            JobRecord | None: The parsed record, or ``None`` if ``raw`` is empty.
         """
         if not raw:
             return None
@@ -209,10 +207,10 @@ class RedisJobStore(JobStore):
         """JSON-encode each field value for storage as a hash field.
 
         Args:
-            fields: Record fields to encode.
+            fields (dict[str, object]): Record fields to encode.
 
         Returns:
-            Mapping of field name to its JSON-encoded value.
+            dict[str, str]: Mapping of field name to its JSON-encoded value.
         """
         return {field: json.dumps(value) for field, value in fields.items()}
 

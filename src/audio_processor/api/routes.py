@@ -70,7 +70,7 @@ def _get_job_store() -> InMemoryJobStore:  # pyright: ignore[reportUnusedFunctio
     within this module (request handlers use :func:`get_job_store`).
 
     Returns:
-        The module-level in-memory job store.
+        InMemoryJobStore: The module-level in-memory job store.
     """
     return _default_store
 
@@ -82,10 +82,10 @@ def get_job_store(request: Request) -> JobStore:
     at startup); otherwise falls back to the process-local in-memory store.
 
     Args:
-        request: The incoming request.
+        request (Request): The incoming request.
 
     Returns:
-        The active job store.
+        JobStore: The active job store.
     """
     store = getattr(request.app.state, "job_store", None)
     if isinstance(store, JobStore):
@@ -97,10 +97,10 @@ def _parse_iso(value: object) -> datetime | None:
     """Best-effort parse of a stored timestamp.
 
     Args:
-        value: A datetime, an ISO-8601 string, or anything else.
+        value (object): A datetime, an ISO-8601 string, or anything else.
 
     Returns:
-        The parsed datetime, or ``None`` if absent/unparseable.
+        datetime | None: The parsed datetime, or ``None`` if absent/unparseable.
     """
     if isinstance(value, datetime):
         return value
@@ -124,9 +124,12 @@ async def _maybe_enqueue(
     store for later processing.
 
     Args:
-        request: The incoming request (source of the ARQ pool on app state).
-        job_id: Unique job identifier.
-        record: The job record to hand to the worker (carries the ``input``).
+        request (Request): The incoming request (source of the ARQ pool on app state).
+        job_id (str): Unique job identifier.
+        record (dict[str, object]): The job record to hand to the worker (carries the ``input``).
+
+    Raises:
+        HTTPException: If enqueueing is enabled but no ARQ pool is configured.
     """
     if not settings.enqueue_enabled:
         return
@@ -162,12 +165,12 @@ async def _stream_upload_to_temp(
     read.
 
     Args:
-        file: The incoming upload.
-        temp_path: Destination path (already created).
-        max_bytes: Maximum permitted size in bytes.
+        file (UploadFile): The incoming upload.
+        temp_path (Path): Destination path (already created).
+        max_bytes (int): Maximum permitted size in bytes.
 
     Returns:
-        Number of bytes written.
+        int: Number of bytes written.
 
     Raises:
         HTTPException: 413 if the stream exceeds ``max_bytes``.
@@ -221,18 +224,21 @@ async def process_audio(
     Returns a job ID that can be used to check status and retrieve results.
 
     Args:
-        request: FastAPI request object.
-        file: Uploaded audio or video file.
-        enable_diarization: Whether to identify speakers.
-        enable_summarization: Whether to generate a summary.
-        language: Language code for transcription.
-        callback_url: Optional webhook URL for completion notification.
+        request (Request): FastAPI request object.
+        file (Annotated[UploadFile, File(description='Audio or video file to process')]): Uploaded audio or video file.
+        enable_diarization (Annotated[bool, Form(description='Enable speaker diarization')]): Whether to identify speakers.
+        enable_summarization (Annotated[bool, Form(description='Enable AI summarization')]): Whether to generate a summary.
+        language (Annotated[str, Form(description="Language code (e.g., 'en', 'es')")]): Language code for transcription.
+        callback_url (Annotated[str | None, Form(description='Webhook URL for completion notification')]): Optional webhook URL for completion notification.
 
     Returns:
-        ProcessAudioResponse with job_id and status URL.
+        ProcessAudioResponse: ProcessAudioResponse with job_id and status URL.
 
     Raises:
         HTTPException: If validation fails or file is too large.
+        Exception: Propagated internally from enqueue failures; always caught by
+            the outer handler and re-raised as HTTPException(500), never reaching
+            the caller. Documented to satisfy pydoclint DOC503 (body raises it).
     """
     # Validate file
     if not file.filename:
@@ -393,11 +399,11 @@ async def get_job_status(
     """Get the status of an audio processing job.
 
     Args:
-        request: FastAPI request object.
-        job_id: Unique job identifier.
+        request (Request): FastAPI request object.
+        job_id (str): Unique job identifier.
 
     Returns:
-        JobStatusResponse with current status and progress.
+        JobStatusResponse: JobStatusResponse with current status and progress.
 
     Raises:
         HTTPException: If job is not found.
@@ -458,11 +464,11 @@ async def get_job_results(
     """Get the complete results of a finished job.
 
     Args:
-        request: FastAPI request object.
-        job_id: Unique job identifier.
+        request (Request): FastAPI request object.
+        job_id (str): Unique job identifier.
 
     Returns:
-        Dictionary with transcription results and artifact URLs.
+        dict[str, object]: Dictionary with transcription results and artifact URLs.
 
     Raises:
         HTTPException: If job not found or not completed.
@@ -556,12 +562,12 @@ async def get_artifact(
     - transcript.vtt: WebVTT subtitle format
 
     Args:
-        request: FastAPI request object.
-        job_id: Unique job identifier.
-        artifact_name: Name of the artifact to download.
+        request (Request): FastAPI request object.
+        job_id (str): Unique job identifier.
+        artifact_name (str): Name of the artifact to download.
 
     Returns:
-        Response with the artifact content.
+        Response: Response with the artifact content.
 
     Raises:
         HTTPException: If job not found, not completed, or artifact unavailable.

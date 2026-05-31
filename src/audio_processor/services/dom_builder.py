@@ -36,10 +36,10 @@ class DOMBuildResult:
     """Result of building a Docling DOM document.
 
     Attributes:
-        document: The generated Docling document.
-        speaker_count: Number of speakers in the document.
-        utterance_count: Number of utterances in the document.
-        total_duration_ms: Total audio duration in milliseconds.
+        document (DoclingDocument): The generated Docling document.
+        speaker_count (int): Number of speakers in the document.
+        utterance_count (int): Number of utterances in the document.
+        total_duration_ms (int): Total audio duration in milliseconds.
     """
 
     document: DoclingDocument
@@ -60,6 +60,11 @@ class DOMBuilder:
     - Utterance paragraphs (TextItem) under each speaker section
     - Metadata includes timestamps, confidence, and playback URLs
 
+    Args:
+        document_name (str): Name for the generated document.
+        media_base_url (str | None): Base URL for media fragment links.
+            If None, uses relative fragment URIs (#t=start,end).
+
     Example:
         >>> builder = DOMBuilder()
         >>> result = builder.build(transcription_result)
@@ -73,13 +78,6 @@ class DOMBuilder:
         document_name: str = "audio_transcript",
         media_base_url: str | None = None,
     ) -> None:
-        """Initialize the DOM builder.
-
-        Args:
-            document_name: Name for the generated document.
-            media_base_url: Base URL for media fragment links.
-                If None, uses relative fragment URIs (#t=start,end).
-        """
         self.document_name = document_name
         self.media_base_url = media_base_url
 
@@ -92,11 +90,11 @@ class DOMBuilder:
         """Build a Docling document from transcription results.
 
         Args:
-            transcription: The transcription result to convert.
-            include_word_timestamps: Whether to include word-level timestamps.
+            transcription (TranscriptionResult): The transcription result to convert.
+            include_word_timestamps (bool): Whether to include word-level timestamps.
 
         Returns:
-            DOMBuildResult with the generated document and statistics.
+            DOMBuildResult: DOMBuildResult with the generated document and statistics.
 
         Raises:
             ValidationError: If transcription data is invalid.
@@ -169,8 +167,8 @@ class DOMBuilder:
         """Add document-level metadata from transcription.
 
         Args:
-            doc: The Docling document.
-            transcription: The transcription result.
+            doc (DoclingDocument): The Docling document.
+            transcription (TranscriptionResult): The transcription result.
         """
         # Note: DoclingDocument doesn't have a direct meta attribute
         # Metadata will be added to individual items
@@ -183,10 +181,10 @@ class DOMBuilder:
         """Group utterances by their speaker ID.
 
         Args:
-            utterances: Tuple of utterances.
+            utterances (tuple[Utterance, ...]): Tuple of utterances.
 
         Returns:
-            Dictionary mapping speaker_id to list of utterances.
+            dict[int | None, list[Utterance]]: Dictionary mapping speaker_id to list of utterances.
         """
         grouped: dict[int | None, list[Utterance]] = defaultdict(list)
 
@@ -208,10 +206,10 @@ class DOMBuilder:
         """Add a speaker section with their utterances.
 
         Args:
-            doc: The Docling document.
-            speaker: The speaker to add.
-            utterances: The speaker's utterances.
-            include_word_timestamps: Whether to include word timestamps.
+            doc (DoclingDocument): The Docling document.
+            speaker (Speaker): The speaker to add.
+            utterances (list[Utterance]): The speaker's utterances.
+            include_word_timestamps (bool): Whether to include word timestamps.
         """
         # Create section header for speaker
         speaker_section = doc.add_heading(
@@ -249,9 +247,9 @@ class DOMBuilder:
         """Add utterances without a speaker assignment.
 
         Args:
-            doc: The Docling document.
-            utterances: Utterances without speaker assignment.
-            include_word_timestamps: Whether to include word timestamps.
+            doc (DoclingDocument): The Docling document.
+            utterances (list[Utterance]): Utterances without speaker assignment.
+            include_word_timestamps (bool): Whether to include word timestamps.
         """
         # Create a section for unknown speaker
         unknown_section = doc.add_heading(
@@ -284,10 +282,10 @@ class DOMBuilder:
         """Add an utterance as a text item.
 
         Args:
-            doc: The Docling document.
-            utterance: The utterance to add.
-            parent: The parent section header.
-            include_word_timestamps: Whether to include word timestamps.
+            doc (DoclingDocument): The Docling document.
+            utterance (Utterance): The utterance to add.
+            parent (object): The parent section header.
+            include_word_timestamps (bool): Whether to include word timestamps.
         """
         # Convert seconds to milliseconds
         start_ms = int(utterance.start * 1000)
@@ -338,11 +336,11 @@ class DOMBuilder:
         https://www.w3.org/TR/media-frags/
 
         Args:
-            start_ms: Start time in milliseconds.
-            end_ms: End time in milliseconds.
+            start_ms (int): Start time in milliseconds.
+            end_ms (int): End time in milliseconds.
 
         Returns:
-            Media fragment URI (e.g., '#t=1.5,3.2' or 'http://example.com/audio.mp3#t=1.5,3.2').
+            str: Media fragment URI (e.g., '#t=1.5,3.2' or 'http://example.com/audio.mp3#t=1.5,3.2').
         """
         # Convert milliseconds to seconds with 3 decimal places
         start_sec = start_ms / 1000
@@ -358,14 +356,14 @@ class DOMBuilder:
             return f"{self.media_base_url}{fragment}"
         return fragment
 
-    def export_to_json(self, result: DOMBuildResult) -> dict:
+    def export_to_json(self, result: DOMBuildResult) -> dict[str, object]:
         """Export the DOM result to a JSON-serializable dictionary.
 
         Args:
-            result: The DOM build result.
+            result (DOMBuildResult): The DOM build result.
 
         Returns:
-            JSON-serializable dictionary.
+            dict[str, object]: JSON-serializable dictionary.
         """
         doc_dict = result.document.export_to_dict()
 
@@ -382,10 +380,10 @@ class DOMBuilder:
         """Export the DOM result to Markdown format.
 
         Args:
-            result: The DOM build result.
+            result (DOMBuildResult): The DOM build result.
 
         Returns:
-            Markdown string representation.
+            str: Markdown string representation.
         """
         return result.document.export_to_markdown()
 
@@ -393,9 +391,9 @@ class DOMBuilder:
         """Export the DOM result to plain text.
 
         Args:
-            result: The DOM build result.
+            result (DOMBuildResult): The DOM build result.
 
         Returns:
-            Plain text representation.
+            str: Plain text representation.
         """
         return result.document.export_to_text()
