@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - fix(jobs): correct field paths for `duration_ms` and `language` in `process_audio_job` result assembly; both now read from `TranscriptionResult.metadata` where they actually live, preventing `AttributeError` at runtime
 - fix(api): guard `content-length` header parsing against malformed values; `int()` conversion is now wrapped in a `ValueError` handler so a non-numeric header no longer raises an unhandled exception
 - fix(tests): restore `tmp_path` fixture in `test_custom_initialization` for `AudioConverter`, `AudioConditioner`, and `VADProcessor`; hardcoded `/custom/temp` caused `PermissionError` on systems without root access
+- fix(core): harden the shared job store. `RedisJobStore._decode_hash` now converts a corrupt or legacy (non-JSON) field value into a typed, logged `DatabaseError` instead of letting a raw `JSONDecodeError` propagate and 500 a `GET` route or wedge the worker decode loop. `InMemoryJobStore.get`/`update`/`create` deep-copy records so callers cannot mutate stored state out of band (including nested `progress`/`input`/`result` dicts), matching `RedisJobStore`. `RedisJobStore` now rejects a non-positive `ttl_seconds` with `ConfigurationError` rather than letting Redis `EXPIRE` delete newly written jobs immediately
 
 ### Fixed
 
