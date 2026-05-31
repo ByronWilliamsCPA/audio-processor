@@ -16,15 +16,20 @@ by the API is visible to the worker and vice versa.
 from __future__ import annotations
 
 import abc
+import copy
 import json
 from typing import TYPE_CHECKING, cast
 
 from audio_processor.core.config import settings
+from audio_processor.core.exceptions import ConfigurationError, DatabaseError
+from audio_processor.utils.logging import get_logger
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable
 
     from redis.asyncio import Redis
+
+logger = get_logger(__name__)
 
 # A job record is a JSON-serializable mapping. Values are intentionally broad
 # (object) because records carry mixed content (status strings, nested input
@@ -114,16 +119,28 @@ class InMemoryJobStore(JobStore):
 
     async def create(self, job_id: str, record: JobRecord) -> None:
         """See :meth:`JobStore.create`."""
-        self._jobs[job_id] = dict(record)
+        # Deep-copy on store so later mutation of the caller's input (including
+        # nested dicts) cannot reach stored state, matching RedisJobStore, which
+        # round-trips every value through JSON.
+        self._jobs[job_id] = copy.deepcopy(record)
 
     async def get(self, job_id: str) -> JobRecord | None:
         """See :meth:`JobStore.get`."""
-        return self._jobs.get(job_id)
+        # Deep-copy so callers cannot mutate stored state out of band, including
+        # nested values (progress/input/result dicts). A shallow ``dict`` copy
+        # would leave those aliased; RedisJobStore returns freshly decoded
+        # objects, and this keeps the in-memory backend faithful to that.
+        record = self._jobs.get(job_id)
+        return copy.deepcopy(record) if record is not None else None
 
     async def update(self, job_id: str, **fields: object) -> JobRecord:
         """See :meth:`JobStore.update`."""
         record = self._jobs.setdefault(job_id, {})
-        return _merge_fields(record, fields)
+        # Deep-copy incoming values before merging so a caller mutating a
+        # passed-in nested object later cannot reach stored state, and deep-copy
+        # the result so the returned record is likewise isolated.
+        _merge_fields(record, copy.deepcopy(fields))
+        return copy.deepcopy(record)
 
     # -- Synchronous mapping helpers (test ergonomics / direct injection) -----
 
@@ -166,11 +183,26 @@ class RedisJobStore(JobStore):
         redis (Redis): An async Redis connection (e.g. the ARQ pool).
         ttl_seconds (int | None): Expiry for job records. Defaults to the configured
             ``job_result_ttl_seconds``.
+
+    Raises:
+        ConfigurationError: If the resolved TTL is not a positive number of
+            seconds. A non-positive TTL reaching Redis ``EXPIRE`` deletes the
+            key immediately, so newly written jobs would silently vanish; this
+            surfaces the misconfiguration loudly instead.
     """
 
     def __init__(self, redis: Redis, ttl_seconds: int | None = None) -> None:
         self._redis = redis
-        self._ttl = ttl_seconds or settings.job_result_ttl_seconds
+        # Use ``is not None`` so an explicit 0/negative is not silently coerced
+        # to the default; reject it instead. A non-positive TTL reaching Redis
+        # EXPIRE deletes the key at once, which would make new jobs disappear.
+        resolved_ttl = (
+            ttl_seconds if ttl_seconds is not None else settings.job_result_ttl_seconds
+        )
+        if resolved_ttl <= 0:
+            msg = f"job result TTL must be positive seconds, got {resolved_ttl}"
+            raise ConfigurationError(msg)
+        self._ttl = resolved_ttl
 
     @staticmethod
     def _as_text(value: object) -> str:
@@ -194,13 +226,25 @@ class RedisJobStore(JobStore):
 
         Returns:
             JobRecord | None: The parsed record, or ``None`` if ``raw`` is empty.
+
+        Raises:
+            DatabaseError: If a stored field value is not valid JSON (a corrupt
+                or legacy record); surfaced as a typed, logged error rather than
+                letting a raw ``JSONDecodeError`` crash the caller.
         """
         if not raw:
             return None
-        return {
-            cls._as_text(field): json.loads(cls._as_text(value))
-            for field, value in raw.items()
-        }
+        try:
+            return {
+                cls._as_text(field): json.loads(cls._as_text(value))
+                for field, value in raw.items()
+            }
+        except ValueError as exc:
+            # ``json.JSONDecodeError`` is a ``ValueError`` subclass, so catching
+            # ``ValueError`` alone covers a non-JSON (corrupt/legacy) field value.
+            logger.exception("job_record_decode_failed")
+            msg = "Corrupted job record in store"
+            raise DatabaseError(msg, operation="decode") from exc
 
     @staticmethod
     def _encode_fields(fields: dict[str, object]) -> dict[str, str]:

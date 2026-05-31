@@ -6,9 +6,11 @@ import asyncio
 
 import pytest
 
+from audio_processor.core.exceptions import ConfigurationError, DatabaseError
 from audio_processor.core.job_store import (
     InMemoryJobStore,
     RedisJobStore,
+    job_key,
 )
 from tests.unit._fake_redis import FakeRedis
 
@@ -70,6 +72,56 @@ class TestInMemoryJobStore:
         record = await store.get("j1")
         assert record is not None
         assert record["status"] == "completed"
+
+    @pytest.mark.asyncio
+    async def test_get_returns_a_copy(self) -> None:
+        """Mutating a fetched record must not alter stored state.
+
+        Matches RedisJobStore, which always returns a freshly decoded record,
+        so tests on the in-memory backend cannot mask aliasing bugs.
+        """
+        store = InMemoryJobStore()
+        await store.create("j1", {"status": "queued"})
+        fetched = await store.get("j1")
+        assert fetched is not None
+        fetched["status"] = "tampered"
+        again = await store.get("j1")
+        assert again is not None
+        assert again["status"] == "queued"
+
+    @pytest.mark.asyncio
+    async def test_get_returns_a_deep_copy(self) -> None:
+        """Mutating a *nested* value of a fetched record must not leak.
+
+        A shallow ``dict`` copy would leave nested dicts (progress/input/result)
+        aliased to stored state; only a deep copy gives the same isolation as
+        RedisJobStore, which decodes fresh nested objects per field.
+        """
+        store = InMemoryJobStore()
+        await store.create("j1", {"status": "queued", "progress": {"pct": 0}})
+        fetched = await store.get("j1")
+        assert fetched is not None
+        progress = fetched["progress"]
+        assert isinstance(progress, dict)
+        progress["pct"] = 99
+        again = await store.get("j1")
+        assert again is not None
+        assert again["progress"] == {"pct": 0}
+
+    @pytest.mark.asyncio
+    async def test_update_isolates_incoming_nested_fields(self) -> None:
+        """Mutating a nested object passed to update must not alter stored state.
+
+        Matches RedisJobStore, which JSON-encodes incoming values on write.
+        """
+        store = InMemoryJobStore()
+        await store.create("j1", {"status": "queued"})
+        progress = {"pct": 10}
+        await store.update("j1", progress=progress)
+        progress["pct"] = 99
+        again = await store.get("j1")
+        assert again is not None
+        assert again["progress"] == {"pct": 10}
 
 
 class TestRedisJobStore:
@@ -138,3 +190,30 @@ class TestRedisJobStore:
             store.update("j1", progress={"pct": 10}),
         )
         assert await store.get("j1") == {"status": "running", "progress": {"pct": 10}}
+
+    @pytest.mark.asyncio
+    async def test_get_raises_on_corrupt_record(self) -> None:
+        """A non-JSON field value surfaces as a typed DatabaseError, not a crash.
+
+        Writing a raw (non-JSON-encoded) value mimics a corrupt or legacy
+        record; the store must convert the JSONDecodeError into a logged
+        DatabaseError rather than letting it propagate uncaught.
+        """
+        redis = FakeRedis()
+        store = RedisJobStore(redis)  # type: ignore[arg-type]
+        await redis.hset(job_key("bad"), mapping={"status": "not-json{"})
+        with pytest.raises(DatabaseError, match="Corrupted job record"):
+            await store.get("bad")
+
+    @pytest.mark.asyncio
+    async def test_non_positive_ttl_rejected(self) -> None:
+        """A zero or negative TTL must raise rather than reach Redis EXPIRE.
+
+        ``EXPIRE key 0`` (or negative) deletes the key immediately, so a job
+        written with such a TTL would vanish; the store rejects it at
+        construction so the misconfiguration surfaces loudly.
+        """
+        redis = FakeRedis()
+        for bad_ttl in (0, -1):
+            with pytest.raises(ConfigurationError, match="TTL must be positive"):
+                RedisJobStore(redis, ttl_seconds=bad_ttl)  # type: ignore[arg-type]
