@@ -236,7 +236,9 @@ async def process_audio(
 
     Raises:
         HTTPException: If validation fails or file is too large.
-        Exception: If an unexpected error occurs during processing.
+        Exception: Propagated internally from enqueue failures; always caught by
+            the outer handler and re-raised as HTTPException(500), never reaching
+            the caller. Documented to satisfy pydoclint DOC503 (body raises it).
     """
     # Validate file
     if not file.filename:

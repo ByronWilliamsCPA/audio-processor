@@ -356,14 +356,14 @@ class DOMBuilder:
             return f"{self.media_base_url}{fragment}"
         return fragment
 
-    def export_to_json(self, result: DOMBuildResult) -> dict:  # type: ignore[type-arg]
+    def export_to_json(self, result: DOMBuildResult) -> dict[str, object]:
         """Export the DOM result to a JSON-serializable dictionary.
 
         Args:
             result (DOMBuildResult): The DOM build result.
 
         Returns:
-            dict: JSON-serializable dictionary.
+            dict[str, object]: JSON-serializable dictionary.
         """
         doc_dict = result.document.export_to_dict()
 
