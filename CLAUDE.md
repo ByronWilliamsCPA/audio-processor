@@ -442,7 +442,6 @@ src/audio_processor/
 │   └── __init__.py
 └── utils/                   # Utilities
     ├── __init__.py
-    ├── financial.py        # Financial utilities (Decimal precision)
     └── logging.py          # Structured logging with correlation
 
 tests/

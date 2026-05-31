@@ -6,18 +6,59 @@ and job management.
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
 from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from audio_processor.api.routes import router as audio_router
+from audio_processor.core.config import settings
 from audio_processor.utils.logging import get_logger
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from fastapi import Request
 
 logger = get_logger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Manage application-scoped resources.
+
+    When the Redis job-store backend is configured, opens an ARQ pool and
+    attaches a shared :class:`RedisJobStore` to ``app.state`` so the API and the
+    worker observe the same job state, then enqueues submitted jobs through it.
+    For the default in-memory backend this is a no-op (no Redis connection).
+
+    Args:
+        app (FastAPI): The FastAPI application.
+
+    Yields:
+        None: Control to the running application.
+    """
+    arq_pool = None
+    if settings.job_store_backend == "redis":
+        from arq import create_pool  # noqa: PLC0415
+        from arq.connections import RedisSettings  # noqa: PLC0415
+
+        from audio_processor.core.job_store import RedisJobStore  # noqa: PLC0415
+
+        arq_pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
+        app.state.arq_pool = arq_pool
+        app.state.job_store = RedisJobStore(arq_pool)
+        logger.info("redis_job_store_initialized")
+    try:
+        yield
+    finally:
+        if arq_pool is not None:
+            await arq_pool.close()
+            logger.info("redis_job_store_closed")
+
 
 # Application metadata
 APP_TITLE = "Audio Processor API"
@@ -37,13 +78,18 @@ Audio file conversion and processing for RAG content pipelines.
 2. **Track**: GET /api/v1/status/{job_id} to check progress
 3. **Retrieve**: GET /api/v1/results/{job_id} when complete
 """
-APP_VERSION = "0.1.0"
+try:
+    _app_version = _pkg_version("audio-processor")
+except PackageNotFoundError:
+    _app_version = "unknown"
+APP_VERSION: str = _app_version
 
 # Create FastAPI application
 app = FastAPI(
     title=APP_TITLE,
     description=APP_DESCRIPTION,
     version=APP_VERSION,
+    lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_tags=[
@@ -67,7 +113,7 @@ async def health_check() -> dict[str, str]:
     """Health check endpoint for container orchestration.
 
     Returns:
-        Dictionary with status indicating service health.
+        dict[str, str]: Dictionary with status indicating service health.
     """
     return {"status": "healthy"}
 
@@ -77,7 +123,7 @@ async def root() -> dict[str, str]:
     """Root endpoint with API information.
 
     Returns:
-        Dictionary with API title and version.
+        dict[str, str]: Dictionary with API title and version.
     """
     return {
         "title": APP_TITLE,
@@ -94,11 +140,11 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
     to avoid exposing internal details in production.
 
     Args:
-        request: The incoming request.
-        exc: The exception that was raised.
+        request (Request): The incoming request.
+        exc (Exception): The exception that was raised.
 
     Returns:
-        JSON response with generic error message.
+        JSONResponse: JSON response with generic error message.
     """
     # Log the exception with full context for debugging and monitoring
     logger.exception(

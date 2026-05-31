@@ -120,8 +120,14 @@ CVE-2026-6276
 # libexpat1 - XML parser library
 #   CVE-2026-25210 (HIGH): information disclosure / data corruption
 #   CVE-2026-45186 (HIGH): computational complexity DoS
+#   CVE-2025-59375 (HIGH, no fix): DoS via large dynamic memory allocation on crafted XML.
+#     Not invoked by application Python (no XML parser imported in src/, verified by grep).
+#     expat is linked by ffmpeg's XML-based demuxers (e.g. TTML/SMIL), which a crafted upload
+#     could in principle reach; impact is memory-amplification DoS only (no RCE), bounded by
+#     the /process upload size cap, the ffmpeg subprocess timeout, and container memory limits.
 CVE-2026-25210
 CVE-2026-45186
+CVE-2025-59375
 
 # libgnutls30t64 - GnuTLS transport security
 #   CVE-2026-33845 (CRITICAL): DTLS zero-length DoS
@@ -196,3 +202,21 @@ CVE-2026-42496
 CVE-2026-8376
 CVE-2026-42497
 CVE-2026-9538
+
+# perl-base - IO::Compress (same dpkg perl-base package, distinct advisory from Archive::Tar)
+#   CVE-2026-48962 (HIGH, no fix): IO::Compress < 2.220 arbitrary code execution via eval STRING
+#                                  on an attacker-controlled output glob in File::GlobMapper
+# Status: No fix available in Debian as of 2026-05-31 (perl-base 5.40.1-6, "affected")
+# Risk Assessment: NEGLIGIBLE for this application
+# Justification:
+#   - No application code invokes perl or the IO::Compress module (verified: grep of src/ for
+#     perl / IO::Compress returns nothing). This application is Python and never runs Perl.
+#   - The RCE requires a Perl caller passing an attacker-controlled output glob to IO::Compress;
+#     no such call path exists here.
+#   - perl-base is a non-removable dpkg system dependency of python:3.12-slim
+#   - Container runs as non-root (appuser, UID 1000) with no ability to run attacker Perl code
+# References:
+#   - https://security-tracker.debian.org/tracker/CVE-2026-48962
+# Review Date: 2026-05-31
+# Next Review: 2026-07-30 (60-day cap per CLAUDE.md unfixed-CVE policy)
+CVE-2026-48962

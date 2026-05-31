@@ -50,10 +50,8 @@ path = [
     ".readthedocs.yaml",
     ".trivyignore",  # Trivy vulnerability scanner ignore file
     "mkdocs.yml",
-    "poetry.lock",  # Dependency lockfile for reproducible builds
-    "requirements/**/*.txt",  # Generated from poetry export
+    "requirements/**/*.txt",  # Generated requirements files
     "benchmarks/labelmaps/**/*.yaml",  # Benchmark label mappings
-    ".zenodo.json",  # Zenodo metadata for DOI
 ]
 SPDX-License-Identifier = "CC0-1.0"
 SPDX-FileCopyrightText = "2025 Byron Williams"
@@ -119,14 +117,11 @@ path = [
     "image_reference_sets.txt",
     "overrides/**",
     "renovate.json",
-    "validate_workflows.sh",
     "scripts/**/*.sh",  # Shell scripts for automation
     "scripts/**/*.md",  # Script documentation
     "tmp_cleanup/**/*.txt",  # Temporary text files
     "tmp_cleanup/.gitkeep",  # Directory placeholder
     "sonar-project.properties",  # SonarCloud/SonarQube configuration
-    "codemeta.json",  # CodeMeta software metadata
-    ".zenodo.json",  # Zenodo DOI metadata
     "Makefile",  # Build automation
     "justfile",  # Just command runner
     "Taskfile.yml",  # Task runner configuration
@@ -139,7 +134,6 @@ SPDX-FileCopyrightText = "2025 Byron Williams"
 path = [
     "benchmarks/reports/**/*.json",
     "benchmarks/reports/**/*.md",
-    "codemeta.json",
     "benchmarks/LICENSES.md",
     "benchmarks/registry.yml",
     "notebooks/**/*.ipynb",  # Jupyter notebooks (Colab training examples)

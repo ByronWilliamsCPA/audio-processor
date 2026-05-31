@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Literal
 
 import platformdirs
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,13 +18,8 @@ class Settings(BaseSettings):
 
     Settings are loaded from environment variables. Audio processing settings
     include Deepgram API configuration, Redis for job queue, and audio
-    preprocessing parameters.
-
-    Attributes:
-        log_level: The logging level for the application.
-        json_logs: Flag to enable or disable JSON formatted logs.
-        include_timestamp: Flag to include timestamps in logs.
-        environment: Deployment environment (development, staging, production).
+    preprocessing parameters. Each field is documented via its ``Field``
+    description; see the field definitions below for details.
     """
 
     model_config = SettingsConfigDict(
@@ -180,6 +175,20 @@ class Settings(BaseSettings):
         default=86400,
         description="Time to keep job results in Redis (seconds)",
     )
+    job_store_backend: Literal["memory", "redis"] = Field(
+        default="memory",
+        description=(
+            "Backend for job state. 'memory' is process-local (dev/single "
+            "process); 'redis' shares state between the API and the worker."
+        ),
+    )
+    enqueue_enabled: bool = Field(
+        default=False,
+        description=(
+            "Enqueue submitted jobs to the ARQ worker. Requires the 'redis' "
+            "job store backend so the worker and API share job state."
+        ),
+    )
 
     # ==========================================================================
     # API Configuration
@@ -193,12 +202,41 @@ class Settings(BaseSettings):
         description="API server port",
     )
 
+    # ==========================================================================
+    # API Security
+    # ==========================================================================
+    auth_required: bool = Field(
+        default=False,
+        description="Require a valid X-API-Key header on /api/v1 endpoints",
+    )
+    api_keys: SecretStr = Field(
+        default=SecretStr(""),
+        description=(
+            "Comma-separated API keys accepted when auth_required is true. "
+            "Provide via the API_KEYS environment variable / secret."
+        ),
+    )
+    rate_limit_enabled: bool = Field(
+        default=False,
+        description="Enable per-client rate limiting on expensive endpoints",
+    )
+    rate_limit_requests: int = Field(
+        default=60,
+        ge=1,
+        description="Maximum requests allowed per rate-limit window",
+    )
+    rate_limit_window_seconds: int = Field(
+        default=60,
+        ge=1,
+        description="Length of the rate-limit window in seconds",
+    )
+
     @property
     def max_file_size_bytes(self) -> int:
         """Maximum file size in bytes.
 
         Returns:
-            File size limit converted from megabytes to bytes.
+            int: File size limit converted from megabytes to bytes.
         """
         return self.audio_max_file_size_mb * 1024 * 1024
 
@@ -207,9 +245,52 @@ class Settings(BaseSettings):
         """Maximum audio duration in seconds.
 
         Returns:
-            Duration limit converted from hours to seconds.
+            float: Duration limit converted from hours to seconds.
         """
         return self.audio_max_duration_hours * 3600
+
+    @property
+    def api_key_set(self) -> frozenset[str]:
+        """Configured API keys as a set.
+
+        Returns:
+            frozenset[str]: Frozenset of non-empty, stripped API keys parsed from ``api_keys``.
+        """
+        raw = self.api_keys.get_secret_value()
+        return frozenset(key.strip() for key in raw.split(",") if key.strip())
+
+    @model_validator(mode="after")
+    def _check_auth_has_keys(self) -> Settings:
+        """Ensure authentication is configured with at least one key.
+
+        Returns:
+            Settings: The validated settings instance.
+
+        Raises:
+            ValueError: If ``auth_required`` is set with no API keys, which
+                would reject every request at runtime.
+        """
+        if self.auth_required and not self.api_key_set:
+            msg = "auth_required=True requires at least one key in api_keys"
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def _check_enqueue_requires_redis(self) -> Settings:
+        """Ensure enqueueing is only enabled with a shared Redis store.
+
+        Returns:
+            Settings: The validated settings instance.
+
+        Raises:
+            ValueError: If ``enqueue_enabled`` is set without the Redis backend
+                (jobs would otherwise be enqueued where the worker cannot see
+                them, and never processed).
+        """
+        if self.enqueue_enabled and self.job_store_backend != "redis":
+            msg = "enqueue_enabled requires job_store_backend='redis'"
+            raise ValueError(msg)
+        return self
 
 
 # A single, global instance of the settings

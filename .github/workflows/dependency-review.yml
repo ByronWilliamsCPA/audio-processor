@@ -1,4 +1,6 @@
 # Dependency Review - Analyzes dependency changes in PRs
+# CI-013: security-analysis.yml passes run-dependency-review: true to the org reusable.
+# Review whether this standalone workflow duplicates that check.
 # Checks for vulnerabilities and license compliance
 #
 # Features:

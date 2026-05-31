@@ -10,9 +10,9 @@ tags:
 
 ## **1\. Introduction: The Imperative of Multimodal Retrieval-Augmented Generation**
 
-The evolution of Retrieval-Augmented Generation (RAG) systems has historically been constrained to the textual domain, relying on the ingestion of PDFs, Markdown, and plain text to ground Large Language Models (LLMs) in proprietary data. However, a significant proportion of high-value enterprise information exists solely in acoustic formats—earnings calls, customer support interactions, legal depositions, and internal strategy meetings. The transition from text-exclusive RAG to multimodal RAG necessitates a fundamental reimagining of the data ingestion pipeline. Unlike text, which is discrete and deterministic, audio is continuous, stochastic, and fraught with signal artifacts that require sophisticated preprocessing before it can be rendered semantically useful for vector retrieval.
+The evolution of Retrieval-Augmented Generation (RAG) systems has historically been constrained to the textual domain, relying on the ingestion of PDFs, Markdown, and plain text to ground Large Language Models (LLMs) in proprietary data. However, a significant proportion of high-value enterprise information exists solely in acoustic formats: earnings calls, customer support interactions, legal depositions, and internal strategy meetings. The transition from text-exclusive RAG to multimodal RAG necessitates a fundamental reimagining of the data ingestion pipeline. Unlike text, which is discrete and deterministic, audio is continuous, stochastic, and fraught with signal artifacts that require sophisticated preprocessing before it can be rendered semantically useful for vector retrieval.
 
-This report provides an exhaustive technical analysis of constructing an enterprise-grade audio preprocessing engine centered around **Docling**, a document conversion library that has evolved to support multimodal ingestion. The analysis extends beyond simple transcription to encompass the full lifecycle of audio data: signal conditioning, voice activity detection (VAD), speaker diarization, automatic speech recognition (ASR), and semantic chunking. We evaluate the integration of Docling with distinct ASR backends—specifically OpenAI’s Whisper, Deepgram, and LLM-based audio reasoning via OpenRouter—and propose a scalable infrastructure architecture utilizing **Modal** for serverless GPU execution.
+This report provides an exhaustive technical analysis of constructing an enterprise-grade audio preprocessing engine centered around **Docling**, a document conversion library that has evolved to support multimodal ingestion. The analysis extends beyond simple transcription to encompass the full lifecycle of audio data: signal conditioning, voice activity detection (VAD), speaker diarization, automatic speech recognition (ASR), and semantic chunking. We evaluate the integration of Docling with distinct ASR backends (specifically OpenAI’s Whisper, Deepgram, and LLM-based audio reasoning via OpenRouter) and propose a scalable infrastructure architecture utilizing **Modal** for serverless GPU execution.
 
 The objective is to define a "best practices" reference architecture that balances cost, latency, and semantic fidelity. We argue that the efficacy of an audio RAG system is determined not at the query stage, but at the ingestion stage; errors introduced during preprocessing (e.g., misattributed speakers, poor timestamp alignment, phonetic hallucinations) propagate downstream, permanently corrupting the vector space and degrading retrieval performance.
 
@@ -31,7 +31,7 @@ Most modern ASR models, including Whisper, are pre-trained on 16 kHz audio. Inge
 
 ### **2.2. Bit Depth and Quantization Noise**
 
-Bit depth determines the dynamic range of the signal—the difference between the loudest and quietest sounds that can be represented.
+Bit depth determines the dynamic range of the signal: the difference between the loudest and quietest sounds that can be represented.
 
 * **16-bit Integer (PCM):** The industry standard, offering 96 dB of dynamic range.
 * **32-bit Float:** Used in professional audio recording to prevent clipping.
@@ -124,7 +124,7 @@ Deepgram provides native speaker diarization that is integrated into the single-
 
 ### **4.3. OpenRouter and Audio-Reasoning LLMs**
 
-The frontier of ASR is the "Audio-LLM"—models like Gemini 1.5 Pro or GPT-4o that accept audio tokens directly as input without an intermediate text conversion step.
+The frontier of ASR is the "Audio-LLM": models like Gemini 1.5 Pro or GPT-4o that accept audio tokens directly as input without an intermediate text conversion step.
 
 #### **4.3.1. The Reasoning Advantage**
 
@@ -204,7 +204,7 @@ VAD is the gatekeeper. Its role is to discard segments of silence or non-speech 
 
 For recordings with background noise (street ambience, HVAC hum), **spectral gating** or deep-learning-based denoising (like Facebook's **Denoiser**) is required.
 
-* **Caution:** Aggressive denoising can introduce "musical noise" artifacts—random spectral bursts that sound like digital chirping. These artifacts are highly detrimental to ASR models.
+* **Caution:** Aggressive denoising can introduce "musical noise" artifacts, random spectral bursts that sound like digital chirping. These artifacts are highly detrimental to ASR models.
 * **Best Practice:** Use conservative settings (low reduction amounts) or fine-tune the ASR model on noisy data rather than aggressively preprocessing the signal.
 
 ### **6.3. Speaker Diarization**

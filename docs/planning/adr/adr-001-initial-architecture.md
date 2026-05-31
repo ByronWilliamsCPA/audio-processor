@@ -17,7 +17,7 @@ source: "/plan command generation"
 
 ## TL;DR
 
-Use Deepgram Nova-2 as the exclusive ASR engine with native diarization and summarization, outputting Docling DOM format for seamless integration with the existing image_detection RAG pipeline.
+Use Deepgram Nova-2 as the exclusive ASR engine with native diarization and summarization, outputting Docling DOM format for direct integration with the existing image_detection RAG pipeline.
 
 ## Context
 

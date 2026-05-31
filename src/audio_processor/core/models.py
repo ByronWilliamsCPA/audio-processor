@@ -6,26 +6,19 @@ pipeline for jobs, transcription results, speakers, and quality metrics.
 
 from __future__ import annotations
 
-import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal  # noqa: TC003 - Required at runtime for Pydantic
 from enum import StrEnum
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
-# Python 3.10 compatibility: UTC was added in 3.11
-if sys.version_info >= (3, 11):  # noqa: UP036
-    from datetime import UTC
-else:
-    UTC = timezone.utc  # noqa: UP017  # pyright: ignore[reportUnreachable]
-
 
 def _utc_now() -> datetime:
     """Get current UTC time (timezone-aware).
 
     Returns:
-        Current datetime in UTC with timezone info attached.
+        datetime: Current datetime in UTC with timezone info attached.
     """
     return datetime.now(UTC)
 
@@ -76,12 +69,13 @@ class Word(BaseModel):
     """A single transcribed word with timing information.
 
     Attributes:
-        word: The transcribed word text.
-        start: Start time in seconds.
-        end: End time in seconds.
-        confidence: Confidence score (0.0 to 1.0).
-        speaker: Speaker identifier (if diarization enabled).
-        punctuated_word: Word with punctuation applied.
+        model_config: Pydantic model configuration.
+        word (str): The transcribed word text.
+        start (float): Start time in seconds.
+        end (float): End time in seconds.
+        confidence (float): Confidence score (0.0 to 1.0).
+        speaker (int | None): Speaker identifier (if diarization enabled).
+        punctuated_word (str | None): Word with punctuation applied.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -98,13 +92,14 @@ class Utterance(BaseModel):
     """A continuous speech segment from a single speaker.
 
     Attributes:
-        id: Unique identifier for this utterance.
-        speaker: Speaker identifier.
-        start: Start time in seconds.
-        end: End time in seconds.
-        text: Full text of the utterance.
-        confidence: Average confidence score.
-        words: List of words in this utterance.
+        model_config: Pydantic model configuration.
+        id (str): Unique identifier for this utterance.
+        speaker (int): Speaker identifier.
+        start (float): Start time in seconds.
+        end (float): End time in seconds.
+        text (str): Full text of the utterance.
+        confidence (float): Average confidence score.
+        words (tuple[Word, ...]): List of words in this utterance.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -122,7 +117,7 @@ class Utterance(BaseModel):
         """Duration of the utterance in seconds.
 
         Returns:
-            Elapsed time between start and end timestamps.
+            float: Elapsed time between start and end timestamps.
         """
         return self.end - self.start
 
@@ -136,10 +131,11 @@ class Speaker(BaseModel):
     """A speaker identified through diarization.
 
     Attributes:
-        id: Numeric speaker identifier (0-indexed).
-        label: Display label (e.g., "Speaker 1").
-        total_duration: Total speaking time in seconds.
-        utterance_count: Number of utterances from this speaker.
+        model_config: Pydantic model configuration.
+        id (int): Numeric speaker identifier (0-indexed).
+        label (str): Display label (e.g., "Speaker 1").
+        total_duration (float): Total speaking time in seconds.
+        utterance_count (int): Number of utterances from this speaker.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -159,17 +155,18 @@ class AudioQualityMetrics(BaseModel):
     """Audio quality assessment metrics.
 
     Attributes:
-        snr_db: Signal-to-noise ratio in decibels.
-        silence_ratio: Percentage of audio that is silence (0.0 to 1.0).
-        clipping_ratio: Percentage of clipped samples (0.0 to 1.0).
-        peak_amplitude: Maximum amplitude value.
-        rms_level_db: RMS level in decibels.
-        duration_seconds: Total duration of audio.
-        sample_rate: Sample rate in Hz.
-        channels: Number of audio channels.
-        quality_score: Composite quality score (0.0 to 1.0).
-        quality_level: Qualitative assessment level.
-        warnings: List of quality warnings.
+        model_config: Pydantic model configuration.
+        snr_db (float): Signal-to-noise ratio in decibels.
+        silence_ratio (float): Percentage of audio that is silence (0.0 to 1.0).
+        clipping_ratio (float): Percentage of clipped samples (0.0 to 1.0).
+        peak_amplitude (float): Maximum amplitude value.
+        rms_level_db (float): RMS level in decibels.
+        duration_seconds (float): Total duration of audio.
+        sample_rate (int): Sample rate in Hz.
+        channels (int): Number of audio channels.
+        quality_score (float): Composite quality score (0.0 to 1.0).
+        quality_level (QualityLevel): Qualitative assessment level.
+        warnings (tuple[str, ...]): List of quality warnings.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -196,14 +193,15 @@ class TranscriptionMetadata(BaseModel):
     """Metadata about a transcription result.
 
     Attributes:
-        duration_seconds: Duration of the audio in seconds.
-        word_count: Total number of words transcribed.
-        confidence_mean: Average confidence across all words.
-        confidence_min: Minimum confidence score.
-        model: ASR model used for transcription.
-        language: Detected or specified language code.
-        processing_time_seconds: Time taken for transcription.
-        cost_usd: Estimated cost in USD.
+        model_config: Pydantic model configuration.
+        duration_seconds (float): Duration of the audio in seconds.
+        word_count (int): Total number of words transcribed.
+        confidence_mean (float): Average confidence across all words.
+        confidence_min (float): Minimum confidence score.
+        model (str): ASR model used for transcription.
+        language (str): Detected or specified language code.
+        processing_time_seconds (float | None): Time taken for transcription.
+        cost_usd (Decimal | None): Estimated cost in USD.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -222,12 +220,13 @@ class TranscriptionResult(BaseModel):
     """Complete transcription result from ASR processing.
 
     Attributes:
-        transcript: Full transcript text.
-        utterances: List of speaker-attributed utterances.
-        speakers: List of identified speakers.
-        words: Flat list of all words with timing.
-        summary: AI-generated summary (if enabled).
-        metadata: Transcription metadata.
+        model_config: Pydantic model configuration.
+        transcript (str): Full transcript text.
+        utterances (tuple[Utterance, ...]): List of speaker-attributed utterances.
+        speakers (tuple[Speaker, ...]): List of identified speakers.
+        words (tuple[Word, ...]): Flat list of all words with timing.
+        summary (str | None): AI-generated summary (if enabled).
+        metadata (TranscriptionMetadata): Transcription metadata.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -249,14 +248,15 @@ class AudioJobInput(BaseModel):
     """Input parameters for an audio processing job.
 
     Attributes:
-        file_path: Path to the input audio file.
-        original_filename: Original name of uploaded file.
-        file_size_bytes: Size of the file in bytes.
-        content_type: MIME type of the file.
-        enable_diarization: Whether to enable speaker diarization.
-        enable_summarization: Whether to generate summary.
-        language: Language code (e.g., "en", "es").
-        callback_url: Optional webhook URL for completion notification.
+        model_config: Pydantic model configuration.
+        file_path (str): Path to the input audio file.
+        original_filename (str): Original name of uploaded file.
+        file_size_bytes (int): Size of the file in bytes.
+        content_type (str): MIME type of the file.
+        enable_diarization (bool): Whether to enable speaker diarization.
+        enable_summarization (bool): Whether to generate summary.
+        language (str): Language code (e.g., "en", "es").
+        callback_url (str | None): Optional webhook URL for completion notification.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -275,11 +275,11 @@ class AudioJobProgress(BaseModel):
     """Progress information for a running job.
 
     Attributes:
-        stage: Current processing stage.
-        percent_complete: Percentage complete (0-100).
-        message: Human-readable status message.
-        started_at: When processing started.
-        updated_at: Last progress update time.
+        stage (str): Current processing stage.
+        percent_complete (int): Percentage complete (0-100).
+        message (str): Human-readable status message.
+        started_at (datetime | None): When processing started.
+        updated_at (datetime): Last progress update time.
     """
 
     stage: str
@@ -293,16 +293,16 @@ class AudioJob(BaseModel):
     """An audio processing job with full state.
 
     Attributes:
-        id: Unique job identifier.
-        status: Current job status.
-        input: Job input parameters.
-        progress: Current progress (if processing).
-        result: Transcription result (if completed).
-        quality: Audio quality metrics (if assessed).
-        error: Error message (if failed).
-        created_at: Job creation timestamp.
-        completed_at: Job completion timestamp.
-        processing_time_seconds: Total processing time.
+        id (UUID): Unique job identifier.
+        status (JobStatus): Current job status.
+        input (AudioJobInput): Job input parameters.
+        progress (AudioJobProgress | None): Current progress (if processing).
+        result (TranscriptionResult | None): Transcription result (if completed).
+        quality (AudioQualityMetrics | None): Audio quality metrics (if assessed).
+        error (str | None): Error message (if failed).
+        created_at (datetime): Job creation timestamp.
+        completed_at (datetime | None): Job completion timestamp.
+        processing_time_seconds (float | None): Total processing time.
     """
 
     id: UUID = Field(default_factory=uuid4)
@@ -326,10 +326,10 @@ class ProcessAudioRequest(BaseModel):
     """Request body for audio processing submission.
 
     Attributes:
-        enable_diarization: Whether to enable speaker diarization.
-        enable_summarization: Whether to generate summary.
-        language: Language code for transcription.
-        callback_url: Optional webhook for completion notification.
+        enable_diarization (bool): Whether to enable speaker diarization.
+        enable_summarization (bool): Whether to generate summary.
+        language (str): Language code for transcription.
+        callback_url (str | None): Optional webhook for completion notification.
     """
 
     enable_diarization: bool = True
@@ -342,10 +342,10 @@ class ProcessAudioResponse(BaseModel):
     """Response for successful audio submission.
 
     Attributes:
-        job_id: Unique identifier for the submitted job.
-        status: Initial job status.
-        status_url: URL to check job status.
-        message: Confirmation message.
+        job_id (UUID): Unique identifier for the submitted job.
+        status (JobStatus): Initial job status.
+        status_url (str): URL to check job status.
+        message (str): Confirmation message.
     """
 
     job_id: UUID
@@ -358,13 +358,13 @@ class JobStatusResponse(BaseModel):
     """Response for job status queries.
 
     Attributes:
-        job_id: Job identifier.
-        status: Current status.
-        progress: Progress information (if processing).
-        result_url: URL to fetch results (if completed).
-        error: Error message (if failed).
-        created_at: Job creation time.
-        completed_at: Job completion time (if done).
+        job_id (UUID): Job identifier.
+        status (JobStatus): Current status.
+        progress (AudioJobProgress | None): Progress information (if processing).
+        result_url (str | None): URL to fetch results (if completed).
+        error (str | None): Error message (if failed).
+        created_at (datetime): Job creation time.
+        completed_at (datetime | None): Job completion time (if done).
     """
 
     job_id: UUID

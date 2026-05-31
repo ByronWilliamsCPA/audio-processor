@@ -210,10 +210,15 @@ disabled in Debian's curl build; CVE-2026-5773 is not reachable.
 | --- | --- | --- |
 | CVE-2026-25210 | HIGH | information disclosure / data corruption |
 | CVE-2026-45186 | HIGH | computational complexity DoS |
+| CVE-2025-59375 | HIGH | DoS via large dynamic memory allocation on crafted XML (added 2026-05-31, surfaced on the PR #56 Trivy gate via other-vendor severity) |
 
 No XML parsing in `src/`. `libexpat1` is present only because system tools
 link it. Python's standard library `xml.etree` is not imported anywhere in
-the application.
+the application. The one residual reachability path is ffmpeg's XML-based
+demuxers (TTML/SMIL), which a crafted upload could in principle exercise;
+CVE-2025-59375 is a memory-amplification DoS only (no code execution),
+bounded by the `/process` upload size cap, the ffmpeg subprocess timeout,
+and container memory limits.
 
 ### libgnutls30t64
 
@@ -290,6 +295,7 @@ Same reachability story as `libexpat1`: no XML parsing in `src/`.
 | CVE-2026-8376 | CRITICAL | affected | Perl heap buffer overflow through version 5.43.10 |
 | CVE-2026-42497 | HIGH | affected | Archive::Tar < 3.08 hardlink extraction path traversal |
 | CVE-2026-9538 | HIGH | affected | Archive::Tar < 3.10 memory exposure |
+| CVE-2026-48962 | HIGH | affected | IO::Compress < 2.220 arbitrary code execution via `eval STRING` on an attacker-controlled output glob (added 2026-05-31, surfaced on the PR #56 Trivy gate via other-vendor severity) |
 
 `perl-base` ships in `python:3.12-slim` as a non-removable dependency of
 `dpkg` (the Debian package manager itself). No application code invokes perl,
@@ -297,10 +303,12 @@ shells out to perl scripts, or calls any Perl module. The Archive::Tar CVEs
 require calling `Archive::Tar->extract()` on a malicious tar archive; the
 application never extracts archives via Perl. CVE-2026-8376 requires executing
 a crafted Perl script; the container runs no Perl scripts and has no
-attacker-controlled code execution path into the Perl interpreter. Non-root
-container (`appuser`, UID 1000) with no additional capabilities.
+attacker-controlled code execution path into the Perl interpreter.
+CVE-2026-48962 requires a Perl caller passing an attacker-controlled output
+glob to `IO::Compress`; this application is Python and has no such call path.
+Non-root container (`appuser`, UID 1000) with no additional capabilities.
 
-- **Reassess-by**: 2026-07-27 (60-day cap)
+- **Reassess-by**: 2026-07-27 for the Archive::Tar family; 2026-07-30 for CVE-2026-48962 (60-day cap)
 - **Suppressed in**: `.trivyignore`
 
 ---

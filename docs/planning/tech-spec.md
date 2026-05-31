@@ -15,7 +15,7 @@ source: "/plan command generation"
 
 ## TL;DR
 
-FastAPI-based async audio processing service using Deepgram Nova-2 API with comprehensive audio preprocessing pipeline (librosa, pydub, Silero VAD), Redis Queue for job management, FFmpeg for media handling, and Docling DOM for pipeline-compatible output. Python 3.12 with UV, Ruff, BasedPyright, and pytest.
+FastAPI-based async audio processing service using Deepgram Nova-2 API with multi-stage audio preprocessing pipeline (librosa, pydub, Silero VAD), Redis Queue for job management, FFmpeg for media handling, and Docling DOM for pipeline-compatible output. Python 3.12 with UV, Ruff, BasedPyright, and pytest.
 
 ## 1. Technology Stack
 

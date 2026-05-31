@@ -10,20 +10,30 @@ This module defines the REST API endpoints for:
 from __future__ import annotations
 
 import os
-import sys
 import tempfile
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
 import anyio
 import anyio.to_thread
-from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
 from fastapi.responses import Response
 
+from audio_processor.api.security import rate_limit, require_api_key
 from audio_processor.core.config import settings
 from audio_processor.core.exceptions import ValidationError
+from audio_processor.core.job_store import InMemoryJobStore, JobStore
 from audio_processor.core.models import (
     AudioJobInput,
     AudioJobProgress,
@@ -34,31 +44,151 @@ from audio_processor.core.models import (
 from audio_processor.services.audio_converter import AudioConverter
 from audio_processor.utils.logging import get_logger
 
-# Python 3.10 compatibility: UTC was added in 3.11
-if sys.version_info >= (3, 11):  # noqa: UP036
-    from datetime import UTC
-else:
-    UTC = timezone.utc  # noqa: UP017  # pyright: ignore[reportUnreachable]
-
 logger = get_logger(__name__)
 
 PLAIN_TEXT_CONTENT_TYPE = "text/plain; charset=utf-8"
 
-# Create router with prefix
-router = APIRouter(prefix="/api/v1", tags=["Audio Processing"])
+# Create router with prefix. API-key authentication is enforced on every
+# /api/v1 route (a no-op unless auth_required is enabled).
+router = APIRouter(
+    prefix="/api/v1",
+    tags=["Audio Processing"],
+    dependencies=[Depends(require_api_key)],
+)
 
-# In-memory job store (replace with Redis in production)
-# This is a simple dict for development; production uses Redis
-_jobs: dict[str, dict[str, object]] = {}
+# Process-local fallback store. In production, a RedisJobStore is attached to
+# ``app.state.job_store`` at startup (see api/__init__.py) so the API and the
+# ARQ worker share job state. The in-memory store is used for development and
+# tests, and is the single source of truth when no store is attached.
+_default_store = InMemoryJobStore()
 
 
-def _get_job_store() -> dict[str, dict[str, object]]:
-    """Get the job store.
+def _get_job_store() -> InMemoryJobStore:  # pyright: ignore[reportUnusedFunction]
+    """Return the process-local in-memory job store.
+
+    Exposed as a test seam for direct record injection/inspection; not called
+    within this module (request handlers use :func:`get_job_store`).
 
     Returns:
-        Dictionary of jobs keyed by job_id.
+        InMemoryJobStore: The module-level in-memory job store.
     """
-    return _jobs
+    return _default_store
+
+
+def get_job_store(request: Request) -> JobStore:
+    """Resolve the job store for a request.
+
+    Prefers a store attached to ``app.state`` (e.g. a Redis-backed store wired
+    at startup); otherwise falls back to the process-local in-memory store.
+
+    Args:
+        request (Request): The incoming request.
+
+    Returns:
+        JobStore: The active job store.
+    """
+    store = getattr(request.app.state, "job_store", None)
+    if isinstance(store, JobStore):
+        return store
+    return _default_store
+
+
+def _parse_iso(value: object) -> datetime | None:
+    """Best-effort parse of a stored timestamp.
+
+    Args:
+        value (object): A datetime, an ISO-8601 string, or anything else.
+
+    Returns:
+        datetime | None: The parsed datetime, or ``None`` if absent/unparseable.
+    """
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value)
+        except ValueError:
+            return None
+    return None
+
+
+async def _maybe_enqueue(
+    request: Request,
+    job_id: str,
+    record: dict[str, object],
+) -> None:
+    """Enqueue a job to the ARQ worker when enqueueing is enabled.
+
+    No-op when ``enqueue_enabled`` is false or no ARQ pool is attached to the
+    application (e.g. in-memory/dev deployments), leaving the job queued in the
+    store for later processing.
+
+    Args:
+        request (Request): The incoming request (source of the ARQ pool on app state).
+        job_id (str): Unique job identifier.
+        record (dict[str, object]): The job record to hand to the worker (carries the ``input``).
+
+    Raises:
+        HTTPException: If enqueueing is enabled but no ARQ pool is configured.
+    """
+    if not settings.enqueue_enabled:
+        return
+    pool = getattr(request.app.state, "arq_pool", None)
+    if pool is None:
+        # Enqueueing is enabled but no pool is configured: the job would be
+        # stranded QUEUED forever. Fail loudly rather than silently accept it.
+        logger.error("enqueue_pool_missing", job_id=job_id)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Job enqueueing is enabled but no worker pool is configured",
+        )
+    # Imported lazily so the API does not hard-depend on the 'jobs' (arq) extra
+    # unless enqueueing is actually used.
+    from audio_processor.jobs.worker import enqueue_task  # noqa: PLC0415
+
+    await enqueue_task(pool, "process_audio_job", job_id, record)
+
+
+# Upload streaming chunk size (1 MiB).
+UPLOAD_CHUNK_SIZE = 1024 * 1024
+
+
+async def _stream_upload_to_temp(
+    file: UploadFile,
+    temp_path: Path,
+    max_bytes: int,
+) -> int:
+    """Stream an upload to disk in bounded chunks, enforcing a hard size cap.
+
+    Avoids buffering the entire body in memory and does not trust the
+    client-supplied ``Content-Length``: the cap is enforced on bytes actually
+    read.
+
+    Args:
+        file (UploadFile): The incoming upload.
+        temp_path (Path): Destination path (already created).
+        max_bytes (int): Maximum permitted size in bytes.
+
+    Returns:
+        int: Number of bytes written.
+
+    Raises:
+        HTTPException: 413 if the stream exceeds ``max_bytes``.
+    """
+    bytes_written = 0
+    async with await anyio.open_file(temp_path, "wb") as out:
+        while chunk := await file.read(UPLOAD_CHUNK_SIZE):
+            bytes_written += len(chunk)
+            if bytes_written > max_bytes:
+                raise HTTPException(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    detail=(
+                        "File too large. Maximum size is "
+                        f"{settings.audio_max_file_size_mb} MB"
+                    ),
+                )
+            await out.write(chunk)
+    return bytes_written
 
 
 @router.post(
@@ -66,6 +196,7 @@ def _get_job_store() -> dict[str, dict[str, object]]:
     status_code=status.HTTP_202_ACCEPTED,
     summary="Submit audio for processing",
     description="Upload an audio or video file for transcription processing.",
+    dependencies=[Depends(rate_limit)],
 )
 async def process_audio(
     request: Request,
@@ -93,18 +224,21 @@ async def process_audio(
     Returns a job ID that can be used to check status and retrieve results.
 
     Args:
-        request: FastAPI request object.
-        file: Uploaded audio or video file.
-        enable_diarization: Whether to identify speakers.
-        enable_summarization: Whether to generate a summary.
-        language: Language code for transcription.
-        callback_url: Optional webhook URL for completion notification.
+        request (Request): FastAPI request object.
+        file (Annotated[UploadFile, File(description='Audio or video file to process')]): Uploaded audio or video file.
+        enable_diarization (Annotated[bool, Form(description='Enable speaker diarization')]): Whether to identify speakers.
+        enable_summarization (Annotated[bool, Form(description='Enable AI summarization')]): Whether to generate a summary.
+        language (Annotated[str, Form(description="Language code (e.g., 'en', 'es')")]): Language code for transcription.
+        callback_url (Annotated[str | None, Form(description='Webhook URL for completion notification')]): Optional webhook URL for completion notification.
 
     Returns:
-        ProcessAudioResponse with job_id and status URL.
+        ProcessAudioResponse: ProcessAudioResponse with job_id and status URL.
 
     Raises:
         HTTPException: If validation fails or file is too large.
+        Exception: Propagated internally from enqueue failures; always caught by
+            the outer handler and re-raised as HTTPException(500), never reaching
+            the caller. Documented to satisfy pydoclint DOC503 (body raises it).
     """
     # Validate file
     if not file.filename:
@@ -138,6 +272,8 @@ async def process_audio(
         enable_summarization=enable_summarization,
     )
 
+    temp_path: Path | None = None
+    success = False
     try:
         # Save file to temp directory
         temp_dir = Path(settings.audio_temp_dir)
@@ -152,17 +288,17 @@ async def process_audio(
         os.close(fd)
         temp_path = Path(temp_name)
 
-        # Read upload and write asynchronously
-        content = await file.read()
-        await anyio.Path(temp_path).write_bytes(content)
+        # Stream the upload to disk with a hard size cap (do not buffer the
+        # entire body in memory or trust the client Content-Length header).
+        file_size_bytes = await _stream_upload_to_temp(
+            file, temp_path, settings.max_file_size_bytes
+        )
 
         # Validate audio file
         converter = AudioConverter()
         try:
             audio_info = converter.validate_file(temp_path)
         except ValidationError as e:
-            # Clean up temp file
-            await anyio.Path(temp_path).unlink(missing_ok=True)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(e),
@@ -172,7 +308,7 @@ async def process_audio(
         job_input = AudioJobInput(
             file_path=str(temp_path),
             original_filename=file.filename,
-            file_size_bytes=len(content),
+            file_size_bytes=file_size_bytes,
             content_type=file.content_type or "application/octet-stream",
             enable_diarization=enable_diarization,
             enable_summarization=enable_summarization,
@@ -180,9 +316,9 @@ async def process_audio(
             callback_url=callback_url,
         )
 
-        # Store job in memory (will be replaced with Redis queue)
-        jobs = _get_job_store()
-        jobs[job_id] = {
+        # Persist the job record to the shared store (single source of truth
+        # for both the API and the worker).
+        record: dict[str, object] = {
             "id": job_id,
             "status": JobStatus.QUEUED.value,
             "input": job_input.model_dump(),
@@ -199,26 +335,42 @@ async def process_audio(
                 "is_video": audio_info.is_video,
             },
         }
+        store = get_job_store(request)
+        await store.create(job_id, record)
 
-        # Job enqueueing to ARQ worker is tracked in GitHub issue #50.
-        # Until Redis is connected, jobs remain in the in-memory store.
+        # Enqueue to the ARQ worker when enabled. Requires a Redis-backed store
+        # and an ARQ pool attached at startup so the worker observes the record.
+        try:
+            await _maybe_enqueue(request, job_id, record)
+        except Exception:
+            # Mark the orphaned record FAILED, then surface the error.
+            await store.update(
+                job_id,
+                status=JobStatus.FAILED.value,
+                error="Failed to enqueue job for processing",
+            )
+            raise
+
         logger.info(
             "audio_job_queued",
             job_id=job_id,
             duration_seconds=audio_info.duration_seconds,
             is_video=audio_info.is_video,
+            enqueued=settings.enqueue_enabled,
         )
 
         # Build status URL
         base_url = str(request.base_url).rstrip("/")
         status_url = f"{base_url}/api/v1/status/{job_id}"
 
-        return ProcessAudioResponse(
+        response = ProcessAudioResponse(
             job_id=uuid.UUID(job_id),
             status=JobStatus.QUEUED,
             status_url=status_url,
             message=f"Audio file queued for processing. Duration: {audio_info.duration_seconds:.1f}s",
         )
+        success = True
+        return response  # noqa: TRY300
 
     except HTTPException:
         raise
@@ -228,6 +380,11 @@ async def process_audio(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to process audio upload",
         ) from e
+    finally:
+        # On any failure path the upload is orphaned: remove it. On success the
+        # worker takes ownership of the temp file and deletes it when done.
+        if temp_path is not None and not success:
+            await anyio.Path(temp_path).unlink(missing_ok=True)
 
 
 @router.get(
@@ -242,24 +399,23 @@ async def get_job_status(
     """Get the status of an audio processing job.
 
     Args:
-        request: FastAPI request object.
-        job_id: Unique job identifier.
+        request (Request): FastAPI request object.
+        job_id (str): Unique job identifier.
 
     Returns:
-        JobStatusResponse with current status and progress.
+        JobStatusResponse: JobStatusResponse with current status and progress.
 
     Raises:
         HTTPException: If job is not found.
     """
-    jobs = _get_job_store()
+    store = get_job_store(request)
+    job = await store.get(job_id)
 
-    if job_id not in jobs:
+    if job is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Job not found: {job_id}",
         )
-
-    job = jobs[job_id]
 
     # Build result URL if completed
     result_url: str | None = None
@@ -280,18 +436,10 @@ async def get_job_status(
                 updated_at=datetime.now(UTC),
             )
 
-    # Parse dates
-    created_at = job.get("created_at")
-    if isinstance(created_at, str):
-        created_at = datetime.fromisoformat(created_at)
-    elif not isinstance(created_at, datetime):
-        created_at = datetime.now(UTC)
-
-    completed_at = job.get("completed_at")
-    if isinstance(completed_at, str):
-        completed_at = datetime.fromisoformat(completed_at)
-    elif completed_at is not None and not isinstance(completed_at, datetime):
-        completed_at = None
+    # Parse dates defensively: a corrupt/legacy timestamp must not 500 a status
+    # check (created_at falls back to now; completed_at falls back to None).
+    created_at = _parse_iso(job.get("created_at")) or datetime.now(UTC)
+    completed_at = _parse_iso(job.get("completed_at"))
 
     return JobStatusResponse(
         job_id=uuid.UUID(job_id),
@@ -316,24 +464,23 @@ async def get_job_results(
     """Get the complete results of a finished job.
 
     Args:
-        request: FastAPI request object.
-        job_id: Unique job identifier.
+        request (Request): FastAPI request object.
+        job_id (str): Unique job identifier.
 
     Returns:
-        Dictionary with transcription results and artifact URLs.
+        dict[str, object]: Dictionary with transcription results and artifact URLs.
 
     Raises:
         HTTPException: If job not found or not completed.
     """
-    jobs = _get_job_store()
+    store = get_job_store(request)
+    job = await store.get(job_id)
 
-    if job_id not in jobs:
+    if job is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Job not found: {job_id}",
         )
-
-    job = jobs[job_id]
 
     if job["status"] != JobStatus.COMPLETED.value:
         raise HTTPException(
@@ -401,6 +548,7 @@ ARTIFACT_CONTENT_TYPES: dict[str, str] = {
     description="Download a specific artifact from a completed job.",
 )
 async def get_artifact(
+    request: Request,
     job_id: str,
     artifact_name: str,
 ) -> Response:
@@ -414,24 +562,24 @@ async def get_artifact(
     - transcript.vtt: WebVTT subtitle format
 
     Args:
-        job_id: Unique job identifier.
-        artifact_name: Name of the artifact to download.
+        request (Request): FastAPI request object.
+        job_id (str): Unique job identifier.
+        artifact_name (str): Name of the artifact to download.
 
     Returns:
-        Response with the artifact content.
+        Response: Response with the artifact content.
 
     Raises:
         HTTPException: If job not found, not completed, or artifact unavailable.
     """
-    jobs = _get_job_store()
+    store = get_job_store(request)
+    job = await store.get(job_id)
 
-    if job_id not in jobs:
+    if job is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Job not found: {job_id}",
         )
-
-    job = jobs[job_id]
 
     if job["status"] != JobStatus.COMPLETED.value:
         raise HTTPException(
