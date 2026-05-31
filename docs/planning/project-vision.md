@@ -15,7 +15,7 @@ source: "/plan command generation"
 
 ## TL;DR
 
-Audio Processor is a Deepgram-powered audio transcription pipeline that converts audio/video files into structured, RAG-ready content through high-accuracy speech-to-text, speaker diarization, and automatic summarization, outputting unified Docling DOM format for seamless integration with the existing image_detection RAG pipeline.
+Audio Processor is a Deepgram-powered audio transcription pipeline that converts audio/video files into structured, RAG-ready content through high-accuracy speech-to-text, speaker diarization, and automatic summarization, outputting unified Docling DOM format for direct integration with the existing image_detection RAG pipeline.
 
 ## Problem Statement
 
@@ -40,7 +40,7 @@ The existing RAG pipeline (/home/byron/dev/image_detection/) handles text docume
 
 ### Core Value
 
-Audio Processor transforms spoken content into searchable, attributable text chunks that integrate seamlessly with existing document processing pipelines, enabling unified semantic search across all content types.
+Audio Processor transforms spoken content into searchable, attributable text chunks that integrate directly with existing document processing pipelines, enabling unified semantic search across all content types.
 
 ### Key Capabilities (MVP)
 

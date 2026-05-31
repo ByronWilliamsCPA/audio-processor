@@ -28,7 +28,7 @@ Implement Docling DOM output format for pipeline integration, add result retriev
 | Milestone | Sprint(s) | Deliverable |
 | --------- | --------- | ----------- |
 | M2.1: Docling DOM Mapping | Sprints 1-4 | Speaker/Utterance → SectionItem/TextItem mapping complete |
-| M2.2: Results API | Sprints 5-6 | GET /results endpoint with comprehensive output |
+| M2.2: Results API | Sprints 5-6 | GET /results endpoint returning metadata, speakers, summary, and artifact links |
 | M2.3: Artifact Generation | Sprints 7-8 | Multiple output formats (JSON, TXT, SRT) |
 | M2.4: Integration Testing | Sprints 9-10 | Downstream pipeline validation, E2E tests |
 

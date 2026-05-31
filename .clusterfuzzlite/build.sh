@@ -5,6 +5,9 @@
 # Reference: https://google.github.io/clusterfuzzlite/build-integration/python/
 
 # Install atheris fuzzing engine
+# SCORECARD:Pinned-Dependencies: Add version pin and hash for reproducible fuzz builds.
+# Run: pip download atheris==<ver> && pip hash atheris-<ver>*.whl
+# Then replace with: pip3 install 'atheris==<ver>' --hash=sha256:<hash>
 pip3 install atheris
 
 # Install the package with fuzzing support

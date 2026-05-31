@@ -1,7 +1,7 @@
 # Audio Processor
 
 ## Quality & Security
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/ByronWilliamsCPA/audio_processor/badge)](https://securityscorecards.dev/viewer/?uri=github.com/ByronWilliamsCPA/audio_processor)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/ByronWilliamsCPA/audio-processor/badge)](https://securityscorecards.dev/viewer/?uri=github.com/ByronWilliamsCPA/audio-processor)
 [![codecov](https://codecov.io/gh/ByronWilliamsCPA/audio_processor/graph/badge.svg)](https://codecov.io/gh/ByronWilliamsCPA/audio_processor)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=ByronWilliamsCPA_audio-processor&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=ByronWilliamsCPA_audio-processor)
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=ByronWilliamsCPA_audio-processor&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=ByronWilliamsCPA_audio-processor)

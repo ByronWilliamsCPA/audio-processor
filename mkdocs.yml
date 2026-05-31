@@ -6,11 +6,11 @@ site_description: Audio file conversion and processing for RAG content pipelines
 site_author: Byron Williams
 site_url: https://audio-processor.readthedocs.io
 repo_url: https://github.com/ByronWilliamsCPA/audio-processor
-repo_name: ByronWilliamsCPA/audio_processor
+repo_name: ByronWilliamsCPA/audio-processor
 edit_uri: edit/main/docs/
 
 # Copyright
-copyright: Copyright &copy; 2025 Byron Williams
+copyright: Copyright &copy; 2025-2026 Byron Williams
 
 # Theme Configuration
 theme:
@@ -174,6 +174,7 @@ nav:
       - Overview: api-reference.md
 
   - Development:
+      - Setup: development/setup.md
       - Architecture: development/architecture.md
       - Testing: development/testing.md
       - Code Quality: development/code-quality.md
@@ -185,6 +186,4 @@ nav:
       - License: project/license.md
 
 # Validation
-# strict mode disabled to allow links to repo root files
-# These files are valid but outside docs/ directory
-strict: false
+strict: true

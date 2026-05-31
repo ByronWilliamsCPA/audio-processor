@@ -175,8 +175,8 @@ class DeepgramTranscriptionClient:
             if summarize:
                 options["summarize"] = "v2"
 
-            # Call Deepgram API using v5 SDK
-            # The v5 SDK uses listen.rest.transcribe_file
+            # #CRITICAL: ExternalResources: Deepgram API must be reachable and return a valid response.
+            # #VERIFY: Ensure timeout is configured and ExternalServiceError is raised on network failure.
             response = self._client.listen.rest.v("1").transcribe_file(  # pyright: ignore[reportAttributeAccessIssue]
                 {"buffer": audio_data},
                 options,

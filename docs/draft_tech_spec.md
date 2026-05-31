@@ -1617,10 +1617,10 @@ volumes:
 
 ## Revision History
 
-| Version | Date | Author | Changes |
-|---------|------|--------|---------|
-| 1.0 | December 2024 | — | Initial technical specification |
+| Version | Date          | Author         | Changes                         |
+|---------|---------------|----------------|---------------------------------|
+| 1.0     | December 2024 | Byron Williams | Initial technical specification |
 
 ---
 
-*— End of Document —*
+End of Document

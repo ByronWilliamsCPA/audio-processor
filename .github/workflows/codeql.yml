@@ -1,4 +1,7 @@
 # CodeQL Security Analysis
+# CI-013: security-analysis.yml passes run-codeql: true to the org reusable, which also
+# runs CodeQL. Review whether this standalone workflow creates a duplicate scan. If so,
+# consider removing this file and relying solely on security-analysis.yml.
 # Performs static application security testing (SAST) using GitHub CodeQL.
 #
 # IMPORTANT: GitHub's CodeQL "default setup" must remain DISABLED for this repo.

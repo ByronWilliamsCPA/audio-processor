@@ -24,7 +24,7 @@ class CLIContext:
 
 
 @click.group()
-@click.version_option(version="0.1.0", prog_name="audio_processor")
+@click.version_option(package_name="audio-processor", prog_name="audio_processor")
 @click.option(
     "--debug",
     is_flag=True,

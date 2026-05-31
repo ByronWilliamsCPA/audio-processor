@@ -7,6 +7,8 @@ and job management.
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
 from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
@@ -76,7 +78,11 @@ Audio file conversion and processing for RAG content pipelines.
 2. **Track**: GET /api/v1/status/{job_id} to check progress
 3. **Retrieve**: GET /api/v1/results/{job_id} when complete
 """
-APP_VERSION = "0.1.0"
+try:
+    _app_version = _pkg_version("audio-processor")
+except PackageNotFoundError:
+    _app_version = "unknown"
+APP_VERSION: str = _app_version
 
 # Create FastAPI application
 app = FastAPI(
