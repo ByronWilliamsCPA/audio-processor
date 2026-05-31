@@ -34,6 +34,13 @@ class QualityAssessor:
     transcription accuracy. Provides SNR, silence ratio, clipping
     detection, and composite quality scoring.
 
+    Args:
+        snr_excellent_db (float | None): SNR threshold for excellent quality.
+        snr_good_db (float | None): SNR threshold for good quality.
+        snr_fair_db (float | None): SNR threshold for fair quality.
+        max_silence_ratio (float | None): Maximum acceptable silence ratio.
+        max_clipping_ratio (float | None): Maximum acceptable clipping ratio.
+
     Example:
         >>> assessor = QualityAssessor()
         >>> metrics = assessor.assess("/path/to/audio.wav")
@@ -50,15 +57,6 @@ class QualityAssessor:
         max_silence_ratio: float | None = None,
         max_clipping_ratio: float | None = None,
     ) -> None:
-        """Initialize the QualityAssessor.
-
-        Args:
-            snr_excellent_db: SNR threshold for excellent quality.
-            snr_good_db: SNR threshold for good quality.
-            snr_fair_db: SNR threshold for fair quality.
-            max_silence_ratio: Maximum acceptable silence ratio.
-            max_clipping_ratio: Maximum acceptable clipping ratio.
-        """
         self.snr_excellent_db = snr_excellent_db or settings.quality_snr_excellent_db
         self.snr_good_db = snr_good_db or settings.quality_snr_good_db
         self.snr_fair_db = snr_fair_db or settings.quality_snr_fair_db
@@ -71,10 +69,10 @@ class QualityAssessor:
         """Assess audio quality of a file.
 
         Args:
-            file_path: Path to the audio file.
+            file_path (str | Path): Path to the audio file.
 
         Returns:
-            AudioQualityMetrics with quality assessment results.
+            AudioQualityMetrics: AudioQualityMetrics with quality assessment results.
 
         Raises:
             ValidationError: If the file doesn't exist or can't be read.
@@ -158,10 +156,10 @@ class QualityAssessor:
         """Load audio file using soundfile.
 
         Args:
-            file_path: Path to the audio file.
+            file_path (Path): Path to the audio file.
 
         Returns:
-            Tuple of (audio samples, sample rate).
+            tuple[AudioSamples, int]: Tuple of (audio samples, sample rate).
         """
         try:
             audio, sample_rate = sf.read(str(file_path), dtype="float64")
@@ -180,10 +178,10 @@ class QualityAssessor:
         portions of the signal.
 
         Args:
-            audio: Audio samples (mono).
+            audio (AudioSamples): Audio samples (mono).
 
         Returns:
-            SNR in decibels.
+            float: SNR in decibels.
         """
         # Calculate frame-level energy
         frame_length = 2048
@@ -227,13 +225,13 @@ class QualityAssessor:
         """Calculate the ratio of silence in the audio.
 
         Args:
-            audio: Audio samples (mono).
-            sample_rate: Sample rate in Hz.
-            threshold_db: Silence threshold in dB below peak.
-            frame_ms: Frame size in milliseconds.
+            audio (AudioSamples): Audio samples (mono).
+            sample_rate (int): Sample rate in Hz.
+            threshold_db (float): Silence threshold in dB below peak.
+            frame_ms (float): Frame size in milliseconds.
 
         Returns:
-            Ratio of silent frames (0.0 to 1.0).
+            float: Ratio of silent frames (0.0 to 1.0).
         """
         frame_length = int(sample_rate * frame_ms / 1000)
         hop_length = frame_length // 2
@@ -267,11 +265,11 @@ class QualityAssessor:
         """Calculate the ratio of clipped samples.
 
         Args:
-            audio: Audio samples (mono), normalized to [-1, 1].
-            threshold: Amplitude threshold for clipping detection.
+            audio (AudioSamples): Audio samples (mono), normalized to [-1, 1].
+            threshold (float): Amplitude threshold for clipping detection.
 
         Returns:
-            Ratio of clipped samples (0.0 to 1.0).
+            float: Ratio of clipped samples (0.0 to 1.0).
         """
         if len(audio) == 0:
             return 0.0
@@ -283,10 +281,10 @@ class QualityAssessor:
         """Calculate RMS level in dBFS.
 
         Args:
-            audio: Audio samples (mono).
+            audio (AudioSamples): Audio samples (mono).
 
         Returns:
-            RMS level in decibels (dBFS).
+            float: RMS level in decibels (dBFS).
         """
         rms = np.sqrt(np.mean(audio**2))
         if rms > 0:
@@ -304,12 +302,12 @@ class QualityAssessor:
         Combines multiple metrics into a single 0.0-1.0 score.
 
         Args:
-            snr_db: Signal-to-noise ratio in dB.
-            silence_ratio: Ratio of silence (0.0-1.0).
-            clipping_ratio: Ratio of clipped samples (0.0-1.0).
+            snr_db (float): Signal-to-noise ratio in dB.
+            silence_ratio (float): Ratio of silence (0.0-1.0).
+            clipping_ratio (float): Ratio of clipped samples (0.0-1.0).
 
         Returns:
-            Quality score from 0.0 (worst) to 1.0 (best).
+            float: Quality score from 0.0 (worst) to 1.0 (best).
         """
         # SNR score (0-1): Maps 0-30dB to 0-1
         snr_score = np.clip(snr_db / 30.0, 0.0, 1.0)
@@ -334,11 +332,11 @@ class QualityAssessor:
         """Determine qualitative quality level.
 
         Args:
-            snr_db: Signal-to-noise ratio in dB.
-            quality_score: Composite quality score.
+            snr_db (float): Signal-to-noise ratio in dB.
+            quality_score (float): Composite quality score.
 
         Returns:
-            QualityLevel enum value.
+            QualityLevel: QualityLevel enum value.
         """
         if snr_db >= self.snr_excellent_db and quality_score >= 0.8:
             return QualityLevel.EXCELLENT
@@ -358,13 +356,13 @@ class QualityAssessor:
         """Generate quality warnings for the audio.
 
         Args:
-            snr_db: Signal-to-noise ratio in dB.
-            silence_ratio: Ratio of silence.
-            clipping_ratio: Ratio of clipped samples.
-            peak_amplitude: Maximum amplitude.
+            snr_db (float): Signal-to-noise ratio in dB.
+            silence_ratio (float): Ratio of silence.
+            clipping_ratio (float): Ratio of clipped samples.
+            peak_amplitude (float): Maximum amplitude.
 
         Returns:
-            List of warning messages.
+            list[str]: List of warning messages.
         """
         warnings: list[str] = []
 

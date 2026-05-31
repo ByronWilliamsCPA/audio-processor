@@ -25,9 +25,9 @@ class FormattedTranscript:
     """A formatted transcript in a specific format.
 
     Attributes:
-        content: The formatted transcript content.
-        format: The format type (txt, srt, vtt).
-        line_count: Number of lines/entries in the transcript.
+        content (str): The formatted transcript content.
+        format (str): The format type (txt, srt, vtt).
+        line_count (int): Number of lines/entries in the transcript.
     """
 
     content: str
@@ -59,12 +59,12 @@ class TranscriptFormatter:
         """Convert transcription to plain text format.
 
         Args:
-            transcription: The transcription result.
-            include_speakers: Whether to include speaker labels.
-            include_timestamps: Whether to include timestamps.
+            transcription (TranscriptionResult): The transcription result.
+            include_speakers (bool): Whether to include speaker labels.
+            include_timestamps (bool): Whether to include timestamps.
 
         Returns:
-            FormattedTranscript with plain text content.
+            FormattedTranscript: FormattedTranscript with plain text content.
         """
         lines: list[str] = []
 
@@ -130,12 +130,12 @@ class TranscriptFormatter:
         ```
 
         Args:
-            transcription: The transcription result.
-            include_speakers: Whether to include speaker labels.
-            max_chars_per_line: Maximum characters per subtitle line.
+            transcription (TranscriptionResult): The transcription result.
+            include_speakers (bool): Whether to include speaker labels.
+            max_chars_per_line (int): Maximum characters per subtitle line.
 
         Returns:
-            FormattedTranscript with SRT content.
+            FormattedTranscript: FormattedTranscript with SRT content.
         """
         entries: list[str] = []
 
@@ -201,12 +201,12 @@ class TranscriptFormatter:
         ```
 
         Args:
-            transcription: The transcription result.
-            include_speakers: Whether to include speaker labels.
-            max_chars_per_line: Maximum characters per subtitle line.
+            transcription (TranscriptionResult): The transcription result.
+            include_speakers (bool): Whether to include speaker labels.
+            max_chars_per_line (int): Maximum characters per subtitle line.
 
         Returns:
-            FormattedTranscript with VTT content.
+            FormattedTranscript: FormattedTranscript with VTT content.
         """
         lines: list[str] = ["WEBVTT", ""]
 
@@ -259,10 +259,10 @@ class TranscriptFormatter:
         """Format milliseconds to HH:MM:SS format.
 
         Args:
-            ms: Time in milliseconds.
+            ms (int): Time in milliseconds.
 
         Returns:
-            Formatted timestamp string.
+            str: Formatted timestamp string.
         """
         total_seconds = ms // 1000
         hours = total_seconds // 3600
@@ -277,10 +277,10 @@ class TranscriptFormatter:
         """Format milliseconds to SRT timestamp format (HH:MM:SS,mmm).
 
         Args:
-            ms: Time in milliseconds.
+            ms (int): Time in milliseconds.
 
         Returns:
-            SRT-formatted timestamp string.
+            str: SRT-formatted timestamp string.
         """
         hours = ms // 3600000
         minutes = (ms % 3600000) // 60000
@@ -293,10 +293,10 @@ class TranscriptFormatter:
         """Format milliseconds to WebVTT timestamp format (HH:MM:SS.mmm).
 
         Args:
-            ms: Time in milliseconds.
+            ms (int): Time in milliseconds.
 
         Returns:
-            VTT-formatted timestamp string.
+            str: VTT-formatted timestamp string.
         """
         hours = ms // 3600000
         minutes = (ms % 3600000) // 60000
@@ -309,11 +309,11 @@ class TranscriptFormatter:
         """Wrap text to fit within subtitle line limits.
 
         Args:
-            text: The text to wrap.
-            max_chars: Maximum characters per line.
+            text (str): The text to wrap.
+            max_chars (int): Maximum characters per line.
 
         Returns:
-            Wrapped text with newlines.
+            str: Wrapped text with newlines.
         """
         if len(text) <= max_chars:
             return text
@@ -345,7 +345,8 @@ class ArtifactGenerator:
     """Generator for all transcript artifacts.
 
     Coordinates the generation of multiple output formats from
-    a single transcription result.
+    a single transcription result. Initializes with a default
+    ``TranscriptFormatter`` instance.
 
     Example:
         >>> generator = ArtifactGenerator()
@@ -355,7 +356,6 @@ class ArtifactGenerator:
     """
 
     def __init__(self) -> None:
-        """Initialize the artifact generator."""
         self.formatter = TranscriptFormatter()
 
     def generate_all(
@@ -367,11 +367,11 @@ class ArtifactGenerator:
         """Generate all artifact formats.
 
         Args:
-            transcription: The transcription result.
-            include_docling: Whether to include Docling DOM (requires DOMBuilder).
+            transcription (TranscriptionResult): The transcription result.
+            include_docling (bool): Whether to include Docling DOM (requires DOMBuilder).
 
         Returns:
-            Dictionary mapping artifact names to content.
+            dict[str, str]: Dictionary mapping artifact names to content.
         """
         # Import here to avoid circular imports
         from audio_processor.services.dom_builder import DOMBuilder  # noqa: PLC0415
@@ -421,11 +421,11 @@ class ArtifactGenerator:
         """Generate a specific artifact.
 
         Args:
-            transcription: The transcription result.
-            artifact_name: Name of the artifact to generate.
+            transcription (TranscriptionResult): The transcription result.
+            artifact_name (str): Name of the artifact to generate.
 
         Returns:
-            Artifact content string, or None if not found.
+            str | None: Artifact content string, or None if not found.
         """
         # Import here to avoid circular imports
         from audio_processor.services.dom_builder import DOMBuilder  # noqa: PLC0415

@@ -48,13 +48,13 @@ def _progress(
     """Build a job progress payload with a current timestamp.
 
     Args:
-        stage: Machine-readable pipeline stage name.
-        percent: Percent complete (0-100).
-        message: Human-readable status message.
-        started: Whether to include a ``started_at`` timestamp (first stage).
+        stage (str): Machine-readable pipeline stage name.
+        percent (int): Percent complete (0-100).
+        message (str): Human-readable status message.
+        started (bool): Whether to include a ``started_at`` timestamp (first stage).
 
     Returns:
-        Progress dictionary suitable for the job store.
+        dict[str, object]: Progress dictionary suitable for the job store.
     """
     now = datetime.now(UTC).isoformat()
     payload: dict[str, object] = {
@@ -72,12 +72,12 @@ def _convert_audio(converter: AudioConverter, file_path: Path, job_id: str) -> P
     """Convert or extract the input into an ASR-ready audio file.
 
     Args:
-        converter: The audio converter service.
-        file_path: Path to the input media file.
-        job_id: Job identifier (for logging).
+        converter (AudioConverter): The audio converter service.
+        file_path (Path): Path to the input media file.
+        job_id (str): Job identifier (for logging).
 
     Returns:
-        Path to the converted audio file.
+        Path: Path to the converted audio file.
     """
     if converter.is_video(file_path):
         logger.info(
@@ -95,12 +95,12 @@ def _transcribe(
     """Transcribe audio via Deepgram, tolerating a missing API key.
 
     Args:
-        converted_path: Path to the ASR-ready audio file.
-        input_data: Job input options (diarization/summarization/language).
-        job_id: Job identifier (for logging).
+        converted_path (Path): Path to the ASR-ready audio file.
+        input_data (dict[str, Any]): Job input options (diarization/summarization/language).
+        job_id (str): Job identifier (for logging).
 
     Returns:
-        The transcription result, or ``None`` if Deepgram is not configured.
+        TranscriptionResult | None: The transcription result, or ``None`` if Deepgram is not configured.
     """
     # Imported lazily to avoid importing the optional 'audio' extra at module
     # load and to surface a missing API key as a catchable ConfigurationError.
@@ -125,10 +125,10 @@ def _build_transcription_payload(result: TranscriptionResult) -> dict[str, objec
     """Serialize a transcription result into the job result payload.
 
     Args:
-        result: The transcription result.
+        result (TranscriptionResult): The transcription result.
 
     Returns:
-        JSON-serializable transcription summary.
+        dict[str, object]: JSON-serializable transcription summary.
     """
     return {
         "transcript": result.transcript,
@@ -157,11 +157,11 @@ def _generate_artifacts(
     error message is returned so the caller can surface it on the job record.
 
     Args:
-        result: The transcription result.
-        job_id: Job identifier (for logging).
+        result (TranscriptionResult): The transcription result.
+        job_id (str): Job identifier (for logging).
 
     Returns:
-        Tuple of (artifacts, error_message). ``error_message`` is ``None`` on
+        tuple[dict[str, str], str | None]: Tuple of (artifacts, error_message). ``error_message`` is ``None`` on
         success; artifacts is empty when generation failed.
     """
     from audio_processor.services.transcript_formatter import (  # noqa: PLC0415
@@ -190,16 +190,17 @@ async def process_audio_job(
     reports progress.
 
     Args:
-        ctx: ARQ context with Redis connection.
-        job_id: Unique job identifier.
-        job_data: Job input data including file path and options.
+        ctx (JobContext): ARQ context with Redis connection.
+        job_id (str): Unique job identifier.
+        job_data (dict[str, Any]): Job input data including file path and options.
 
     Returns:
-        Dictionary with processing results.
+        dict[str, object]: Dictionary with processing results.
 
     Raises:
         ValidationError: If the input file path is missing or unreadable.
         AudioProcessorError: If processing fails.
+        TranscriptionError: If transcription fails.
     """
     redis: ArqRedis = ctx["redis"]  # pyright: ignore[reportAssignmentType]
 
@@ -349,14 +350,14 @@ async def _update_job_status(
     """Update job status in Redis.
 
     Args:
-        redis: ARQ Redis connection.
-        job_id: Job identifier.
-        status: New job status.
-        progress: Progress update.
-        result: Job result (when completed).
-        artifacts: Generated artifacts (when completed).
-        error: Error message (when failed).
-        completed_at: Completion timestamp.
+        redis (ArqRedis): ARQ Redis connection.
+        job_id (str): Job identifier.
+        status (JobStatus | None): New job status.
+        progress (dict[str, object] | None): Progress update.
+        result (dict[str, object] | None): Job result (when completed).
+        artifacts (dict[str, str] | None): Generated artifacts (when completed).
+        error (str | None): Error message (when failed).
+        completed_at (str | None): Completion timestamp.
     """
     # Delegate to the shared RedisJobStore so the worker and the API use the
     # same key scheme and serialization (single source of truth for job state).

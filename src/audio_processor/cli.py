@@ -35,8 +35,8 @@ def cli(ctx: click.Context, debug: bool) -> None:
     """Audio Processor - Audio file conversion and processing for RAG content pipelines.
 
     Args:
-        ctx: Click context object for sharing data between commands.
-        debug: Enable debug logging output.
+        ctx (click.Context): Click context object for sharing data between commands.
+        debug (bool): Enable debug logging output.
     """
     # Store typed context object for subcommands
     ctx.obj = CLIContext(debug=debug)
@@ -58,8 +58,8 @@ def hello(ctx: click.Context, name: str) -> None:
     """Greet the user with a personalized message.
 
     Args:
-        ctx: Click context object.
-        name: Name to include in greeting.
+        ctx (click.Context): Click context object.
+        name (str): Name to include in greeting.
     """
     try:
         # Click's ctx.obj is typed as Any - this is expected
@@ -91,7 +91,7 @@ def config(ctx: click.Context) -> None:
     Shows configuration values from environment variables or defaults.
 
     Args:
-        ctx: Click context object.
+        ctx (click.Context): Click context object.
     """
     try:
         # Click's ctx.obj is typed as Any - this is expected

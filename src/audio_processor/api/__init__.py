@@ -36,10 +36,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     For the default in-memory backend this is a no-op (no Redis connection).
 
     Args:
-        app: The FastAPI application.
+        app (FastAPI): The FastAPI application.
 
     Yields:
-        Control to the running application.
+        None: Control to the running application.
     """
     arq_pool = None
     if settings.job_store_backend == "redis":
@@ -113,7 +113,7 @@ async def health_check() -> dict[str, str]:
     """Health check endpoint for container orchestration.
 
     Returns:
-        Dictionary with status indicating service health.
+        dict[str, str]: Dictionary with status indicating service health.
     """
     return {"status": "healthy"}
 
@@ -123,7 +123,7 @@ async def root() -> dict[str, str]:
     """Root endpoint with API information.
 
     Returns:
-        Dictionary with API title and version.
+        dict[str, str]: Dictionary with API title and version.
     """
     return {
         "title": APP_TITLE,
@@ -140,11 +140,11 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
     to avoid exposing internal details in production.
 
     Args:
-        request: The incoming request.
-        exc: The exception that was raised.
+        request (Request): The incoming request.
+        exc (Exception): The exception that was raised.
 
     Returns:
-        JSON response with generic error message.
+        JSONResponse: JSON response with generic error message.
     """
     # Log the exception with full context for debugging and monitoring
     logger.exception(

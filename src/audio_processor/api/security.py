@@ -51,7 +51,7 @@ async def require_api_key(
     compared in constant time against the configured set.
 
     Args:
-        x_api_key: Value of the ``X-API-Key`` request header, if present.
+        x_api_key (Annotated[str | None, Header(alias=API_KEY_HEADER)]): Value of the ``X-API-Key`` request header, if present.
 
     Raises:
         HTTPException: 500 if auth is required but no keys are configured;
@@ -87,11 +87,11 @@ def _client_identifier(request: Request, x_api_key: str | None) -> str:
     """Derive a rate-limit identifier from the API key or client address.
 
     Args:
-        request: The incoming request.
-        x_api_key: The API key header value, if present.
+        request (Request): The incoming request.
+        x_api_key (str | None): The API key header value, if present.
 
     Returns:
-        A stable identifier for the caller.
+        str: A stable identifier for the caller.
     """
     if x_api_key:
         # Bucket per key without holding the raw secret as a map key. The
@@ -111,8 +111,8 @@ async def rate_limit(
     No-op when ``rate_limit_enabled`` is false.
 
     Args:
-        request: The incoming request (used for the client address fallback).
-        x_api_key: The API key header value, if present.
+        request (Request): The incoming request (used for the client address fallback).
+        x_api_key (Annotated[str | None, Header(alias=API_KEY_HEADER)]): The API key header value, if present.
 
     Raises:
         HTTPException: 429 when the caller exceeds the configured limit, with a

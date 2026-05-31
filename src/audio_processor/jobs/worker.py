@@ -54,7 +54,7 @@ async def startup(ctx: JobContext) -> None:  # noqa: ARG001
     Use for initializing connections, caches, etc.
 
     Args:
-        ctx: ARQ context (required by ARQ but unused in this function)
+        ctx (JobContext): ARQ context (required by ARQ but unused in this function)
     """
     logger.info("arq_worker_starting")
 
@@ -68,7 +68,7 @@ async def shutdown(ctx: JobContext) -> None:  # noqa: ARG001
     Use for closing connections, cleaning up resources.
 
     Args:
-        ctx: ARQ context (required by ARQ but unused in this function)
+        ctx (JobContext): ARQ context (required by ARQ but unused in this function)
     """
     logger.info("arq_worker_shutting_down")
 
@@ -126,13 +126,13 @@ async def enqueue_task(
     """Enqueue a background task.
 
     Args:
-        redis: ARQ Redis connection
-        task_name: Name of the task function
-        *args: Task arguments
-        **kwargs: Task keyword arguments
+        redis (ArqRedis): ARQ Redis connection
+        task_name (str): Name of the task function
+        *args (Any): Task arguments
+        **kwargs (Any): Task keyword arguments
 
     Returns:
-        Job ID string.
+        str: Job ID string.
 
     Raises:
         RuntimeError: If task enqueueing fails.
