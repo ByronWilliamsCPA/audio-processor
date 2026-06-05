@@ -26,7 +26,8 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-@asynccontextmanager
+# basedpyright 1.39 typeshed wrongly flags stdlib asynccontextmanager as deprecated
+@asynccontextmanager  # pyright: ignore[reportDeprecated]
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Manage application-scoped resources.
 

@@ -71,8 +71,14 @@ jobs:
           #   - protobuf: BSD-3-Clause (LicenseRef-scancode-protobuf upstream)
           #   - jaraco-functools, ruamel-yaml, ruamel-yaml-clib: MIT
           #   - mkdocs-git-revision-date-localized-plugin: MIT
-          #   - nvidia-* CUDA stack: NVIDIA Software License Agreement (proprietary
-          #     EULA, accepted as dependency of torch which is required for VAD)
+          #   - llvmlite: BSD-2-Clause with LLVM exception (permissive). GitHub's
+          #     dependency API resolves it to an unparseable composite ref
+          #     (LicenseRef-bad-...), so it is bypassed by package name. Pulled
+          #     transitively by numba. (added 2026-06-04, PR #60)
+          #   - nvidia-*/cuda-* CUDA stack: NVIDIA Software License Agreement
+          #     (proprietary EULA, accepted as dependency of torch which is
+          #     required for VAD). Package names migrated from the cu12 suffix to
+          #     the CUDA 13 names during the 2026-06-04 lockfile refresh (PR #60).
           allow-dependencies-licenses: >-
             pkg:pypi/torch,
             pkg:pypi/lxml,
@@ -84,20 +90,24 @@ jobs:
             pkg:pypi/ruamel-yaml,
             pkg:pypi/ruamel-yaml-clib,
             pkg:pypi/mkdocs-git-revision-date-localized-plugin,
-            pkg:pypi/nvidia-cublas-cu12,
-            pkg:pypi/nvidia-cuda-cupti-cu12,
-            pkg:pypi/nvidia-cuda-nvrtc-cu12,
-            pkg:pypi/nvidia-cuda-runtime-cu12,
-            pkg:pypi/nvidia-cudnn-cu12,
-            pkg:pypi/nvidia-cufft-cu12,
-            pkg:pypi/nvidia-cufile-cu12,
-            pkg:pypi/nvidia-curand-cu12,
-            pkg:pypi/nvidia-cusolver-cu12,
-            pkg:pypi/nvidia-cusparse-cu12,
-            pkg:pypi/nvidia-cusparselt-cu12,
-            pkg:pypi/nvidia-nccl-cu12,
-            pkg:pypi/nvidia-nvjitlink-cu12,
-            pkg:pypi/nvidia-nvshmem-cu12,
-            pkg:pypi/nvidia-nvtx-cu12
+            pkg:pypi/llvmlite,
+            pkg:pypi/cuda-bindings,
+            pkg:pypi/cuda-pathfinder,
+            pkg:pypi/cuda-toolkit,
+            pkg:pypi/nvidia-cublas,
+            pkg:pypi/nvidia-cuda-cupti,
+            pkg:pypi/nvidia-cuda-nvrtc,
+            pkg:pypi/nvidia-cuda-runtime,
+            pkg:pypi/nvidia-cudnn-cu13,
+            pkg:pypi/nvidia-cufft,
+            pkg:pypi/nvidia-cufile,
+            pkg:pypi/nvidia-curand,
+            pkg:pypi/nvidia-cusolver,
+            pkg:pypi/nvidia-cusparse,
+            pkg:pypi/nvidia-cusparselt-cu13,
+            pkg:pypi/nvidia-nccl-cu13,
+            pkg:pypi/nvidia-nvjitlink,
+            pkg:pypi/nvidia-nvshmem-cu13,
+            pkg:pypi/nvidia-nvtx
           # Comment on PR with findings
           comment-summary-in-pr: on-failure
