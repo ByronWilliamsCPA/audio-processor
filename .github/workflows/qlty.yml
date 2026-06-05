@@ -15,7 +15,12 @@ on:
 permissions: read-all
 
 concurrency:
-  group: qlty-${{ github.event.workflow_run.head_branch || github.ref }}
+  # Isolate by event type, and for workflow_run by head repo, so fork PRs
+  # sharing a branch name do not cancel each other (PR #62 review).
+  group: >-
+    qlty-${{ github.event_name }}-${{
+    github.event.workflow_run.head_repository.full_name || github.repository
+    }}-${{ github.event.workflow_run.head_branch || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -46,7 +51,7 @@ jobs:
       upstream: origin/${{ github.base_ref }}
 
   # Weekly health scan: full codebase, informational only.
-  # Remove no-fail once existing qlty debt is resolved.
+  # Remove no-fail once existing qlty debt is resolved (see #64).
   qlty-health:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     uses: ByronWilliamsCPA/.github/.github/workflows/python-qlty-gate.yml@040026ab682aa4b9ef491750d62cdd1592cdb659
