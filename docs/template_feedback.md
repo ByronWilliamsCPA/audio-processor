@@ -571,6 +571,49 @@ jobs:
 
 ---
 
+### Renovate digest updates of shared org workflows can silently break consumers via removed inputs
+
+- **Priority**: High
+- **Category**: CI/CD
+- **Discovered**: 2026-05-19
+
+**Issue**: When the shared `ByronWilliamsCPA/.github` org-level reusable workflows drop or rename a `workflow_call` input between SHAs, every downstream consumer's `*-security-analysis.yml` (or equivalent caller) that still passes the removed input gets a GitHub Actions `startup_failure` on the next Renovate digest update. The failed startup never reports a check-run result for the required status `Security Analysis / Security Gate Validation`, so the strict-policy ruleset blocks merge with no actionable error visible in `gh pr checks` (the check name simply does not appear). Renovate's digest strategy cannot detect this class of break because it only diffs SHAs, not reusable-workflow input signatures.
+
+**Context**: Encountered on `audio-processor#38` when bumping `ByronWilliamsCPA/.github` from `799ebd63` to `1b2d33c`. The new SHA removed the `run-safety` input from `python-security-analysis.yml` (safety was decommissioned upstream). The template-generated `.github/workflows/security-analysis.yml` still passed `run-safety: false`, causing `startup_failure`. Symptom presented as "failing the security gate" with no failing check visible in standard tooling; root cause required inspecting `commits/{sha}/check-runs` and noting `conclusion: startup_failure` on the Security Analysis run.
+
+**Suggested Fix**:
+
+1. In the template's `.github/workflows/security-analysis.yml`, do not pass `run-safety` (the upstream reusable workflow no longer accepts it). Pass only inputs that are guaranteed-present and document each one in a comment.
+2. Add an upstream policy note to the org-workflow repo recommending a deprecation cycle (mark input as deprecated for one minor version before removing) when removing reusable-workflow inputs.
+3. Consider a template CI smoke test that statically validates: for every `uses:` reference to `ByronWilliamsCPA/.github/.github/workflows/*.yml@<sha>`, every key under `with:` is present in the target workflow's `workflow_call.inputs` at that SHA. This catches the failure mode at template-generation time rather than at Renovate-digest-update time.
+
+**Affected Files**:
+
+- `{{cookiecutter.project_slug}}/.github/workflows/security-analysis.yml`
+
+---
+
+### Renovate `commitMessageTopic` produces title-cased subjects that fail `amannn/action-semantic-pull-request`
+
+- **Priority**: Medium
+- **Category**: CI/CD
+- **Discovered**: 2026-05-19
+
+**Issue**: The template's `renovate.json` enables semantic commits via `:semanticCommits` but does not set `"commitMessageLowerCase": "auto"`. Renovate then emits PR titles like `chore(deps): Update GitHub Actions to 1b2d33c` (capitalized subject), which fails the default `amannn/action-semantic-pull-request` subjectPattern regex `^(?![A-Z]).+$`. Every Renovate PR becomes a Critical CI failure that the user must rename by hand. The same template ships the `Validate PR Title` check, so the conflict is template-internal.
+
+**Context**: Discovered on `audio-processor#38` when `Validate PR Title` failed with `The subject "Update GitHub Actions to 1b2d33c" found in the pull request title "chore(deps): Update GitHub Actions to 1b2d33c"`. Renaming the title via `gh pr edit` cleared the check immediately.
+
+**Suggested Fix**:
+
+1. Add `"commitMessageLowerCase": "auto"` to the template's `renovate.json` next to `"semanticCommits": "enabled"`. Documentation: <https://docs.renovatebot.com/configuration-options/#commitmessagelowercase>.
+2. Optionally, in the template's PR-title-validation workflow, document the conflict so future template consumers do not rediscover it.
+
+**Affected Files**:
+
+- `{{cookiecutter.project_slug}}/renovate.json`
+
+---
+
 ## Submitting Feedback
 
 Once you've collected feedback, you can:
