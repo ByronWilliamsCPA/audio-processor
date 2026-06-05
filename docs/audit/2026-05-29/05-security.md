@@ -54,6 +54,8 @@ Recommendation: Keep the suppression; on reassess (2026-07-26) bump `torch>=` on
 
 ## SEC-04: py 1.11.0 unmaintained ReDoS CVE in dev-only transitive dependency
 
+Note: consolidated into DEP-03 in the final backlog (see 00-final-report.md section 5); this entry is the security-domain record, not a separate backlog ID.
+
 Severity: Low
 Effort: S (drop when dev tool removes the dependency)
 CVE: CVE-2022-42969 (PYSEC-2022-42969, GHSA-w596-4wvx-j9j6), CVSS 7.5, DISPUTED
@@ -125,7 +127,7 @@ Recommendation: Update the README example to a pinned SHA to model the correct p
 | SEC-01 | API has no authentication/authorization | High | M | src/audio_processor/api/routes.py, api/__init__.py | 0 auth deps; all routes public | Add router-level auth dependency; authorize result/artifact reads per-caller | - |
 | SEC-02 | Upload size limit bypassable, full body read into memory | High | S | src/audio_processor/api/routes.py:117-127,156; audio_converter.py:517 | Size check trusts content-length header then `await file.read()` unbounded | Stream and cap bytes during read against max_file_size_bytes | - |
 | SEC-03 | torch 2.9.1 unpatched local-CE CVE in optional extras | Medium | S | uv.lock, osv-scanner.toml, pyproject.toml:648-653 | No upstream fix; absent from prod image via no-extra build | Keep suppression; bump torch when fix ships (reassess 2026-07-26) | CVE-2026-4538 / PYSEC-2026-139 |
-| SEC-04 | py 1.11.0 ReDoS in dev-only transitive dep | Low | S | uv.lock, osv-scanner.toml, pyproject.toml:647 | svnwc unused; dev-only, excluded from wheels | Keep suppression; remove when dev tool drops py | CVE-2022-42969 / PYSEC-2022-42969 |
+| SEC-04 | py 1.11.0 ReDoS in dev-only transitive dep (folded into DEP-03) | Low | S | uv.lock, osv-scanner.toml, pyproject.toml:647 | svnwc unused; dev-only, excluded from wheels | Keep suppression; remove when dev tool drops py | CVE-2022-42969 / PYSEC-2022-42969 |
 | SEC-05 | PYSEC-2026-161 suppression note stale (already patched) | Low | S | pyproject.toml:152-154; uv.lock | fastapi 0.136.3 / starlette 1.1.0 contain the fix | Clarify comment; no live suppression | CVE-2026-48710 |
 | SEC-06 | Sentry scrubbing shallow and key-list-limited | Medium | S | src/audio_processor/core/sentry.py:198-208 | Top-level keys only; headers/query/nested not scrubbed | Recurse, scrub headers+query, case-insensitive substring match | - |
 | SEC-07 | README example uses moving @main reusable-workflow ref | Low | S | .github/workflows/README.md:162 | Doc example unpinned; all active refs SHA-pinned | Pin the README example to a SHA | - |

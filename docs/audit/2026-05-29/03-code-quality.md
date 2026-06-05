@@ -42,7 +42,7 @@ warning rules:
 
 CLAUDE.md states "BasedPyright type checking (strict mode)" as a passing quality gate
 and "Address ALL type checker warnings, not just errors." 626 unsuppressed warnings is
-a systemic gap against that standard. The bulk (521 of 626) is `reportUnknown*` from
+a systemic gap against that standard. The bulk (555 of 626) is `reportUnknown*` from
 untyped third-party libs (redis.asyncio, librosa, numpy member access, sentry SDK).
 
 Recommendation: Re-run `uv run basedpyright src/` against a fully synced env to remove
@@ -213,7 +213,7 @@ the audit-block workflows are switched to block-mode on schedule.
 
 | ID | Title | Severity | Effort | Files | Evidence | Recommendation | CVE |
 |----|-------|----------|--------|-------|----------|----------------|-----|
-| QUAL-01 | basedpyright 626 warnings vs strict-clean claim | Medium | L | src/ (all) | `basedpyright src/` -> 59 err / 626 warn; 521 reportUnknown* | Re-run synced; set rule severities or add typed adapters; reconcile CLAUDE.md | n/a |
+| QUAL-01 | basedpyright 626 warnings vs strict-clean claim | Medium | L | src/ (all) | `basedpyright src/` -> 59 err / 626 warn; 555 reportUnknown* | Re-run synced; set rule severities or add typed adapters; reconcile CLAUDE.md | n/a |
 | QUAL-02 | Duplicated audio-load fallback helper | Medium | S | services/quality_assessor.py:166, audio_conditioner.py:233, vad_processor.py:177/288, preprocessing/loader.py:92 | token-identical sf.read/librosa.load blocks | Extract one load_audio(), reuse loader.py | n/a |
 | QUAL-03 | 109 inline ignores on 2 untyped lib boundaries, no prose reason | Medium | M | core/cache.py (36), core/sentry.py (24), jobs/worker.py (14), +others | `git grep type:ignore` -> 109; redis + structlog + sentry clusters | Type logger once, wrap redis, add per-block reason comments | n/a |
 | QUAL-04 | Tests un-collectable / coverage unmeasurable without extras | Medium | S | tests/unit/* (14 modules), pyproject.toml:548 | pytest collect -> 80/458, 14 import errors; pytest-cov absent | Verify gate in CI with --all-extras; importorskip heavy modules | n/a |

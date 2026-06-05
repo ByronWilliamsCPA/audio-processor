@@ -296,7 +296,7 @@
       "severity": "Medium",
       "effort": "L",
       "files": ["src/audio_processor/"],
-      "evidence": "basedpyright src/ -> 59 errors (42 env import artifacts) and 626 warnings, 521 reportUnknown* from untyped redis/librosa/numpy/sentry; CLAUDE.md claims strict-mode clean",
+      "evidence": "basedpyright src/ -> 59 errors (42 env import artifacts) and 626 warnings, 555 reportUnknown* from untyped redis/librosa/numpy/sentry; CLAUDE.md claims strict-mode clean",
       "recommendation": "Re-run against a synced env, then set reportUnknown* severities with rationale or add typed adapters; reconcile the CLAUDE.md claim. Do not add more inline ignores.",
       "cve": ""
     },
