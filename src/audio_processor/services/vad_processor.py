@@ -138,7 +138,7 @@ class VADProcessor:
                 repo_or_dir="snakers4/silero-vad",
                 model="silero_vad",
                 force_reload=False,
-                trust_repo=True,
+                trust_repo=True,  # pyright: ignore[reportArgumentType]  # torch 2.12 stub narrows to str; bool is valid at runtime
             )
             VADProcessor._model = model
             VADProcessor._utils = utils
