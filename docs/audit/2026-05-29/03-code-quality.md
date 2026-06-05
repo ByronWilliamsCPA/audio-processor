@@ -1,6 +1,6 @@
 # Code Quality and Maintainability Audit
 
-Repo: /home/user/audio-processor
+Repo: ByronWilliamsCPA/audio-processor
 Date: 2026-05-29
 Scope: code quality and maintainability, read-only.
 Auditor domain: senior engineer review.

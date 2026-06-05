@@ -430,7 +430,7 @@
       "files": ["pyproject.toml", "uv.lock"],
       "evidence": "pyproject.toml:152-154 comment cites the issue; lock has fastapi 0.136.3 / starlette 1.1.0 (fix landed 1.0.1); no live ignore-vuln entry",
       "recommendation": "Clarify or remove the comment to note the issue is fixed by the pinned versions. No security risk.",
-      "cve": "PYSEC-2026-161"
+      "cve": "CVE-2026-48710"
     },
     {
       "id": "SEC-07",

@@ -1,6 +1,6 @@
 # Dependencies and Supply Chain Audit
 
-Repo: /home/user/audio-processor
+Repo: ByronWilliamsCPA/audio-processor
 Date: 2026-05-29
 Domain: dependencies and supply chain (read-only review)
 Auditor scope: direct/transitive dependency freshness, lockfile health, language targets, migration residue, SBOM coverage, base images, suppression accuracy.
@@ -36,7 +36,7 @@ Evidence:
 - pyproject.toml:160 `"pydub>=0.25.1"` in the `audio` extra.
 - uv.lock pins `pydub 0.25.1`.
 - PyPI: latest release 0.25.1, uploaded 2021-03-10. No release in ~5 years 2 months.
-- pydub imports `audioop`, which PEP 594 removed from the stdlib in Python 3.12/3.13. `requires-python = ">=3.11,<3.14"` (pyproject.toml:12) admits 3.13, where pydub will fail to import without the `audioop-lts` backport (not in the lock).
+- pydub imports `audioop`, which PEP 594 removed from the stdlib in Python 3.13 (deprecated since 3.11). `requires-python = ">=3.11,<3.14"` (pyproject.toml:12) admits 3.13, where pydub will fail to import without the `audioop-lts` backport (not in the lock).
 
 Recommendation: Either drop pydub in favor of librosa/soundfile (already direct deps) for the same operations, or, if kept, add `audioop-lts; python_version >= '3.13'` and test on 3.13. Verify whether pydub is actually imported before investing.
 

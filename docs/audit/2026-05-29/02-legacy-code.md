@@ -1,6 +1,6 @@
 # Legacy Code Patterns Audit
 
-Repo: /home/user/audio-processor
+Repo: ByronWilliamsCPA/audio-processor
 Date: 2026-05-29
 Scope: src/audio_processor/ (~7450 LOC). READ-ONLY review.
 Auditor domain: legacy code patterns.
