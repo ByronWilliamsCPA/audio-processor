@@ -89,3 +89,31 @@ DISPUTED vulnerability affecting SVN path parsing.
 interrogate (dev dependency) transitively requires py, but this project
 does not interact with Subversion repositories.
 """
+
+# ----------------------------------------------------------------------------
+# torch - CVE-2025-3000 (no patched release; local-only)
+# ----------------------------------------------------------------------------
+[[IgnoredVulns]]
+id = "CVE-2025-3000"
+reason = """
+Local-only vulnerability in torch (CVSS 4.0 AV:L/AC:L/PR:L, low C/I/A impact);
+OSV lists no fixed release (last_affected only). torch enters via the [ml] extra
+(direct) and the [audio] extra (transitive via silero-vad); the production
+Dockerfile runs uv sync --frozen --no-dev with no --extra flags, so torch is not
+installed at runtime. Same compensating controls as PYSEC-2026-139. Documented in
+docs/known-vulnerabilities.md with reassess-by 2026-08-31.
+"""
+
+[[IgnoredVulns]]
+id = "GHSA-rrmf-rvhw-rf47"
+reason = """
+GitHub Security Advisory alias of CVE-2025-3000 (torch, local-only, no patched
+release). See the CVE-2025-3000 entry above and docs/known-vulnerabilities.md.
+"""
+
+[[IgnoredVulns]]
+id = "PYSEC-2025-194"
+reason = """
+PyPI advisory alias of CVE-2025-3000 (torch, local-only, no patched release).
+See the CVE-2025-3000 entry above and docs/known-vulnerabilities.md.
+"""

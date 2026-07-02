@@ -650,6 +650,12 @@ ignore-vuln = [
     # (Dockerfile: uv sync --frozen --no-dev, no --extra flags). Documented in
     # docs/known-vulnerabilities.md with reassess-by 2026-07-26.
     "PYSEC-2026-139",
+    # CVE-2025-3000 (aliases GHSA-rrmf-rvhw-rf47, PYSEC-2025-194): local-only (CVSS 4.0
+    # AV:L/PR:L, low impact) vulnerability in torch with no patched release. Same
+    # exposure analysis as PYSEC-2026-139: torch is only reachable via the [ml]/[audio]
+    # extras, which the production container never installs. Documented in
+    # docs/known-vulnerabilities.md with reassess-by 2026-08-31.
+    "CVE-2025-3000",
 ]
 
 # Bandit Security Configuration
