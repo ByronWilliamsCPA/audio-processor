@@ -25,9 +25,11 @@ ADRs document significant architectural decisions along with their context and c
 
 ## ADR Index
 
-| ADR            | Title                             | Status | Date |
-|----------------|-----------------------------------|--------|------|
-| *No ADRs yet*  | Generate with `/plan` command     | -      | -    |
+| ADR | Title | Status | Date |
+|-----|-------|--------|------|
+| [ADR-001](adr-001-initial-architecture.md) | Initial Architecture — Deepgram-Centric Audio Processing | Accepted | 2025-12-04 |
+| [ADR-002](adr-002-audio-preprocessing-pipeline.md) | Audio Preprocessing Pipeline | Accepted | 2025-12-04 |
+| [ADR-003](adr-003-async-execution-model.md) | Async Execution Model — Blocking Work, Timeouts, and Cancellation | Accepted | 2026-07-02 |
 
 ## Creating ADRs
 
