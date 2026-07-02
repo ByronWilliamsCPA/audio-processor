@@ -130,7 +130,7 @@ What arq 0.28 actually does, and how each failure class maps onto it:
 |---|---|---|---|
 | Permanent input/domain error | `ValidationError`, unreadable file, corrupt media | ordinary raise (as today) | `FAILED` on attempt 1; no retry. Correct — re-running cannot fix the input. |
 | Deadline exhausted | `JobTimeoutError` from ADR-003's `StageDeadline` | ordinary raise, caught, `FAILED` written | **No retry.** The budget is sized to the audio; a re-run repeats the same work against the same budget and re-bills Deepgram. This is why ADR-003 raises *inside* the job instead of letting ARQ's cancellation fire: it converts timeout into a handleable, terminal failure. |
-| Transient external failure | Deepgram 429 / 5xx / connection reset | raise `arq.worker.Retry(defer=...)` from the orchestrator with exponential defer (`min(2 ** attempt * 10, 300)` seconds) | re-queued; `max_tries` caps total attempts. This is the **only** place `Retry` may be raised. |
+| Transient external failure | Deepgram 429 / 5xx / connection reset | raise `arq.worker.Retry(defer=...)` from the orchestrator with exponential defer (`min(2 ** (attempt - 1) * 10, 300)` seconds — `attempt` from `job_try` is 1-based, so the first retry defers 10 s) | re-queued; `max_tries` caps total attempts. This is the **only** place `Retry` may be raised. |
 | Worker death / shutdown | SIGTERM, OOM-kill, ARQ backstop cancellation (`job_timeout = budget + grace`, ADR-003 §2) | ARQ cancellation + `retry_jobs = True` | redelivered to a live worker; task entry re-runs from the top (§3). This — not "failed jobs" — is what `retry_jobs` is for. |
 
 Consequences to codify:

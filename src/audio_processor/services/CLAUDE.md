@@ -23,9 +23,9 @@ class MyService:
 
 Any `async def` (route handler, ARQ task, lifespan hook) calling a service method
 that shells out, does CPU-bound audio work, or performs blocking I/O MUST dispatch
-it via `anyio.to_thread.run_sync(..., abandon_on_cancel=True, limiter=<the module's
-CapacityLimiter>)` and MUST pass an explicit timeout that the service enforces
-internally. Calling these methods bare in async code is a review-blocking defect.
+it via `anyio.to_thread.run_sync(..., abandon_on_cancel=True, limiter=<the module's CapacityLimiter>)`
+and MUST pass an explicit timeout that the service enforces internally.
+Calling these methods bare in async code is a review-blocking defect.
 Full contract (placement table, deadline budget, cancellation guarantees):
 `docs/planning/adr/adr-003-async-execution-model.md`.
 

@@ -123,8 +123,9 @@ With the current whole-file buffering, per-job peak memory is dominated by:
 Stages run sequentially within a job, so **peak/job ≈ 4 × WAV bytes**. The
 binding constraint for the worker container:
 
-```
-worker_max_jobs × 4 × (115 MB × audio_max_duration_hours) + 300 MB baseline ≤ container memory limit
+```text
+worker_max_jobs × 4 × (115 MB × audio_max_duration_hours) + 300 MB baseline
+  ≤ container memory limit
 ```
 
 The current defaults are infeasible: 4 h audio → 461 MB WAV → ~1.8 GB peak per
@@ -170,25 +171,26 @@ Services stay sync; the missing rule is for their callers:
 
 > Any `async def` (route handler, ARQ task, lifespan hook) calling a service
 > method that shells out, does CPU-bound audio work, or performs blocking I/O
-> MUST dispatch it via `anyio.to_thread.run_sync(..., abandon_on_cancel=True,
-> limiter=<the module's CapacityLimiter>)` and MUST pass an explicit timeout
-> that the service enforces internally. Calling these methods bare in async
-> code is a review-blocking defect.
+> MUST dispatch it via
+> `anyio.to_thread.run_sync(..., abandon_on_cancel=True, limiter=<the module's CapacityLimiter>)`
+> and MUST pass an explicit timeout that the service enforces internally.
+> Calling these methods bare in async code is a review-blocking defect.
 
 ## Acceptance criteria
 
 Implementation is complete only when all of these tests exist and pass:
 
 1. **API responsiveness (I-1):** with `AudioConverter.validate_file`
-   monkeypatched to `time.sleep(2)`, a concurrent `GET /health` completes in
-   < 500 ms while an upload is in flight.
-2. **Worker parallelism:** two jobs whose conversion stage is stubbed to sleep
+   monkeypatched to block on a `threading.Event` the test releases afterwards
+   (not a fixed `time.sleep` — see `tests/CLAUDE.md`), a concurrent
+   `GET /health` completes in < 500 ms while an upload is in flight.
+2. **Worker parallelism:** two jobs whose conversion stage is stubbed to block
    1 s in-thread finish in < 1.8 s combined (parallel), not ≥ 2 s (serial).
 3. **Deadline propagation:** with total budget `T` and a first stage stubbed to
    consume `t`, the mocked Deepgram transport receives a timeout ≤ `T − t`;
    `subprocess.run` in the converter receives the computed remaining budget,
    not `settings.job_timeout_seconds`.
-4. **Timeout termination (I-2):** a job whose stage sleeps past the budget ends
+4. **Timeout termination (I-2):** a job whose stage blocks past the budget ends
    `FAILED` within budget + grace, the shielded cleanup ran (temp files gone,
    terminal status written), and no child process survives.
 5. **Thread bound (§3):** with `worker_max_jobs = N` and > N queued jobs, at
