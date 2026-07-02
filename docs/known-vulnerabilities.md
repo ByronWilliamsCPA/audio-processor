@@ -392,6 +392,36 @@ reassessment). Check the OSV advisory for a fixed release; if one ships, upgrade
 
 ---
 
+## Base-image baseline refresh — 2026-07-02 (Trivy scan on PR #75)
+
+Trivy reported 22 findings (21 HIGH, 1 CRITICAL) against the container image,
+all with Debian status `affected` and **no fixed version available** — nothing
+to upgrade to. Thirteen unique CVEs were added to `.trivyignore` with per-family
+justifications inline in that file. Shared metadata:
+
+- **Discovered**: 2026-07-02 (Trivy scan on PR #75)
+- **Reassess-by**: 2026-08-31 (60-day cap per CLAUDE.md unfixed-CVE policy)
+- **Status**: Deferred (compensating controls documented per family)
+- **Suppressed in**: `.trivyignore`
+
+Family summary:
+
+| Family | CVEs | Risk | Basis |
+| --- | --- | --- | --- |
+| ffmpeg stack | CVE-2026-58049 | **MEDIUM — request-path exposure** | ffmpeg processes user uploads; RASC is an obscure codec, subprocess is non-root/short-lived, ADR-003 adds hard timeouts. Consider a demuxer allowlist at reassess time. |
+| glib | CVE-2026-58016 (CRITICAL), CVE-2026-58014, CVE-2026-58015 | Negligible | D-Bus/keyfile code paths; headless container runs no D-Bus, parses no keyfiles. |
+| libaom (AV1) | CVE-2026-56208..56211 | Low | All encoder-side; service never encodes AV1. |
+| acl/attr | CVE-2026-54369, CVE-2026-54371 | Low | Local priv-esc class; single non-root user, no untrusted local users. |
+| gzip | CVE-2026-41992 | Low | LZH path never invoked on untrusted input. |
+| libssh2 | CVE-2026-58050 | Low | Linked by curl; no SSH connections made. |
+| libtiff | CVE-2026-12912 | Low | No TIFF decoding in any code path. |
+
+The ffmpeg entry is deliberately **not** grouped with the "not exercised by
+the request path" baseline above: it is the application's primary attack
+surface and carries an elevated-priority reassessment.
+
+---
+
 ## OSSF Scorecard Approved Deviations
 
 This section tracks Scorecard check results where an approved deviation is in
