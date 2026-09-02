@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- ci(security): remove `codeql.yml` and `dependency-review.yml`; GitHub now bills Advanced Security (Code Security), so CodeQL code scanning, the dependency-review action, and SARIF ingestion into the Security tab no longer function. `cifuzzy.yml` no longer uploads its ClusterFuzzLite SARIF via `github/codeql-action/upload-sarif`; the results are now published as a plain workflow artifact instead. `security-analysis.yml` still passes `run-codeql: true` and `run-dependency-review: true` to the shared org reusable workflow; removing those inputs is a coordinated follow-up so the shared workflow's `true` defaults do not silently re-enable a job that cannot succeed.
+
 ### Added
 - Initial project setup and structure
 - feat(preprocessing): audio preprocessing pipeline phases 1-4: FFmpeg-based format conversion and video audio extraction (`AudioConverter`), signal conditioning with resampling/normalization/DC-offset removal (`AudioConditioner`), SNR-based quality assessment (`QualityAssessor`), Silero VAD voice activity detection (`VADProcessor`), Deepgram Nova-2 transcription with diarization and summarization (`DeepgramTranscriptionClient`), multi-format transcript output (`ArtifactGenerator`), and ARQ background job orchestration (`process_audio_job`) with Redis-backed status tracking

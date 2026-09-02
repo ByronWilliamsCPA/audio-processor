@@ -81,7 +81,7 @@ tags:
 | Criterion | Status | Evidence |
 |-----------|--------|----------|
 | `security_know_secure_design` | MET | Self-attestation. `CLAUDE.md` documents FIPS 140-2/3 compliance rules, OWASP tooling, and RAD tagging. `SECURITY.md` has a Security Surface section. File for this criterion on the questionnaire by selecting "Met" and citing these docs. |
-| `security_know_common_errors` | MET | Self-attestation. CI runs Bandit (CWE coverage), CodeQL (`.github/workflows/codeql.yml`), and pip-audit. File on questionnaire by selecting "Met" and citing the security workflow. |
+| `security_know_common_errors` | MET | Self-attestation. CI runs Bandit (CWE coverage) and pip-audit. CodeQL was removed 2026-09 (GitHub Advanced Security billing); see `CHANGELOG.md`. File on questionnaire by selecting "Met" and citing the security workflow. |
 | `security_crypto_published` | MET | No custom cryptographic algorithms; the project uses the Python `cryptography` library and FIPS-approved algorithms only (per `CLAUDE.md` FIPS rules). |
 | `security_crypto_keylength` | MET | Default key lengths from `cryptography` library (AES-256, RSA-2048+ for signing) meet NIST recommendations. |
 | `security_crypto_working` | MET | SHA-1 and MD5 are not used for security purposes; project follows FIPS-approved algorithm list. |
@@ -91,7 +91,7 @@ tags:
 | `security_assurance_case` | PARTIAL | `SECURITY.md` has a "Security Surface" section naming attack vectors and controls. `CLAUDE.md` documents security-first development. A formal assurance case document does not yet exist. To fully meet this criterion, add a `docs/security-assurance-case.md` that traces each threat from the Security Surface section to its control and residual risk. |
 | `security_centralized_authn` | N/A | Project is a CLI/library, not a multi-user application with authentication. Select N/A on the questionnaire. |
 | `security_context` | MET | Least-privilege workflow tokens in GitHub Actions; Pydantic Settings for secrets; see `SECURITY.md`. |
-| `security_static_analysis` | MET | Bandit, Ruff `S`-category rules, CodeQL (`.github/workflows/codeql.yml`), and Semgrep run in CI. |
+| `security_static_analysis` | MET | Bandit, Ruff `S`-category rules, and Semgrep run in CI. CodeQL was removed 2026-09 (GitHub Advanced Security billing). |
 | `security_static_analysis_fixed` | MET | CI fails on any HIGH/CRITICAL Bandit finding; `CLAUDE.md` prohibits suppression without documented justification. |
 | `security_dynamic_analysis` | MET | ClusterFuzzLite (`cifuzzy.yml`) runs fuzz targets on every PR; Atheris instrumentation in `.clusterfuzzlite/`. |
 | `security_dynamic_analysis_unsafe` | MET | Atheris fuzz targets use ASan/UBSan instrumentation enabled by the ClusterFuzzLite base builder. |
@@ -104,7 +104,7 @@ These criteria are PARTIAL or require a questionnaire self-attestation before th
 
 1. **`change_control_release_notes_vulns`** (PARTIAL): Ensure future `CHANGELOG.md` security entries include assigned CVE IDs.
 2. **`security_know_secure_design`** (self-attestation on questionnaire): Select "Met" and cite `CLAUDE.md` + `SECURITY.md`.
-3. **`security_know_common_errors`** (self-attestation on questionnaire): Select "Met" and cite `codeql.yml` + `security-analysis.yml`.
+3. **`security_know_common_errors`** (self-attestation on questionnaire): Select "Met" and cite `security-analysis.yml` (Bandit/pip-audit/OSV); `codeql.yml` was removed 2026-09, see `CHANGELOG.md`.
 4. **`security_assurance_case`** (PARTIAL): Either create `docs/security-assurance-case.md` or self-attest "Met" if the existing `SECURITY.md` Security Surface section is deemed sufficient.
 5. **`reporting_vulnerability_report_private`**: Confirm GitHub Private Vulnerability Reporting is active at `https://github.com/ByronWilliamsCPA/audio-processor/settings/security_analysis`.
 

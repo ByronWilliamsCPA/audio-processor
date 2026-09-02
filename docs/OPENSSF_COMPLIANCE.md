@@ -24,7 +24,7 @@ This template implements the following security controls:
 - ✅ Continuous fuzzing with ClusterFuzzLite
 - ✅ Branch protection with scoped permissions
 - ✅ Automated dependency updates
-- ✅ Multi-tool security scanning (Bandit, pip-audit, CodeQL, Trivy)
+- ✅ Multi-tool security scanning (Bandit, pip-audit, Trivy)
 
 ---
 
@@ -191,14 +191,16 @@ Automated dependency updates and vulnerability scanning.
 
 ### 7. Security Scanning (SAST) 🔍
 
-Static analysis (Bandit, CodeQL, Semgrep) runs on every commit.
+Static analysis (Bandit, Semgrep) runs on every commit. CodeQL was
+removed 2026-09 (GitHub now bills Advanced Security / Code Security,
+so CodeQL code scanning and SARIF ingestion into the Security tab no
+longer function); see `CHANGELOG.md`.
 
 **Tools**:
 
 - **Ruff**: Python linting with security rules
 - **Bandit**: Python security issue detection
 - **BasedPyright**: Type safety (prevents entire classes of bugs)
-- **CodeQL**: Advanced semantic code analysis
 
 **Workflow**: `.github/workflows/security-analysis.yml`
 
