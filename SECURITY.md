@@ -101,7 +101,7 @@ scanning runs via `detect-secrets` and TruffleHog pre-commit hooks.
 
 ## Security Practices
 
-- Static analysis: CodeQL, Bandit, Ruff security rules (`S` category)
+- Static analysis: Bandit, Ruff security rules (`S` category) (CodeQL removed 2026-09: GitHub now bills Advanced Security / Code Security; see CHANGELOG)
 - Dependency scanning: `pip-audit` in CI
 - Container scanning: Trivy on Docker images in CI
 - SBOM generation for tagged releases (CycloneDX format)

@@ -12,7 +12,9 @@
 #
 # Duration: 600 seconds per run
 # Sanitizer: AddressSanitizer for memory safety
-# Reporting: SARIF format uploaded to Security tab
+# Reporting: SARIF results archived as a workflow artifact (GitHub Advanced
+#   Security billing changes removed Security-tab SARIF ingestion; see
+#   CHANGELOG.md, 2026-09)
 name: Continuous Fuzzing
 
 on:
@@ -25,7 +27,6 @@ on:
 
 permissions:
   contents: read
-  security-events: write  # For SARIF upload
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -67,12 +68,14 @@ jobs:
           sanitizer: ${{  matrix.sanitizer  }}
           output-sarif: true
 
-      - name: Upload SARIF
+      - name: Upload SARIF as artifact
         if: always()
-        uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4.35.5
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          sarif_file: results.sarif
-          category: fuzzing-${{  matrix.sanitizer  }}
+          name: fuzzing-sarif-${{  matrix.sanitizer  }}
+          path: results.sarif
+          retention-days: 30
+          if-no-files-found: ignore
 
       - name: Upload Crash Artifacts
         if: failure()
