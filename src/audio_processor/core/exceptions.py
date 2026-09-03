@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     # Allows nesting for complex error contexts
     ErrorDetails = dict[
         str,
-        str | int | float | bool | None | dict[str, str | int | float | bool | None],
+        str | int | float | bool | dict[str, str | int | float | bool | None] | None,
     ]
 else:
     ErrorDetails = dict

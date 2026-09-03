@@ -147,9 +147,14 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
     Returns:
         JSONResponse: JSON response with generic error message.
     """
-    # Log the exception with full context for debugging and monitoring
-    logger.exception(
+    # Log the exception with full context for debugging and monitoring.
+    # This handler runs outside a lexical `except` block (FastAPI calls it
+    # with the exception instance rather than re-raising into one), so
+    # logger.exception()'s implicit sys.exc_info() lookup is not reliable
+    # here; pass the exception explicitly via exc_info instead.
+    logger.error(
         "unhandled_exception",
+        exc_info=exc,
         exc_type=type(exc).__name__,
         exc_message=str(exc),
         path=str(request.url.path),

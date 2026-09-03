@@ -46,3 +46,34 @@ jobs:
       run-safety: false  # safety removed from deps; pip-audit covers vulnerability scanning
       run-osv: true
       no-build: false  # project uses hatchling build backend; uv must build the editable install
+
+  # `security` is a workflow_call caller job (has uses:), so it can only ever
+  # emit the context "Security Analysis / Security Gate Validation" (the
+  # reusable workflow's own inner gate job name, prefixed with this caller
+  # job's name). It can never emit the bare "Security Gate Validation"
+  # context that org ruleset ByronWilliamsCPA-default-branch-baseline
+  # requires. This normal job (has steps:, no uses:) closes that gap by
+  # re-emitting the bare context, gated on the reusable call's own result.
+  security-gate-validation:
+    name: Security Gate Validation
+    runs-on: ubuntu-latest
+    needs: [security]
+    if: always()
+    permissions:
+      contents: read
+    steps:
+      - name: Harden the runner (Audit outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        with:
+          egress-policy: audit
+
+      - name: Check security scan results
+        env:
+          SECURITY_RESULT: ${{ needs.security.result }}
+        run: |
+          if [ "$SECURITY_RESULT" = "success" ] || [ "$SECURITY_RESULT" = "skipped" ]; then
+            echo "Security gate passed"
+          else
+            echo "Security gate FAILED: $SECURITY_RESULT"
+            exit 1
+          fi

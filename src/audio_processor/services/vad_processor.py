@@ -11,6 +11,7 @@ from __future__ import annotations
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 import librosa
 import numpy as np
@@ -282,8 +283,12 @@ class VADProcessor:
         )
 
         try:
-            # Load audio
+            # Load audio. dtype="float64" guarantees a float64 array at
+            # runtime; soundfile's stub returns a dtype union for the
+            # non-literal dtype argument, so cast to the concrete alias
+            # used by speech_chunks below.
             audio, sample_rate = sf.read(str(input_path), dtype="float64")
+            audio = cast("AudioSamples", audio)
 
             # Ensure mono
             if audio.ndim > 1:
