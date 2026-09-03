@@ -43,6 +43,7 @@ logger = logging.getLogger(__name__)
 
 
 def init_sentry(
+    *,
     dsn: str | None = None,
     environment: str | None = None,
     release: str | None = None,
