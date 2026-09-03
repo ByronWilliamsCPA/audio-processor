@@ -220,3 +220,91 @@ CVE-2026-9538
 # Review Date: 2026-05-31
 # Next Review: 2026-07-30 (60-day cap per CLAUDE.md unfixed-CVE policy)
 CVE-2026-48962
+
+# ============================================================================
+# 2026-07-02 baseline refresh (Trivy scan on PR #75)
+# All entries below: no fixed version in Debian 13 (trixie) as of 2026-07-02
+# (Trivy status "affected", Fixed Version empty for every finding).
+# Documented in docs/known-vulnerabilities.md; Reassess-by: 2026-08-31
+# (60-day cap per CLAUDE.md unfixed-CVE policy).
+# ============================================================================
+
+# CVE-2026-58049 - ffmpeg family (ffmpeg, libavcodec-extra/61, libavdevice61,
+# libavfilter10, libavformat61, libavutil59, libpostproc58, libswresample5,
+# libswscale8) - memory corruption via crafted RASC video stream
+# Severity: HIGH
+# Risk Assessment: MEDIUM - unlike the rest of this baseline, ffmpeg IS in the
+# application request path (user-uploaded media is passed to ffmpeg/ffprobe).
+# Justification:
+#   - No fixed Debian package exists; nothing to upgrade to
+#   - RASC is an obscure screen-capture codec; mainstream audio/video uploads
+#     do not exercise the vulnerable demuxer path, but a crafted upload could
+#   - ffmpeg runs as a short-lived subprocess as non-root appuser inside the
+#     container; blast radius is the worker container, not the host
+#   - ADR-003 adds hard per-job subprocess timeouts, bounding hung exploits
+#   - Mitigation candidate at reassess time: restrict ffmpeg demuxers to the
+#     formats the API actually accepts (input format allowlist)
+# Review Date: 2026-07-02
+# Next Review: 2026-08-31 (elevate priority; request-path exposure)
+CVE-2026-58049
+
+# CVE-2026-41992 - gzip global buffer overflow in LZH decompression
+# Severity: HIGH
+# Risk Assessment: LOW - the application never invokes gzip on untrusted
+# input; the binary ships in the base image for packaging tooling only.
+# Review Date: 2026-07-02 / Next Review: 2026-08-31
+CVE-2026-41992
+
+# CVE-2026-54369 (libacl1), CVE-2026-54371 (libattr1) - symlink traversal
+# local privilege escalation via libacl functions / getfattr
+# Severity: HIGH
+# Risk Assessment: LOW - local-privilege-escalation class; the container runs
+# a single non-root user (appuser) with no untrusted local users and no
+# setuid tooling in the request path.
+# Review Date: 2026-07-02 / Next Review: 2026-08-31
+CVE-2026-54369
+CVE-2026-54371
+
+# CVE-2026-56208, CVE-2026-56209, CVE-2026-56210, CVE-2026-56211 - libaom3
+# AV1 ENCODER bugs (first-pass stats buffer, SVC layer context, layer-id ctrl)
+# Severity: HIGH
+# Risk Assessment: LOW - all four are in AV1 encoding paths; this service
+# converts uploads to WAV/PCM audio and never encodes AV1 video, so the
+# vulnerable encoder code is not exercised. libaom is a transitive dep of
+# libavcodec-extra.
+# Review Date: 2026-07-02 / Next Review: 2026-08-31
+CVE-2026-56208
+CVE-2026-56209
+CVE-2026-56210
+CVE-2026-56211
+
+# CVE-2026-58016 (CRITICAL), CVE-2026-58014, CVE-2026-58015 - libglib2.0-0t64
+# gdbus introspection integer underflow / gkeyfile off-by-one / gdbus auth
+# path traversal
+# Severity: CRITICAL / HIGH / HIGH
+# Risk Assessment: NEGLIGIBLE - all three are in GLib's D-Bus and keyfile
+# code; this headless container runs no D-Bus daemon and no code parses
+# keyfiles or GDBus XML. GLib is present only as a transitive C dependency
+# of the ffmpeg codec stack (same analysis as the existing CVE-2025-13601
+# glib entry above).
+# Review Date: 2026-07-02 / Next Review: 2026-08-31
+CVE-2026-58016
+CVE-2026-58014
+CVE-2026-58015
+
+# CVE-2026-58050 - libssh2-1t64 heap buffer overflow in publickey attribute
+# allocation
+# Severity: HIGH
+# Risk Assessment: LOW - libssh2 is linked by curl; the application makes no
+# SSH connections. curl is used only for the localhost healthcheck and
+# image-build downloads (existing baseline rationale).
+# Review Date: 2026-07-02 / Next Review: 2026-08-31
+CVE-2026-58050
+
+# CVE-2026-12912 - libtiff6 heap overflow via crafted PixarLog TIFF
+# Severity: HIGH
+# Risk Assessment: LOW - the service processes audio/video media only; no
+# code path decodes TIFF images. libtiff is a transitive dep of the ffmpeg
+# codec extras.
+# Review Date: 2026-07-02 / Next Review: 2026-08-31
+CVE-2026-12912
