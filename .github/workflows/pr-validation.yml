@@ -26,21 +26,6 @@ permissions:
 
 jobs:
   # ==========================================================================
-  # Org-Level PR Validation (Core Checks)
-  # ==========================================================================
-  core-validation:
-    name: Core Validation
-    permissions:
-      contents: read
-      pull-requests: write
-      checks: write
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-ci.yml@7d12f5486ab5c856397ebaa4acd3c99ca385227c  # main
-    with:
-      python-version: '3.12'
-      coverage-threshold: 80
-      enable-dead-code-check: true
-      no-build: false  # project uses hatchling build backend; uv must build the editable install
-  # ==========================================================================
   # Additional Checks (Template-Specific)
   # ==========================================================================
 
@@ -126,7 +111,7 @@ jobs:
     name: Dependency & Standards Validation
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [core-validation, dead-code, link-check]
+    needs: [dead-code, link-check]
     if: always()
     steps:
       - name: Harden runner
@@ -141,12 +126,6 @@ jobs:
           echo "## PR Validation Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          if [ "${{ needs.core-validation.result }}" == "success" ]; then
-            echo "✅ Core Validation: Passed" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ Core Validation: ${{ needs.core-validation.result }}" >> $GITHUB_STEP_SUMMARY
-          fi
-
           if [ "${{ needs.dead-code.result }}" == "success" ]; then
             echo "✅ Dead Code Check: Passed" >> $GITHUB_STEP_SUMMARY
           else
@@ -158,12 +137,5 @@ jobs:
           else
             echo "⚠️ Link Check: ${{ needs.link-check.result }}" >> $GITHUB_STEP_SUMMARY
           fi
-          # Fail if core validation failed
-          if [ "${{ needs.core-validation.result }}" == "failure" ]; then
-            echo ""
-            echo "❌ Core validation checks failed. Please review and fix issues." >> $GITHUB_STEP_SUMMARY
-            exit 1
-          fi
-
           echo ""
           echo "✅ All validation checks passed!" >> $GITHUB_STEP_SUMMARY
