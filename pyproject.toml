@@ -4,7 +4,7 @@
 [project]
 name = "audio-processor"
 version = "0.1.0"
-description = "Audio file conversion and processing for RAG content pipelines"
+description = "Prepare-Audio for the Foundry RAG pipeline: Deepgram transcription with speaker diarization and Docling DOM output"
 authors = [
     {name = "Byron Williams", email = "byron@williamshome.family"}
 ]

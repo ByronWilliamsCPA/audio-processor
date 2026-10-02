@@ -41,9 +41,6 @@ speaker diarization, and produces transcript artifacts and a Docling DOM. FFmpeg
 This project provides:
 
 - A FastAPI service (`POST /api/v1/process`) with an ARQ worker and Redis job store
-- Production-ready code with comprehensive testing
-- Well-documented API and architecture
-- Security-first development practices
 
 ## Where this fits in the Foundry pipeline
 
@@ -55,19 +52,18 @@ vector storage, and search belong to the application that consumes the chunks, n
 
 ## Features
 
-- **High Quality**: 80%+ test coverage enforced via CI
-- **Type Safe**: Full type hints with BasedPyright strict mode
-- **Well Documented**: Clear docstrings and comprehensive guides
-- **Developer Friendly**: Pre-commit hooks, automated formatting, linting
-- **Security First**: Dependency scanning, security analysis, SBOM generation
-- **CLI Tool**: Command-line interface via audio_processor
-- **ML Ready**: Optional ML dependencies with PyTorch support
+- **REST API**: `POST /api/v1/process` with status, results, and artifact endpoints backed by a job queue
+- **Deepgram transcription**: Speaker diarization, with an optional summarization flag
+- **Authentication**: `X-API-Key` header with rate limiting and an upload size cap
+- **Background processing**: ARQ worker with a Redis job store
+- **Artifacts**: `transcript.txt`, `transcript.srt`, `transcript.vtt`, and `docling_dom.json`
+- **CLI Tool**: `audio_processor` with `hello` and `config` commands
 
 ## Quick Start
 
 ### Prerequisites
 
-- Python 3.10+ (tested with 3.12)
+- Python 3.11 to 3.13 (tested with 3.12)
 - [UV](https://docs.astral.sh/uv/) for dependency management
 
 **Install UV**:
@@ -90,7 +86,7 @@ pipx install uv
 ```bash
 # Clone repository
 git clone https://github.com/ByronWilliamsCPA/audio-processor.git
-cd audio_processor
+cd audio-processor
 
 # Install dependencies (includes dev tools - REQUIRED for development)
 uv sync --all-extras

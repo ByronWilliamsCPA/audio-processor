@@ -89,4 +89,5 @@ Contracts: `ingest-prepare-audio-contract.md` and `prepare-audio-unify-contract.
 
 The audit in `docs/audit/2026-05-29/00-final-report.md` lists `DOMBuilder` and `TranscriptFormatter` as having no
 production callers. The code now reaches both through `ArtifactGenerator`, so only the conditioner and VAD remain
-unwired.
+unwired. The audit finding SEC-01 (no API authentication) is also out of date: `api/security.py` now enforces
+`X-API-Key`. Treat SEC-01 and ARCH-03 as partly superseded by this page.

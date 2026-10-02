@@ -15,7 +15,7 @@ source: "Generated from project planning workflow"
 ---
 
 **Project**: Audio Processor
-**Description**: Audio file conversion and processing for RAG content pipelines
+**Description**: Prepare-Audio for the Foundry RAG pipeline: Deepgram transcription with speaker diarization and Docling DOM output
 **Repository**: `audio_processor`
 **Start Date**: YYYY-MM-DD
 **Target Completion**: YYYY-MM-DD
