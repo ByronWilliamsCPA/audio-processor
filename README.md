@@ -43,6 +43,14 @@ This project provides:
 - Well-documented API and architecture
 - Security-first development practices
 
+## Where this fits in the Foundry pipeline
+
+**Prepare-Audio** is the audio track. It transcribes audio and video with speaker diarization and writes `TranscriptMetadata.json` for Unify, which normalizes it to the same DOM as documents. Audio conversion is only one internal step.
+
+The pipeline runs Ingest, then Prepare-Doc or Prepare-Audio, then Unify, then Chunk, and ends at chunks. Embedding,
+vector storage, and search belong to the application that consumes the chunks, not to the pipeline. See
+[Pipeline Level 0 architecture](docs/architecture/pipeline-level-0.md) for the full picture.
+
 ## Features
 
 - **High Quality**: 80%+ test coverage enforced via CI
