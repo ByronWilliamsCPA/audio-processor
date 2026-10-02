@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- CI: Claude Tier 0 baseline PR review caller (`.github/workflows/claude-baseline-review.yml`), a thin caller of the org reusable in `ByronWilliamsCPA/.github`. Part of the org-wide tiered-pr-review rollout.
 - Initial project setup and structure
 - feat(preprocessing): audio preprocessing pipeline phases 1-4: FFmpeg-based format conversion and video audio extraction (`AudioConverter`), signal conditioning with resampling/normalization/DC-offset removal (`AudioConditioner`), SNR-based quality assessment (`QualityAssessor`), Silero VAD voice activity detection (`VADProcessor`), Deepgram Nova-2 transcription with diarization and summarization (`DeepgramTranscriptionClient`), multi-format transcript output (`ArtifactGenerator`), and ARQ background job orchestration (`process_audio_job`) with Redis-backed status tracking
 - feat(api): REST endpoints for audio upload, job status polling, and result retrieval; job processing delegated to ARQ worker
