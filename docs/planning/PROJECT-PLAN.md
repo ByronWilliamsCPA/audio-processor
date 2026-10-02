@@ -20,7 +20,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 ## Executive Summary
 
-Audio Processor is a Deepgram-powered audio transcription pipeline that converts audio/video files into structured, RAG-ready content. It provides high-accuracy speech-to-text (6-9% WER), native speaker diarization, and automatic summarization, outputting unified Docling DOM format for seamless integration with the existing image_detection RAG pipeline.
+Audio Processor is a Deepgram-powered audio transcription pipeline that converts audio/video files into structured, RAG-ready content. It provides high-accuracy speech-to-text (6-9% WER), native speaker diarization, and automatic summarization, outputting unified Docling DOM format for seamless integration with the Prepare-Doc (image-preprocessing-detector) document track.
 
 **Key Value**: Transform spoken content into searchable, attributable text chunks that integrate seamlessly with existing document processing pipelines, enabling unified semantic search across all content types.
 

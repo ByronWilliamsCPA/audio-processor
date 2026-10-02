@@ -9,7 +9,7 @@ tags:
   - home
 ---
 
-Audio file conversion and processing for RAG content pipelines
+Prepare-Audio for the Foundry RAG pipeline: Deepgram transcription with speaker diarization and Docling DOM output
 
 ## Quick Start
 

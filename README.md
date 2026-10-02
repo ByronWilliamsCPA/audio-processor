@@ -35,29 +35,35 @@
 
 ## Overview
 
-Audio file conversion and processing for RAG content pipelines
+Prepare-Audio: the audio track of the Foundry RAG pipeline. It transcribes audio and video with Deepgram, adds
+speaker diarization, and produces transcript artifacts and a Docling DOM. FFmpeg conversion is one internal step.
 
 This project provides:
-- Core functionality for audio file conversion and processing for rag content pipelines
-- Production-ready code with comprehensive testing
-- Well-documented API and architecture
-- Security-first development practices
+
+- A FastAPI service (`POST /api/v1/process`) with an ARQ worker and Redis job store
+
+## Where this fits in the Foundry pipeline
+
+**Prepare-Audio** is the audio track. It transcribes audio and video with speaker diarization and writes `TranscriptMetadata.json` for Unify, which normalizes it to the same DOM as documents. Audio conversion is only one internal step.
+
+The pipeline runs Ingest, then Prepare-Doc or Prepare-Audio, then Unify, then Chunk, and ends at chunks. Embedding,
+vector storage, and search belong to the application that consumes the chunks, not to the pipeline. See
+[Pipeline Level 0 architecture](docs/architecture/pipeline-level-0.md) for the full picture.
 
 ## Features
 
-- **High Quality**: 80%+ test coverage enforced via CI
-- **Type Safe**: Full type hints with BasedPyright strict mode
-- **Well Documented**: Clear docstrings and comprehensive guides
-- **Developer Friendly**: Pre-commit hooks, automated formatting, linting
-- **Security First**: Dependency scanning, security analysis, SBOM generation
-- **CLI Tool**: Command-line interface via audio_processor
-- **ML Ready**: Optional ML dependencies with PyTorch support
+- **REST API**: `POST /api/v1/process` with status, results, and artifact endpoints backed by a job queue
+- **Deepgram transcription**: Speaker diarization, with an optional summarization flag
+- **Authentication**: `X-API-Key` header with rate limiting and an upload size cap
+- **Background processing**: ARQ worker with a Redis job store
+- **Artifacts**: `transcript.txt`, `transcript.srt`, `transcript.vtt`, and `docling_dom.json`
+- **CLI Tool**: `audio_processor` with `hello` and `config` commands
 
 ## Quick Start
 
 ### Prerequisites
 
-- Python 3.10+ (tested with 3.12)
+- Python 3.11 to 3.13 (tested with 3.12)
 - [UV](https://docs.astral.sh/uv/) for dependency management
 
 **Install UV**:
@@ -80,12 +86,12 @@ pipx install uv
 ```bash
 # Clone repository
 git clone https://github.com/ByronWilliamsCPA/audio-processor.git
-cd audio_processor
+cd audio-processor
 
 # Install dependencies (includes dev tools - REQUIRED for development)
 uv sync --all-extras
 # Install with ML dependencies
-uv sync --all-extras,ml
+uv sync --all-extras
 
 # Setup pre-commit hooks (required)
 uv run pre-commit install
@@ -93,27 +99,24 @@ uv run pre-commit install
 
 ### Basic Usage
 
-```python
-# Import and use the package
-from audio_processor import YourModule
+Submit audio to the API (requires `X-API-Key` when authentication is enabled), then poll for the result:
 
-# Example: Create an instance and use it
-module = YourModule()
-result = module.process()
-print(result)
+```bash
+curl -X POST http://localhost:8000/api/v1/process \
+  -H "X-API-Key: $API_KEY" -F "file=@meeting.mp3" -F "enable_diarization=true"
+curl -H "X-API-Key: $API_KEY" http://localhost:8000/api/v1/status/<job_id>
+curl -H "X-API-Key: $API_KEY" http://localhost:8000/api/v1/results/<job_id>
 ```
+
+See [Level 1 architecture](docs/architecture/diagrams/level-1/index.md) for the components and endpoints.
 
 ### CLI Usage
 
+The CLI currently has only `hello` and `config` commands:
+
 ```bash
-# Display help
 uv run audio_processor --help
-
-# Use the CLI tool
-uv run audio_processor command --option value
-
-# Example: Process input file
-uv run audio_processor process input.txt --output result.json
+uv run audio_processor config
 ```
 
 ## Supply Chain Security
