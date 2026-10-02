@@ -26,7 +26,10 @@ This feedback will be shared with the template team to improve the cookiecutter 
 ## Project Overview
 
 **Name**: Audio Processor
-**Description**: Audio file conversion and processing for RAG content pipelines
+**Description**: Prepare-Audio, the audio track of the Foundry RAG pipeline: Deepgram transcription with speaker
+diarization and Docling DOM output (FFmpeg conversion is one internal step)
+**Pipeline context**: [docs/architecture/pipeline-level-0.md](docs/architecture/pipeline-level-0.md) (shared Level 0 page)
+and [Level 1](docs/architecture/diagrams/level-1/index.md)
 **Author**: Byron Williams <byron@williamshome.family>
 **Repository**: <https://github.com/ByronWilliamsCPA/audio-processor>
 **Created**: 2025-12-04
@@ -76,7 +79,7 @@ When writing code, ALWAYS tag assumptions that could cause production failures:
 ```python
 # #CRITICAL: [category]: [assumption that could cause outages/data loss]
 # #VERIFY: [defensive code required]
-# Example: Payment processing, auth flows, concurrent writes
+# Example: Auth flows, job-state writes, concurrent access
 
 # #ASSUME: [category]: [assumption that could cause bugs]
 # #VERIFY: [validation needed]
@@ -94,7 +97,6 @@ When writing code, ALWAYS tag assumptions that could cause production failures:
 - **Data Integrity**: Type safety at boundaries, null/undefined handling
 - **Concurrency**: Shared state, transaction isolation, deadlock potential
 - **Security**: Authentication, authorization, input validation
-- **Payment/Financial**: Transaction integrity, retry logic, rollback handling
 
 ---
 

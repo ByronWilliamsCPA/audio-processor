@@ -35,10 +35,12 @@
 
 ## Overview
 
-Audio file conversion and processing for RAG content pipelines
+Prepare-Audio: the audio track of the Foundry RAG pipeline. It transcribes audio and video with Deepgram, adds
+speaker diarization, and produces transcript artifacts and a Docling DOM. FFmpeg conversion is one internal step.
 
 This project provides:
-- Core functionality for audio file conversion and processing for rag content pipelines
+
+- A FastAPI service (`POST /api/v1/process`) with an ARQ worker and Redis job store
 - Production-ready code with comprehensive testing
 - Well-documented API and architecture
 - Security-first development practices
@@ -93,7 +95,7 @@ cd audio_processor
 # Install dependencies (includes dev tools - REQUIRED for development)
 uv sync --all-extras
 # Install with ML dependencies
-uv sync --all-extras,ml
+uv sync --all-extras
 
 # Setup pre-commit hooks (required)
 uv run pre-commit install
@@ -101,27 +103,24 @@ uv run pre-commit install
 
 ### Basic Usage
 
-```python
-# Import and use the package
-from audio_processor import YourModule
+Submit audio to the API (requires `X-API-Key` when authentication is enabled), then poll for the result:
 
-# Example: Create an instance and use it
-module = YourModule()
-result = module.process()
-print(result)
+```bash
+curl -X POST http://localhost:8000/api/v1/process \
+  -H "X-API-Key: $API_KEY" -F "file=@meeting.mp3" -F "enable_diarization=true"
+curl -H "X-API-Key: $API_KEY" http://localhost:8000/api/v1/status/<job_id>
+curl -H "X-API-Key: $API_KEY" http://localhost:8000/api/v1/results/<job_id>
 ```
+
+See [Level 1 architecture](docs/architecture/diagrams/level-1/index.md) for the components and endpoints.
 
 ### CLI Usage
 
+The CLI currently has only `hello` and `config` commands:
+
 ```bash
-# Display help
 uv run audio_processor --help
-
-# Use the CLI tool
-uv run audio_processor command --option value
-
-# Example: Process input file
-uv run audio_processor process input.txt --output result.json
+uv run audio_processor config
 ```
 
 ## Supply Chain Security

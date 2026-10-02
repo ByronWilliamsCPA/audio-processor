@@ -15,13 +15,13 @@ source: "/plan command generation"
 
 ## TL;DR
 
-Audio Processor is a Deepgram-powered audio transcription pipeline that converts audio/video files into structured, RAG-ready content through high-accuracy speech-to-text, speaker diarization, and automatic summarization, outputting unified Docling DOM format for direct integration with the existing image_detection RAG pipeline.
+Audio Processor is a Deepgram-powered audio transcription pipeline that converts audio/video files into structured, RAG-ready content through high-accuracy speech-to-text, speaker diarization, and automatic summarization, outputting unified Docling DOM format for direct integration with the Foundry RAG pipeline (Unify, then Chunk).
 
 ## Problem Statement
 
 ### Pain Point
 
-The existing RAG pipeline (/home/byron/dev/image_detection/) handles text documents and images but lacks support for audio content. Organizations increasingly need to ingest meeting recordings, podcasts, interviews, and video content into knowledge bases, but this content remains unsearchable and disconnected from document-based knowledge without a parallel audio processing path.
+The document track of the Foundry pipeline (Prepare-Doc, `image-preprocessing-detector`) handles text documents and images but lacks support for audio content. Organizations increasingly need to ingest meeting recordings, podcasts, interviews, and video content into knowledge bases, but this content remains unsearchable and disconnected from document-based knowledge without a parallel audio processing path.
 
 ### Target Users
 
@@ -48,7 +48,7 @@ Audio Processor transforms spoken content into searchable, attributable text chu
 2. **High-Accuracy Transcription**: Deepgram Nova-2 ASR with 6-9% WER, native diarization, smart formatting, word-level timestamps, and confidence scores
 3. **Speaker Attribution**: Native Deepgram diarization providing word-level speaker identification without separate processing steps
 4. **Content Summarization**: Automatic summarization via Deepgram v2 for improved retrieval and user experience
-5. **RAG Integration**: Output Docling Document Object Model (DOM) format matching the image_detection pipeline for unified downstream processing
+5. **RAG Integration**: Output Docling Document Object Model (DOM) format matching the document track for unified downstream processing
 
 ## Scope Definition
 
@@ -98,7 +98,7 @@ Audio Processor transforms spoken content into searchable, attributable text chu
 ```text
 Web UI (Shared)
     │
-    ├── Route: Documents/Images → image_detection/
+    ├── Route: Documents/Images → Prepare-Doc (image-preprocessing-detector)
     │                               ↓
     │                        Docling DOM Output
     │                               ↓

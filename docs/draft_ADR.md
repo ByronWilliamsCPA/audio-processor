@@ -9,6 +9,10 @@ tags:
   - architecture
 ---
 
+> **Superseded.** This draft predates the accepted plan in [docs/planning/](planning/README.md). The name
+> "Project E" and the repository `audio-preprocessing-engine` are retired: this repository is **Prepare-Audio**
+> (`audio-processor`). Kept for history; do not treat it as current.
+
 ## Audio Preprocessing Engine
 
 ### Architecture Decision Records
