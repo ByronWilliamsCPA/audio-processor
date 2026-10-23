@@ -30,7 +30,7 @@ concurrency:
 jobs:
   reuse:
     name: REUSE Compliance Check
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-reuse.yml@7d12f5486ab5c856397ebaa4acd3c99ca385227c  # main
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-reuse.yml@74cfc8e9d1ea1f6babc40bea102b3071af620942  # main
     with:
       generate-spdx: true
       fail-on-missing: true
@@ -48,7 +48,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Harden runner
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920  # v2.20.0
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25  # v2.22.1
         with:
           egress-policy: block
           allowed-endpoints: ''
