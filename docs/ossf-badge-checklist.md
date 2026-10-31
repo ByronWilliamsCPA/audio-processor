@@ -24,7 +24,7 @@ tags:
 
 | Criterion | Status | Evidence |
 |-----------|--------|----------|
-| `basics_description_good` | MET | `README.md` opens with "Audio file conversion and processing for RAG content pipelines" plus a Features section. |
+| `basics_description_good` | MET | `README.md` opens with a Prepare-Audio overview for the Foundry RAG pipeline plus a Features section. |
 | `basics_interact` | MET | `CONTRIBUTING.md` present; instructs contributors to open GitHub Issues and PRs. |
 | `basics_contribution_requirements` | MET | `CONTRIBUTING.md` documents coding standards, branch workflow, and commit format. |
 | `basics_license` | MET | `LICENSE` (MIT) present at repo root; MIT is OSI-approved. |

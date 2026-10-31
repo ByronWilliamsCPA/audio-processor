@@ -26,7 +26,10 @@ This feedback will be shared with the template team to improve the cookiecutter 
 ## Project Overview
 
 **Name**: Audio Processor
-**Description**: Audio file conversion and processing for RAG content pipelines
+**Description**: Prepare-Audio, the audio track of the Foundry RAG pipeline: Deepgram transcription with speaker
+diarization and Docling DOM output (FFmpeg conversion is one internal step)
+**Pipeline context**: [docs/architecture/pipeline-level-0.md](docs/architecture/pipeline-level-0.md) (shared Level 0 page)
+and [Level 1](docs/architecture/diagrams/level-1/index.md)
 **Author**: Byron Williams <byron@williamshome.family>
 **Repository**: <https://github.com/ByronWilliamsCPA/audio-processor>
 **Created**: 2025-12-04
@@ -76,7 +79,7 @@ When writing code, ALWAYS tag assumptions that could cause production failures:
 ```python
 # #CRITICAL: [category]: [assumption that could cause outages/data loss]
 # #VERIFY: [defensive code required]
-# Example: Payment processing, auth flows, concurrent writes
+# Example: Auth flows, job-state writes, concurrent access
 
 # #ASSUME: [category]: [assumption that could cause bugs]
 # #VERIFY: [validation needed]
@@ -94,7 +97,6 @@ When writing code, ALWAYS tag assumptions that could cause production failures:
 - **Data Integrity**: Type safety at boundaries, null/undefined handling
 - **Concurrency**: Shared state, transaction isolation, deadlock potential
 - **Security**: Authentication, authorization, input validation
-- **Payment/Financial**: Transaction integrity, retry logic, rollback handling
 
 ---
 
@@ -433,20 +435,31 @@ docker build -t audio_processor .  # Build production image
 ```text
 src/audio_processor/
 ├── __init__.py              # Package initialization
-├── cli.py                   # CLI entry point
+├── cli.py                   # CLI entry point (hello, config)
+├── api/                     # FastAPI routes and API-key auth
+│   ├── routes.py           # /api/v1 process, status, results, artifacts
+│   └── security.py         # X-API-Key auth and rate limiting
 ├── core/                    # Core business logic
-│   ├── __init__.py
+│   ├── cache.py            # Cache helpers
 │   ├── config.py           # Configuration (Pydantic Settings)
-│   └── exceptions.py       # Centralized exception hierarchy
-├── middleware/              # Middleware components
-│   └── __init__.py
+│   ├── exceptions.py       # Centralized exception hierarchy
+│   ├── job_store.py        # Redis and in-memory job stores
+│   ├── models.py           # Job and result models
+│   └── sentry.py           # Sentry setup
+├── jobs/                    # ARQ background processing
+│   ├── audio_tasks.py      # Processing pipeline task
+│   └── worker.py           # ARQ worker settings
+├── middleware/              # Package placeholder (no modules yet)
+├── services/                # Audio and transcript services
+│   ├── audio_converter.py, quality_assessor.py, deepgram_client.py
+│   ├── dom_builder.py, transcript_formatter.py   # reached via ArtifactGenerator
+│   └── audio_conditioner.py, vad_processor.py    # built, not wired into the pipeline
 └── utils/                   # Utilities
-    ├── __init__.py
     └── logging.py          # Structured logging with correlation
 
 tests/
-├── unit/                   # Unit tests
-├── integration/            # Integration tests
+├── unit/                   # Unit tests (API, jobs, services, core)
+├── integration/            # Integration tests (empty package)
 ├── conftest.py            # Pytest fixtures
 └── test_example.py        # Example tests
 
@@ -795,5 +808,5 @@ the relevant situation arises; the brief notes below describe the scope of each.
 
 ---
 
-**Last Updated**: 2025-12-05
+**Last Updated**: 2026-10-02
 **Template Version**: 0.1.0
