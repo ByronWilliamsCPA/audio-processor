@@ -73,8 +73,8 @@ Security scanning with:
 
 > **Note (2026-09):** CodeQL advanced analysis and the dependency-review
 > action no longer function; GitHub now bills Advanced Security / Code
-> Security. The `run-codeql` and `run-dependency-review` inputs above are
-> still passed to the shared reusable workflow and are left for a
+> Security. The `run-codeql` and `run-dependency-review` inputs in
+> `security-analysis.yml` are still passed to the shared reusable workflow and are left for a
 > coordinated follow-up (removing them here first would silently flip
 > their defaults to `true` upstream). The standalone `codeql.yml` and
 > `dependency-review.yml` workflow files have been removed from this repo.

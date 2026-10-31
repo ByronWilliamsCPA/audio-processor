@@ -17,12 +17,13 @@ tags:
 
 ## Status
 
-One Python-dependency CVE (`py` 1.11.0) and a documented baseline of
-base-image transitive C library CVEs (catalogued in the section
-"Base-image transitive library CVEs" below and suppressed in
-`.trivyignore`).
+One Python-dependency CVE (`py` 1.11.0), two deferred torch CVEs with no
+patched release (PYSEC-2026-139, CVE-2025-3000 — both excluded from the
+production image), and a documented baseline of base-image transitive C
+library CVEs (catalogued in the section "Base-image transitive library
+CVEs" below and suppressed in `.trivyignore`).
 
-Last reviewed: 2026-05-28
+Last reviewed: 2026-07-02
 
 ---
 
@@ -349,6 +350,75 @@ parties.
 advisory for a patched release. If a fix ships before the reassessment date, upgrade
 the `torch>=` constraint in `pyproject.toml`, regenerate `uv.lock`, and remove this
 entry and its `osv-scanner.toml` suppression.
+
+---
+
+## CVE-2025-3000: torch 2.12.0
+
+| Field | Value |
+| --- | --- |
+| **ID** | CVE-2025-3000 |
+| **Package** | `torch` >= 2.9.0 (direct in `[ml]` extra; transitive via `silero-vad` in `[audio]` extra) |
+| **CVE** | CVE-2025-3000 |
+| **GHSA** | GHSA-rrmf-rvhw-rf47 |
+| **Aliases** | CVE-2025-3000, GHSA-rrmf-rvhw-rf47, PYSEC-2025-194 (all three suppressed in `osv-scanner.toml`) |
+| **Severity** | Low-Medium (local-only) |
+| **CVSS Score** | CVSS:4.0 AV:L/AC:L/AT:N/PR:L/UI:N/VC:L/VI:L/VA:L (per OSV) |
+| **Patched version** | None. OSV records `last_affected` only (no fixed release identified); published 2025-03-31. |
+| **Status** | Deferred (compensating control in place) |
+| **Discovered** | 2026-07-02 (pip-audit and OSV scanner failures on PR #75) |
+| **Reassess-by** | 2026-08-31 (60-day cap) |
+| **Suppressed in** | `osv-scanner.toml`, `[tool.pip-audit] ignore-vuln` in `pyproject.toml` |
+
+**Exploitation scenario**: The vulnerability requires a local attacker with a valid
+user account (AV:L, PR:L) on the same host as the torch runtime, with low
+confidentiality/integrity/availability impact. Remote exploitation is not possible.
+
+**Why deferred**: No patched release exists upstream. As with PYSEC-2026-139, `torch`
+enters the dependency graph only via the `[ml]` extra (direct) and the `[audio]` extra
+(transitive through `silero-vad`). The production Docker image runs
+`uv sync --frozen --no-dev` with no `--extra` flags, so torch is not installed at
+runtime.
+
+**Compensating control**: Identical to PYSEC-2026-139: (1) torch is absent from the
+production container image; (2) the attack vector is local-only, and the service runs
+in a containerised, non-root environment with no local user accounts accessible to
+external parties.
+
+**Planned resolution**: Reassess 2026-08-31 (fold into the 2026-07-26 PYSEC-2026-139
+reassessment). Check the OSV advisory for a fixed release; if one ships, upgrade the
+`torch>=` constraint, regenerate `uv.lock`, and remove this entry plus the
+`osv-scanner.toml` and `pyproject.toml` suppressions.
+
+---
+
+## Base-image baseline refresh — 2026-07-02 (Trivy scan on PR #75)
+
+Trivy reported 22 findings (21 HIGH, 1 CRITICAL) against the container image,
+all with Debian status `affected` and **no fixed version available** — nothing
+to upgrade to. Thirteen unique CVEs were added to `.trivyignore` with per-family
+justifications inline in that file. Shared metadata:
+
+- **Discovered**: 2026-07-02 (Trivy scan on PR #75)
+- **Reassess-by**: 2026-08-31 (60-day cap per CLAUDE.md unfixed-CVE policy)
+- **Status**: Deferred (compensating controls documented per family)
+- **Suppressed in**: `.trivyignore`
+
+Family summary:
+
+| Family | CVEs | Risk | Basis |
+| --- | --- | --- | --- |
+| ffmpeg stack | CVE-2026-58049 | **MEDIUM — request-path exposure** | ffmpeg processes user uploads; RASC is an obscure codec, subprocess is non-root/short-lived, ADR-003 adds hard timeouts. Consider a demuxer allowlist at reassess time. |
+| glib | CVE-2026-58016 (CRITICAL), CVE-2026-58014, CVE-2026-58015 | Negligible | D-Bus/keyfile code paths; headless container runs no D-Bus, parses no keyfiles. |
+| libaom (AV1) | CVE-2026-56208..56211 | Low | All encoder-side; service never encodes AV1. |
+| acl/attr | CVE-2026-54369, CVE-2026-54371 | Low | Local priv-esc class; single non-root user, no untrusted local users. |
+| gzip | CVE-2026-41992 | Low | LZH path never invoked on untrusted input. |
+| libssh2 | CVE-2026-58050 | Low | Linked by curl; no SSH connections made. |
+| libtiff | CVE-2026-12912 | Low | No TIFF decoding in any code path. |
+
+The ffmpeg entry is deliberately **not** grouped with the "not exercised by
+the request path" baseline above: it is the application's primary attack
+surface and carries an elevated-priority reassessment.
 
 ---
 

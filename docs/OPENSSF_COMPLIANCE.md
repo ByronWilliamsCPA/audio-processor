@@ -191,7 +191,7 @@ Automated dependency updates and vulnerability scanning.
 
 ### 7. Security Scanning (SAST) 🔍
 
-Static analysis (Bandit, Semgrep) runs on every commit. CodeQL was
+Static analysis (Bandit, Ruff security rules) runs on every commit. CodeQL was
 removed 2026-09 (GitHub now bills Advanced Security / Code Security,
 so CodeQL code scanning and SARIF ingestion into the Security tab no
 longer function); see `CHANGELOG.md`.

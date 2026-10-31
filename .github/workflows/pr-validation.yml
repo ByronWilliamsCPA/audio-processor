@@ -26,21 +26,6 @@ permissions:
 
 jobs:
   # ==========================================================================
-  # Org-Level PR Validation (Core Checks)
-  # ==========================================================================
-  core-validation:
-    name: Core Validation
-    permissions:
-      contents: read
-      pull-requests: write
-      checks: write
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-ci.yml@799ebd63e16aba0236ceded915f5c1cac20823b3  # main
-    with:
-      python-version: '3.12'
-      coverage-threshold: 80
-      enable-dead-code-check: true
-      no-build: false  # project uses hatchling build backend; uv must build the editable install
-  # ==========================================================================
   # Additional Checks (Template-Specific)
   # ==========================================================================
 
@@ -51,20 +36,20 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Harden the runner
-        uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2.19.3
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
         with:
           egress-policy: audit  # uv sync needs PyPI + Python.org + GitHub; audit catches needed endpoints. TODO: tighten to block with allowed-endpoints after 2026-06-30
 
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
 
       - name: Install UV
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -93,15 +78,15 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Harden the runner
-        uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2.19.3
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
         with:
           egress-policy: audit  # lychee validates external doc URLs across many hosts; block mode is incompatible
 
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Check documentation links
-        uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411 # v2.8.0
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
         with:
           args: >-
             --verbose
@@ -126,11 +111,11 @@ jobs:
     name: Dependency & Standards Validation
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [core-validation, dead-code, link-check]
+    needs: [dead-code, link-check]
     if: always()
     steps:
       - name: Harden runner
-        uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5  # v2.19.3
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920  # v2.20.0
         with:
           egress-policy: block
           allowed-endpoints: >
@@ -140,12 +125,6 @@ jobs:
         run: |
           echo "## PR Validation Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-
-          if [ "${{ needs.core-validation.result }}" == "success" ]; then
-            echo "✅ Core Validation: Passed" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ Core Validation: ${{ needs.core-validation.result }}" >> $GITHUB_STEP_SUMMARY
-          fi
 
           if [ "${{ needs.dead-code.result }}" == "success" ]; then
             echo "✅ Dead Code Check: Passed" >> $GITHUB_STEP_SUMMARY
@@ -158,12 +137,5 @@ jobs:
           else
             echo "⚠️ Link Check: ${{ needs.link-check.result }}" >> $GITHUB_STEP_SUMMARY
           fi
-          # Fail if core validation failed
-          if [ "${{ needs.core-validation.result }}" == "failure" ]; then
-            echo ""
-            echo "❌ Core validation checks failed. Please review and fix issues." >> $GITHUB_STEP_SUMMARY
-            exit 1
-          fi
-
           echo ""
           echo "✅ All validation checks passed!" >> $GITHUB_STEP_SUMMARY

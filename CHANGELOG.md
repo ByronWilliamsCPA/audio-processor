@@ -8,7 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Removed
-- ci(security): remove `codeql.yml` and `dependency-review.yml`; GitHub now bills Advanced Security (Code Security), so CodeQL code scanning, the dependency-review action, and SARIF ingestion into the Security tab no longer function. `cifuzzy.yml` no longer uploads its ClusterFuzzLite SARIF via `github/codeql-action/upload-sarif`; the results are now published as a plain workflow artifact instead. `security-analysis.yml` still passes `run-codeql: true` and `run-dependency-review: true` to the shared org reusable workflow; removing those inputs is a coordinated follow-up so the shared workflow's `true` defaults do not silently re-enable a job that cannot succeed.
+
+- ci(security): remove `codeql.yml` and `dependency-review.yml`; GitHub now bills Advanced Security (Code
+  Security), so CodeQL code scanning, the dependency-review action, and SARIF ingestion into the Security tab no
+  longer function. `cifuzzy.yml` no longer uploads its ClusterFuzzLite SARIF via
+  `github/codeql-action/upload-sarif`; the results are now published as a plain workflow artifact instead.
+  `security-analysis.yml` still passes `run-codeql: true` and `run-dependency-review: true` to the shared org
+  reusable workflow; removing those inputs is a coordinated follow-up so the shared workflow's `true` defaults do
+  not silently re-enable a job that cannot succeed.
 
 ### Added
 - Initial project setup and structure
@@ -18,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - feat(ci): add a qlty PR diff gate (`qlty-gate`, fail-level medium) as a required status check, plus a weekly informational full-codebase qlty health scan (`qlty-health`, Mondays 07:00 UTC); the workflow concurrency group now isolates runs by event type and head repository
 
 ### Fixed
+- fix(security): upgrade vulnerable dependencies flagged by pip-audit/OSV: cryptography 48.0.1 (GHSA-537c-gmf6-5ccf), jupyter-server 2.20.0 (PYSEC-2026-366), jupyterlab 4.5.9 (GHSA-vmhf-c436-hxj4), msgpack 1.2.1 (GHSA-6v7p-g79w-8964), pydantic-settings 2.14.2 (GHSA-4xgf-cpjx-pc3j), starlette 1.3.1 (PYSEC-2026-248, PYSEC-2026-249), tornado 6.5.7 (GHSA-pw6j-qg29-8w7f); defer torch CVE-2025-3000 (no patched release, local-only, excluded from the production image) with documented suppressions and a 2026-08-31 reassess-by in `docs/known-vulnerabilities.md`
 - fix(jobs): correct field paths for `duration_ms` and `language` in `process_audio_job` result assembly; both now read from `TranscriptionResult.metadata` where they actually live, preventing `AttributeError` at runtime
 - fix(api): guard `content-length` header parsing against malformed values; `int()` conversion is now wrapped in a `ValueError` handler so a non-numeric header no longer raises an unhandled exception
 - fix(tests): restore `tmp_path` fixture in `test_custom_initialization` for `AudioConverter`, `AudioConditioner`, and `VADProcessor`; hardcoded `/custom/temp` caused `PermissionError` on systems without root access

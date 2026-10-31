@@ -91,7 +91,7 @@ tags:
 | `security_assurance_case` | PARTIAL | `SECURITY.md` has a "Security Surface" section naming attack vectors and controls. `CLAUDE.md` documents security-first development. A formal assurance case document does not yet exist. To fully meet this criterion, add a `docs/security-assurance-case.md` that traces each threat from the Security Surface section to its control and residual risk. |
 | `security_centralized_authn` | N/A | Project is a CLI/library, not a multi-user application with authentication. Select N/A on the questionnaire. |
 | `security_context` | MET | Least-privilege workflow tokens in GitHub Actions; Pydantic Settings for secrets; see `SECURITY.md`. |
-| `security_static_analysis` | MET | Bandit, Ruff `S`-category rules, and Semgrep run in CI. CodeQL was removed 2026-09 (GitHub Advanced Security billing). |
+| `security_static_analysis` | MET | Bandit and Ruff `S`-category rules run in CI. CodeQL was removed 2026-09 (GitHub Advanced Security billing). |
 | `security_static_analysis_fixed` | MET | CI fails on any HIGH/CRITICAL Bandit finding; `CLAUDE.md` prohibits suppression without documented justification. |
 | `security_dynamic_analysis` | MET | ClusterFuzzLite (`cifuzzy.yml`) runs fuzz targets on every PR; Atheris instrumentation in `.clusterfuzzlite/`. |
 | `security_dynamic_analysis_unsafe` | MET | Atheris fuzz targets use ASan/UBSan instrumentation enabled by the ClusterFuzzLite base builder. |

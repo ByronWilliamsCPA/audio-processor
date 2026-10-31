@@ -57,7 +57,7 @@ Fuzzing runs automatically in CI via `.github/workflows/cifuzzy.yml`:
 - **Triggers**: Every push to main/develop and on PRs
 - **Duration**: 600 seconds per fuzzer
 - **Sanitizer**: AddressSanitizer for memory safety
-- **Reporting**: SARIF format uploaded to GitHub Security tab
+- **Reporting**: SARIF file archived as a workflow artifact (`fuzzing-sarif-<sanitizer>`)
 
 ## Writing New Fuzzers
 

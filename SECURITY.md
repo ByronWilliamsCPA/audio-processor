@@ -124,4 +124,4 @@ This project follows coordinated disclosure. Public details are published in
 the advisory once a fix or mitigation is available. Reporters who want credit
 should say so in the report; otherwise credit is anonymous.
 
-Last updated: 2026-05-16
+Last updated: 2026-10-31
