@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- ci(security): remove `codeql.yml` and `dependency-review.yml`; GitHub now bills Advanced Security (Code
+  Security), so CodeQL code scanning, the dependency-review action, and SARIF ingestion into the Security tab no
+  longer function. `cifuzzy.yml` no longer uploads its ClusterFuzzLite SARIF via
+  `github/codeql-action/upload-sarif`; the results are now published as a plain workflow artifact instead.
+  `security-analysis.yml` still passes `run-codeql: true` and `run-dependency-review: true` to the shared org
+  reusable workflow; removing those inputs is a coordinated follow-up so the shared workflow's `true` defaults do
+  not silently re-enable a job that cannot succeed.
+
 ### Added
 - CI: Claude Tier 0 baseline PR review caller (`.github/workflows/claude-baseline-review.yml`), a thin caller of the org reusable in `ByronWilliamsCPA/.github`. Part of the org-wide tiered-pr-review rollout.
 - Initial project setup and structure
