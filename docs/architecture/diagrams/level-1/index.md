@@ -43,13 +43,15 @@ flowchart LR
 
 1. `POST /api/v1/process` takes a multipart upload (`file`, `enable_diarization`, `enable_summarization`, `language`,
    `callback_url`). The API streams it to a temp file, validates it with `AudioConverter.validate_file`, stores a job
-   record in Redis, and returns 202 with a job ID. Every route under `/api/v1` requires an `X-API-Key` header.
+   record in Redis, and returns 202 with a job ID. When `auth_required` is true, every route under `/api/v1` requires an `X-API-Key`
+   header.
 2. The ARQ worker (`process_audio_job`) converts the audio with FFmpeg, runs `QualityAssessor`, and transcribes with
    Deepgram (skipped with a warning if no API key is configured).
-3. `ArtifactGenerator` builds `docling_dom.json`, `transcript.txt`, `transcript_simple.txt`, `transcript.srt`, and
-   `transcript.vtt`. `TranscriptFormatter` and `DOMBuilder` are therefore reached through `ArtifactGenerator`.
-4. State, result, and artifact text are written to the Redis job store. Clients poll `GET /api/v1/status/{job_id}`,
-   then read `GET /api/v1/results/{job_id}` and `GET /api/v1/artifacts/{job_id}/{artifact_name}`.
+3. When transcription returns a result, the worker attempts to generate the artifacts through `ArtifactGenerator`:
+   `docling_dom.json`, `transcript.txt`, `transcript_simple.txt`, `transcript.srt`, and `transcript.vtt`.
+   `TranscriptFormatter` and `DOMBuilder` are reached through `ArtifactGenerator`.
+4. State and result are written to the Redis job store, along with any generated artifact text. Clients poll
+   `GET /api/v1/status/{job_id}`, then read `GET /api/v1/results/{job_id}` and `GET /api/v1/artifacts/{job_id}/{artifact_name}`.
 
 ## Inputs and outputs
 

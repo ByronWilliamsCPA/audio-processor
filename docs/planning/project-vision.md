@@ -96,23 +96,29 @@ Audio Processor transforms spoken content into searchable, attributable text chu
 ## Integration Architecture
 
 ```text
-Web UI (Shared)
+Ingest (rag-processor)
     │
     ├── Route: Documents/Images → Prepare-Doc (image-preprocessing-detector)
     │                               ↓
-    │                        Docling DOM Output
+    │                        DocumentMetadata.json
     │                               ↓
-    └── Route: Audio/Video    → audio_processor/
+    └── Route: Audio/Video    → Prepare-Audio (audio_processor/)
                                     ↓
                              Deepgram Processing
                                     ↓
-                             Docling DOM Output
+                             TranscriptMetadata.json
                                     ↓
-                        ┌───────────┴───────────┐
-                        ▼                       ▼
-                  Unified Chunking         Vector Indexing
-                  (same logic for         (same embeddings
-                   all content types)      for all sources)
+                  Unify (both tracks meet here; audio track skips OCR)
+                                    ↓
+                             DoclingDOM.json
+                                    ↓
+                       Chunk (same logic for all content types)
+                                    ↓
+                             RAGChunkSet.json
+                                    ↓
+          ── pipeline ends; applications consume the chunks ──
+                                    ↓
+                  Applications: embedding and vector indexing
 ```
 
 ## Assumptions to Validate

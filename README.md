@@ -99,13 +99,13 @@ uv run pre-commit install
 
 ### Basic Usage
 
-Submit audio to the API (requires `X-API-Key` when authentication is enabled), then poll for the result:
+Submit audio to the API (requires `X-API-Key` when authentication is enabled), then poll for the result. Set `JOB_ID` to the ID returned by the submission request:
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/process \
   -H "X-API-Key: $API_KEY" -F "file=@meeting.mp3" -F "enable_diarization=true"
-curl -H "X-API-Key: $API_KEY" http://localhost:8000/api/v1/status/<job_id>
-curl -H "X-API-Key: $API_KEY" http://localhost:8000/api/v1/results/<job_id>
+curl -H "X-API-Key: $API_KEY" "http://localhost:8000/api/v1/status/${JOB_ID}"
+curl -H "X-API-Key: $API_KEY" "http://localhost:8000/api/v1/results/${JOB_ID}"
 ```
 
 See [Level 1 architecture](docs/architecture/diagrams/level-1/index.md) for the components and endpoints.
