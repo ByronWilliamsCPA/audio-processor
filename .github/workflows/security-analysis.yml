@@ -34,7 +34,7 @@ permissions:
 jobs:
   security:
     name: Security Analysis
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-security-analysis.yml@7d12f5486ab5c856397ebaa4acd3c99ca385227c  # main
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-security-analysis.yml@82ce497cae146787ea65bf892aedfe3262a4638e  # main
     with:
       source-directory: 'src'
       python-version: '3.12'
@@ -63,7 +63,7 @@ jobs:
       contents: read
     steps:
       - name: Harden the runner (Audit outbound calls)
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411  # v2.19.4
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25  # v2.22.1
         with:
           egress-policy: audit
 
