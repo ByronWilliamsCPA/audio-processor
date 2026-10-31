@@ -36,7 +36,7 @@ permissions:
 jobs:
   compatibility:
     name: Python Compatibility Matrix
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-compatibility.yml@799ebd63e16aba0236ceded915f5c1cac20823b3  # main
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-compatibility.yml@7d12f5486ab5c856397ebaa4acd3c99ca385227c  # main
     with:
       python-versions: '["3.11", "3.12", "3.13"]'
       include-windows: true

@@ -19,6 +19,16 @@ class MyService:
 - I/O-bound methods that call external APIs or read files: `def` wrapping a sync SDK (current pattern) or `async def` if the SDK supports it.
 - Raise `ExternalServiceError` (from `core.exceptions`) on network failures; never let SDK exceptions propagate raw to the caller.
 
+## Caller-side rule for async contexts (binding — see ADR-003)
+
+Any `async def` (route handler, ARQ task, lifespan hook) calling a service method
+that shells out, does CPU-bound audio work, or performs blocking I/O MUST dispatch
+it via `anyio.to_thread.run_sync(..., abandon_on_cancel=True, limiter=<the module's CapacityLimiter>)`
+and MUST pass an explicit timeout that the service enforces internally.
+Calling these methods bare in async code is a review-blocking defect.
+Full contract (placement table, deadline budget, cancellation guarantees):
+`docs/planning/adr/adr-003-async-execution-model.md`.
+
 ## RAD tagging (mandatory for this layer)
 
 All methods that call external APIs or read files must carry `#CRITICAL: ExternalResources` tags.
