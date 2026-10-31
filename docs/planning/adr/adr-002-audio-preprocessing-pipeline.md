@@ -14,6 +14,9 @@ source: "Audio preprocessing research paper analysis"
 > **Date**: 2025-12-04
 > **Supersedes**: None
 > **Related**: [ADR-001](./adr-001-initial-architecture.md)
+> **Implementation status (2026-10-02)**: `AudioConditioner` and `VADProcessor` exist in `services/` but have no
+> production callers; the live pipeline runs FFmpeg conversion and quality assessment, then Deepgram. See the
+> [Level 1 architecture](../../architecture/diagrams/level-1/index.md). The decision below is unchanged.
 
 ## TL;DR
 

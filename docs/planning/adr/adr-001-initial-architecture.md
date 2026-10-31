@@ -14,6 +14,8 @@ source: "/plan command generation"
 > **Status**: Accepted
 > **Date**: 2025-12-04
 > **Supersedes**: None
+> **Note (2026-10-02)**: The pipeline names used below were retired. "image_detection" is now Prepare-Doc
+> (image-preprocessing-detector); see [Pipeline Level 0](../../architecture/pipeline-level-0.md).
 
 ## TL;DR
 

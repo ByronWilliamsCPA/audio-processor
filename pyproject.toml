@@ -4,7 +4,7 @@
 [project]
 name = "audio-processor"
 version = "0.1.0"
-description = "Audio file conversion and processing for RAG content pipelines"
+description = "Prepare-Audio for the Foundry RAG pipeline: Deepgram transcription with speaker diarization and Docling DOM output"
 authors = [
     {name = "Byron Williams", email = "byron@williamshome.family"}
 ]
@@ -107,7 +107,7 @@ dev = [
     # Documentation
     "mkdocs>=1.6.0,<2",
     "mkdocs-material>=9.5.0,<10",
-    "mkdocstrings[python]>=0.26.0,<1",
+    "mkdocstrings[python]>=1.0.8,<2",
     "griffe-pydantic>=1.1.0",
     "mkdocs-gen-files>=0.5.0,<1",
     "mkdocs-section-index>=0.3.0,<1",

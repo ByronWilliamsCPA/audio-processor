@@ -8,6 +8,10 @@ tags:
   - research
 ---
 
+> **Superseded.** This draft predates the accepted plan in [docs/planning/](planning/README.md). The name
+> "Project E" and the repository `audio-preprocessing-engine` are retired: this repository is **Prepare-Audio**
+> (`audio-processor`). Kept for history; do not treat it as current.
+
 ## **1\. Introduction: The Imperative of Multimodal Retrieval-Augmented Generation**
 
 The evolution of Retrieval-Augmented Generation (RAG) systems has historically been constrained to the textual domain, relying on the ingestion of PDFs, Markdown, and plain text to ground Large Language Models (LLMs) in proprietary data. However, a significant proportion of high-value enterprise information exists solely in acoustic formats: earnings calls, customer support interactions, legal depositions, and internal strategy meetings. The transition from text-exclusive RAG to multimodal RAG necessitates a fundamental reimagining of the data ingestion pipeline. Unlike text, which is discrete and deterministic, audio is continuous, stochastic, and fraught with signal artifacts that require sophisticated preprocessing before it can be rendered semantically useful for vector retrieval.

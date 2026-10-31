@@ -176,6 +176,8 @@ nav:
   - Development:
       - Setup: development/setup.md
       - Architecture: development/architecture.md
+      - Pipeline Level 0: architecture/pipeline-level-0.md
+      - Pipeline Level 1: architecture/diagrams/level-1/index.md
       - Testing: development/testing.md
       - Code Quality: development/code-quality.md
       - Contributing: development/contributing.md
