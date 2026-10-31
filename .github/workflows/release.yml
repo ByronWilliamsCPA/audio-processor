@@ -49,6 +49,7 @@ jobs:
       issues: write
       pull-requests: write
       id-token: write
+      attestations: write  # required by the reusable's release job for artifact attestation
     if: >-
       (github.event_name == 'workflow_dispatch' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
       github.event.workflow_run.conclusion == 'success'
