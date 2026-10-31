@@ -200,6 +200,7 @@ async def _stream_upload_to_temp(
 )
 async def process_audio(
     request: Request,
+    *,
     file: Annotated[UploadFile, File(description="Audio or video file to process")],
     enable_diarization: Annotated[
         bool,
