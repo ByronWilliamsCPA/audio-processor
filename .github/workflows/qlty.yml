@@ -27,7 +27,7 @@ jobs:
   # Coverage upload: runs after CI workflow completes successfully.
   qlty:
     if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-qlty-coverage.yml@82ce497cae146787ea65bf892aedfe3262a4638e  # main
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-qlty-coverage.yml@be444673dde58fec4d3941f9bed03e897f8bcec5  # main
     permissions:
       contents: read
       actions: read
