@@ -53,7 +53,7 @@ jobs:
     if: >-
       (github.event_name == 'workflow_dispatch' && (github.ref_name == 'main' || github.ref_name == 'master')) ||
       github.event.workflow_run.conclusion == 'success'
-    uses: ByronWilliamsCPA/.github/.github/workflows/python-release.yml@82ce497cae146787ea65bf892aedfe3262a4638e  # main
+    uses: ByronWilliamsCPA/.github/.github/workflows/python-release.yml@be444673dde58fec4d3941f9bed03e897f8bcec5  # main
     with:
       python-version: '3.12'
       coverage-threshold: 80
