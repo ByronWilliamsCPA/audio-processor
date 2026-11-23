@@ -62,13 +62,6 @@ See: https://nvd.nist.gov/vuln/detail/CVE-2022-42969
 """
 
 [[IgnoredVulns]]
-id = "PYSEC-2022-42969"
-reason = """
-Same as CVE-2022-42969 - DISPUTED ReDoS in py package via interrogate.
-Dev dependency only, affects SVN parsing which is not used.
-"""
-
-[[IgnoredVulns]]
 id = "PYSEC-2026-139"
 reason = """
 CVE-2026-4538 in torch 2.9.1. CVSS:3.1 AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H (7.8 HIGH, local-only).
@@ -79,15 +72,6 @@ uv sync --frozen --no-dev with no --extra flags so neither extra is installed at
 Exploitation requires a local attacker with a valid user account on the same machine,
 not applicable to a containerised CI/CD or cloud deployment model. Documented in
 docs/known-vulnerabilities.md with reassess-by 2026-07-26.
-"""
-
-[[IgnoredVulns]]
-id = "GHSA-w596-4wvx-j9j6"
-reason = """
-GitHub Security Advisory for py ReDoS (same as CVE-2022-42969).
-DISPUTED vulnerability affecting SVN path parsing.
-interrogate (dev dependency) transitively requires py, but this project
-does not interact with Subversion repositories.
 """
 
 # ----------------------------------------------------------------------------
@@ -102,13 +86,6 @@ OSV lists no fixed release (last_affected only). torch enters via the [ml] extra
 Dockerfile runs uv sync --frozen --no-dev with no --extra flags, so torch is not
 installed at runtime. Same compensating controls as PYSEC-2026-139. Documented in
 docs/known-vulnerabilities.md with reassess-by 2026-08-31.
-"""
-
-[[IgnoredVulns]]
-id = "GHSA-rrmf-rvhw-rf47"
-reason = """
-GitHub Security Advisory alias of CVE-2025-3000 (torch, local-only, no patched
-release). See the CVE-2025-3000 entry above and docs/known-vulnerabilities.md.
 """
 
 [[IgnoredVulns]]
